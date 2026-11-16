@@ -179,7 +179,11 @@ export function serializeFlow(flow: Flow): string {
   const filesBody = entries.join("");
 
   let all = parts;
-  if (textBody && !all.includes(TEXT)) all = insertBeforeEnd(all, TEXT);
+  if (textBody && !all.includes(TEXT)) {
+    // the plugin's order, which reading relies on: text before embedded files
+    const at = all.indexOf(FILES);
+    all = at < 0 ? insertBeforeEnd(all, TEXT) : [...all.slice(0, at), TEXT, ...all.slice(at)];
+  }
   if (filesBody && !all.includes(FILES)) all = insertBeforeEnd(all, FILES);
   const data = all
     .map((p) =>

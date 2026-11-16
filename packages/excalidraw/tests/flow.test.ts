@@ -455,4 +455,18 @@ describe("structure is found from the plugin's markers, not text content", () =>
   it("names CRLF line endings as the cause", () => {
     expect(() => parseFlow(FIXTURE.replaceAll("\n", "\r\n"))).toThrow(/CRLF/);
   });
+
+  describe("a drawing that gains its text section after its embeds", () => {
+    it("writes Text Elements before Embedded Files and stays a fixed point", () => {
+      const stripped = FIXTURE.replace(/## Text Elements\n[\s\S]*?(?=^## Embedded Files$)/m, "");
+      expect(stripped).not.toContain("## Text Elements");
+      const once = serializeFlow(parseFlow(stripped));
+      expect(once.indexOf("## Text Elements")).toBeLessThan(once.indexOf("## Embedded Files"));
+      expect(pluginFailures(once)).toEqual([]);
+      const again = parseFlow(once);
+      expect(again.embeds.size).toBe(3);
+      expect(serializeFlow(again)).toBe(once);
+      expect(serializeFlow(parseFlow(serializeFlow(again)))).toBe(once);
+    });
+  });
 });
