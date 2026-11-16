@@ -116,6 +116,38 @@ try {
     const result = await run(["flow", ...args]);
     assert.equal(result.exitCode, 0, `flow ${args[0]}: ${result.stderr}`);
   }
+  const { parseFlow, serializeFlow } = await import("../../excalidraw/dist/index.js");
+  const original = parseFlow(await readFile(flow, "utf8"));
+  original.elements.find((e) => e.type === "text" && e.text === note).fontFamily = 1;
+  await writeFile(flow, serializeFlow(original));
+  const adversarial = parseFlow(serializeFlow(original));
+  const image = adversarial.elements.find((e) => e.type === "image");
+  for (const [i, dataURL] of [
+    "https://attacker.invalid/track.png",
+    "//attacker.invalid/x",
+    "data:image/svg+xml," +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><image href="https://attacker.invalid/inner.png" width="20" height="20"/></svg>',
+      ),
+  ].entries()) {
+    const id = `attack${i}`;
+    adversarial.files[id] = {
+      id,
+      dataURL,
+      mimeType: i === 2 ? "image/svg+xml" : "image/png",
+      created: 1,
+    };
+    adversarial.elements.push({
+      ...image,
+      id,
+      fileId: id,
+      x: i * 30,
+      y: -100,
+      width: 20,
+      height: 20,
+    });
+  }
+  await writeFile(join(site, "flows/attack.excalidraw.md"), serializeFlow(adversarial));
   const executablePath = values.browser ?? process.env.WIREDOWN_SMOKE_BROWSER;
   try {
     // Default headless launch honors PLAYWRIGHT_BROWSERS_PATH or the standard cache.
@@ -154,7 +186,7 @@ try {
         await page.waitForFunction(
           () => document.querySelectorAll(".wiredown-block svg").length === 2,
         );
-      if (kind === "flow") await page.waitForSelector(".wiredown-flow svg");
+      if (kind === "flow" || kind === "attack") await page.waitForSelector(".wiredown-flow svg");
       if (kind === "failure") await page.waitForSelector(".wiredown-notice");
       await page.waitForLoadState("networkidle");
       if (kind === "plain") {
@@ -162,6 +194,12 @@ try {
         assert.equal(await page.locator(".wiredown-block, svg").count(), 0);
       }
       if (kind === "screens") {
+        assert(
+          assets
+            .filter((p) => p.includes("/fonts/"))
+            .every((p) => p.includes("/fonts/Excalifont/")),
+          "existing screens load no added fonts",
+        );
         assert.match(
           await page.locator(".wiredown-block svg").nth(1).textContent(),
           /2 of 5 seats used/,
@@ -189,6 +227,26 @@ try {
           assert(box && box.width > 200 && box.height > 100, "a screen has no size");
         }
       }
+      if (["flow", "attack"].includes(kind)) {
+        assert(await page.locator(".wiredown-flow > details.wiredown-source").count());
+        assert.equal(await page.locator("details.wiredown-source").getAttribute("open"), null);
+        assert.equal(await page.locator("details.wiredown-source pre").first().isVisible(), false);
+        assert(
+          assets.some((p) => p.includes("/fonts/Virgil/")),
+          "Virgil font must load from test origin",
+        );
+        assert(!responses.some((r) => r.status >= 400), "no missing assets");
+      }
+      if (kind === "attack") {
+        const notice = await page.locator(".wiredown-notice").textContent();
+        assert(
+          notice.includes("Not drawn:") &&
+            notice.includes("image file attack0:") &&
+            notice.includes("image file attack1:"),
+        );
+        assert(!notice.includes("image file attack2:"), "inline SVG stays an image");
+        assert.equal(await page.locator(".wiredown-flow svg").count(), 1);
+      }
       if (kind === "flow") {
         assert.equal(await page.locator(".wiredown-flow svg").count(), 1);
         const svg = page.locator(".wiredown-flow svg");
@@ -209,6 +267,8 @@ try {
         assert(await page.locator(".file-view").isVisible(), "original flow must stay visible");
         assert((await page.locator(".file-view").textContent()).includes("excalidraw"));
         assert.equal(await page.locator(".wiredown-flow svg").count(), 0);
+        assert.equal(await page.locator("details.wiredown-source").count(), 0);
+        assert(await page.locator(".file-view pre").first().isVisible());
         // Chromium reports the deliberately served HTTP 500 as a console error.
         assert.equal(
           errors.filter(
@@ -224,9 +284,13 @@ try {
           ),
           1,
         );
-      } else assert.equal(await page.locator(".wiredown-notice, .wiredown-error").count(), 0);
+      } else if (kind !== "attack")
+        assert.equal(await page.locator(".wiredown-notice, .wiredown-error").count(), 0);
       assert.deepEqual(errors, [], `${name}: browser errors`);
       await page.screenshot({ path: join(out, `${name}.png`), fullPage: true });
+      console.log(
+        `FONT ${name}: ${assets.filter((p) => p.includes("/fonts/")).join(", ") || "none"}`,
+      );
       console.log(
         `PASS ${name}: ${assets.length} asset requests; no unexpected errors, failed requests or external requests`,
       );
@@ -239,6 +303,7 @@ try {
       await page.close();
     }
   }
+  await visit("adversarial", "/me/app/src/branch/main/flows/attack.excalidraw.md", "attack");
   await visit("plain", "/plain", "plain");
   for (const kind of ["screens", "flow"]) {
     const path = `/me/app/src/branch/main/${kind === "screens" ? "screens.md" : "flows/f.excalidraw.md"}`;
