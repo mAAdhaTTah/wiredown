@@ -52,7 +52,7 @@ const DEFAULT_OPTS: Partial<Record<NodeType, Record<string, number>>> = { button
 export const FLAGS = new Set([...COMMON_FLAGS, ...CATALOG.flatMap((e) => e.flags)]);
 
 /** Levenshtein distance, for "did you mean". */
-function distance(a: string, b: string): number {
+export function distance(a: string, b: string): number {
   let row = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
     const next = [i];
