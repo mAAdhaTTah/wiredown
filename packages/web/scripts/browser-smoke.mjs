@@ -2,7 +2,7 @@
 // using src/gitea.ts's HTML/URL assumptions, not a test of a live Gitea.
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -42,17 +42,22 @@ function renderMd(md) {
   }
   return out.join("\n");
 }
-function html(theme, body) {
-  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><link rel="icon" href="data:,"><style>body{font-family:sans-serif;margin:24px;${theme === "gitea-dark" ? "background:#1e1e1e;color:#ddd" : ""}}</style></head><body><div class="file-view markup">${body}</div><script src="/assets/wiredown/wiredown.js" defer></script></body></html>`;
+function html(theme, body, fonts) {
+  const tag = fonts ? ` data-fonts="${fonts}"` : "";
+  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><link rel="icon" href="data:,"><style>body{font-family:sans-serif;margin:24px;${theme === "gitea-dark" ? "background:#1e1e1e;color:#ddd" : ""}}</style></head><body><div class="file-view markup">${body}</div><script src="/assets/wiredown/wiredown.js"${tag} defer></script></body></html>`;
 }
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   try {
     if (url.pathname.startsWith("/assets/wiredown/")) {
-      const file = new URL(url.pathname.slice("/assets/wiredown/".length), dist);
+      const path = url.pathname.slice("/assets/wiredown/".length);
+      // A font folder a site added next to the bundle (README, "Other fonts").
+      const file = path.startsWith("fonts/Virgil/")
+        ? join(site, path)
+        : new URL(path, dist).pathname;
       const body = await readFile(file);
       res.writeHead(200, {
-        "content-type": types[extname(file.pathname)] ?? "application/octet-stream",
+        "content-type": types[extname(file)] ?? "application/octet-stream",
       });
       res.end(body);
       return;
@@ -74,7 +79,11 @@ const server = createServer(async (req, res) => {
       res.end(
         match[1] === "raw"
           ? md
-          : html(url.searchParams.get("theme") ?? "gitea-light", renderMd(md)),
+          : html(
+              url.searchParams.get("theme") ?? "gitea-light",
+              renderMd(md),
+              url.searchParams.get("fonts"),
+            ),
       );
       return;
     }
@@ -93,6 +102,11 @@ const server = createServer(async (req, res) => {
 let browser;
 try {
   await mkdir(out, { recursive: true });
+  await cp(
+    new URL("../node_modules/@excalidraw/excalidraw/dist/prod/fonts/Virgil/", import.meta.url),
+    join(site, "fonts/Virgil"),
+    { recursive: true },
+  );
   // Copy the proposal's running example and explicit-replace variant verbatim.
   const proposal = await readFile(
     new URL("../../../docs/prds/initial-implementation/syntax-proposal.md", import.meta.url),
@@ -231,10 +245,17 @@ try {
         assert(await page.locator(".wiredown-flow > details.wiredown-source").count());
         assert.equal(await page.locator("details.wiredown-source").getAttribute("open"), null);
         assert.equal(await page.locator("details.wiredown-source pre").first().isVisible(), false);
-        assert(
+        // Only Excalifont ships; the Virgil note loads Virgil only when the
+        // site added it (data-fonts), and is otherwise drawn in Excalifont.
+        const virgil = path.includes("fonts=Virgil");
+        assert.equal(
           assets.some((p) => p.includes("/fonts/Virgil/")),
-          "Virgil font must load from test origin",
+          virgil,
+          virgil ? "added Virgil must load" : "no request for a Virgil font",
         );
+        const fallback = "text in font 1 is drawn in a fallback font";
+        const notices = await page.locator(".wiredown-notice").allTextContents();
+        assert.equal(notices.join("").includes(fallback), !virgil, "Virgil fallback notice");
         assert(!responses.some((r) => r.status >= 400), "no missing assets");
       }
       if (kind === "attack") {
@@ -259,6 +280,11 @@ try {
         assert.equal(await page.locator(".wiredown-flow svg").count(), 1);
       }
       if (kind === "flow") {
+        assert.equal(
+          (await page.locator(".wiredown-error").count()) +
+            (path.includes("fonts=Virgil") ? await page.locator(".wiredown-notice").count() : 0),
+          0,
+        );
         assert.equal(await page.locator(".wiredown-flow svg").count(), 1);
         const svg = page.locator(".wiredown-flow svg");
         for (const text of ["F1", "F2", note])
@@ -295,7 +321,7 @@ try {
           ),
           1,
         );
-      } else if (kind !== "attack")
+      } else if (kind === "screens" || kind === "plain")
         assert.equal(await page.locator(".wiredown-notice, .wiredown-error").count(), 0);
       assert.deepEqual(errors, [], `${name}: browser errors`);
       await page.screenshot({ path: join(out, `${name}.png`), fullPage: true });
@@ -322,6 +348,7 @@ try {
     const dark = await visit(`${kind}-dark`, `${path}?theme=gitea-dark`, kind);
     assert.notEqual(dark, light, `${kind}: dark SVG must differ from light`);
   }
+  await visit("flow-virgil", "/me/app/src/branch/main/flows/f.excalidraw.md?fonts=Virgil", "flow");
   await visit("raw-failure", "/me/app/src/branch/main/flows/f.excalidraw.md?failRaw=1", "failure");
   console.log(`PASS browser smoke. Screenshots: ${out}`);
 } catch (error) {
