@@ -525,7 +525,7 @@ function removedLine(r: Removed): string {
     return r.copy
       ? `removed ${r.element}, one of the elements claiming ${r.node} (${parts})\n` +
           (r.labelLeft
-            ? `left the labels of ${r.node}: the copy has no group of its own; remove its label by element id\n`
+            ? `left the label of ${r.node}, and any notes or overlays pasted with it: the copy has no group of its own; remove them by element id\n`
             : "")
       : `removed ${r.node} (${parts})\n`;
   }

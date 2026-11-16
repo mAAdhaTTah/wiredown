@@ -120,7 +120,7 @@ test("lint, remove, lint: a highlight whose component left the screen", async ()
     expect.objectContaining({ kind: "highlight", target: "invite" }),
   ]);
   expect((await lint(file)).stdout).toBe(
-    `${file}: F2: error: highlight #invite: ^team-after has no #invite any more; remove it with "wiredown flow remove <flow> F2#invite"\n` +
+    `${file}: F2: error: highlight #invite: ^team-after has no #invite any more; remove it with "wiredown flow remove <flow> ${refreshed.unresolved[0].element}"\n` +
       `${file}: 1 error\n`,
   );
   expect((await run(["flow", "remove", file, "F2#invite"])).stdout).toBe(

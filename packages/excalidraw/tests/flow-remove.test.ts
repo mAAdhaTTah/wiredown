@@ -326,3 +326,23 @@ test("notes and overlays whose node is gone are removed by element id", () => {
   removeFromFlow(flow, [flow.elements.find((e) => e.text === "F2 · b")!.id]);
   sound(flow);
 });
+
+test("a person's text bound to a removed shape is detached, never deleted", () => {
+  const flow = newFlow();
+  addScreen(flow, { screenId: "a", title: "a", path: "screens", size: home });
+  const mark = addMark(flow, "F1", { target: "invite", box, screen: home, label: "3" });
+  const ellipse = flow.elements.find((e) => e.id === mark)!;
+  const theirs: ExcalidrawElementJson = {
+    ...{ id: "person01", type: "text", x: 0, y: 0, width: 10, height: 10, version: 1 },
+    ...{ text: "mine", rawText: "mine", containerId: mark },
+  };
+  flow.elements.push(theirs);
+  ellipse.boundElements = [
+    ...(ellipse.boundElements as { id: string }[]),
+    { id: "person01", type: "text" },
+  ];
+  removeFromFlow(flow, ["F1#invite:3"]);
+  expect(theirs).toMatchObject({ containerId: null, version: 2 });
+  expect(theirs.isDeleted).toBeFalsy();
+  expect(ellipse.isDeleted).toBe(true);
+});

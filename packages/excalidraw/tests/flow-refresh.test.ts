@@ -222,8 +222,8 @@ test("an overlay whose target is gone is left in place and reported", () => {
   ]);
   expect(byId(flow, hi)).toEqual(before);
   expect(lintFlow(flow, screens).map((f) => f.message)).toEqual([
-    'highlight #invite: ^home has no #invite any more; remove it with "wiredown flow remove <flow> F1#invite"',
-    'mark 3 #invite: ^home has no #invite any more; remove it with "wiredown flow remove <flow> F1#invite:3"',
+    `highlight #invite: ^home has no #invite any more; remove it with "wiredown flow remove <flow> ${hi}"`,
+    `mark 3 #invite: ^home has no #invite any more; remove it with "wiredown flow remove <flow> ${mark}"`,
   ]);
 });
 
