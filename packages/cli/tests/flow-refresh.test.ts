@@ -105,7 +105,8 @@ test("refresh moves overlays when a component moves, and reports lost ones", asy
           {
             frame: "F1",
             element: expect.any(String),
-            message: "mark 2 #seats: ^team has no #seats any more",
+            message:
+              'mark 2 #seats: ^team has no #seats any more; remove it with "wiredown flow remove <flow> F1#seats:2"',
           },
         ],
       },
