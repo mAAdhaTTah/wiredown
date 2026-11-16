@@ -2,8 +2,8 @@
 
 - Use pnpm; Node and pnpm versions are pinned in `mise.toml`.
 - Use strict TypeScript and ESM. Extend `tsconfig.base.json` in packages.
-- Build every package with Vite (`vite build`) to `dist/`; `tsc --noEmit`
-  only type-checks. Relative imports have no extension (`./parse`).
+- Build packages with plain `tsc` to `dist/`, except the Obsidian plugin
+  and `@wiredown/web`, which bundle with esbuild.
 - Use Vitest. Tests live in `packages/<name>/tests`.
 - Keep code clear and succinct. Avoid overengineering and do not build for
   use cases the design does not call for.
