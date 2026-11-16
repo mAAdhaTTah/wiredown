@@ -456,5 +456,7 @@ image, an `feImage`, a pattern), so for PNG output pass `raster: true` to
 `renderFlowSvg`: the drawing's own SVG images are then listed in `rejected`
 and not drawn, while its PNG, JPEG, GIF and WebP images are. `svgToPng`
 throws ("refusing an SVG image that is not one of the trusted screens") on
-any data URL other than a trusted screen, a raster image or a font. In SVG
-output a drawing's SVG images stay embedded as inert image data.
+any data URL other than a trusted screen, a raster image or a font.
+`svgToPng` does not inspect the SVG's own links, so an `<image href="/path">`
+in the SVG you pass is read from disk; pass only SVGs from this module's
+exporters. In SVG output a drawing's SVG images stay embedded as inert image data.

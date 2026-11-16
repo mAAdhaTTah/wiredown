@@ -273,20 +273,25 @@ function woff2ToSfnt(base64: string): Promise<Uint8Array> {
  * caller's: as exported here it links to nothing but data URLs.
  */
 function refuseUntrustedImages(svg: string, trusted: ReadonlySet<string>) {
-  let rest = svg;
+  const refused = () =>
+    new Error("svgToPng: refusing an SVG image that is not one of the trusted screens");
+  if (/<!ENTITY/i.test(svg)) throw refused();
+  // Links occur in markup and CSS, not in a drawing's visible text.
+  let rest = (
+    svg.match(/<style\b[^>]*>[\s\S]*?<\/style\s*>|<(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi) ?? []
+  ).join("");
   for (const url of trusted) rest = rest.replaceAll(url, "");
   const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
   rest = rest
-    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (ref, name: string) =>
-      name[0] !== "#"
-        ? (named[name] ?? ref)
-        : String.fromCodePoint(
-            Number(name[1].toLowerCase() === "x" ? "0" + name.slice(1) : name.slice(1)),
-          ),
-    )
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (ref, name: string) => {
+      if (name[0] !== "#") return named[name] ?? ref;
+      const code = Number(name[1].toLowerCase() === "x" ? "0" + name.slice(1) : name.slice(1));
+      if (code > 0x10ffff) throw refused();
+      return String.fromCodePoint(code);
+    })
     .replace(/[\t\n\r]/g, "");
   if (/<!ENTITY|data:(?!image\/(?:png|jpeg|gif|webp)[;,]|font\/woff2[;,])/i.test(rest))
-    throw new Error("svgToPng: refusing an SVG image that is not one of the trusted screens");
+    throw refused();
 }
 
 /**
