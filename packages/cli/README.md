@@ -7,7 +7,7 @@ headlessly in Node, with JSON output for agents.
 wiredown check <file.md>... [--json]
 wiredown lint [<path>...] [--json]
 wiredown render <file.md> [--screen <id>]... [--out <dir>] [--format svg|png] [--scale <n>]
-                [--transparent] [--theme light|dark] [--no-fonts] [--screens <screens.md>] [--json]
+                [--transparent] [--theme light|dark] [--no-fonts] [--json]
 wiredown --help | <command> --help | flow <command> --help | --version
 ```
 
