@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { layoutScreen, parse } from "@wiredown/core";
 import { addScreen, embedSize, newFlow, screenElements } from "../src/index.js";
 import { BACKGROUND, FLOW_MARGIN, renderFlowSvg, renderSvg, svgToPng } from "../src/node.js";
@@ -86,51 +86,146 @@ describe("svgToPng", { timeout: 30000 }, () => {
   });
 });
 
-// A drawing may carry an SVG image linking to a local file, which resvg would
-// read if the SVG were inlined. Only wiredown's own screens are inlined.
-it("does not draw a local file that a drawing's SVG image links to", async () => {
-  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
-  const { tmpdir } = await import("node:os");
-  const { join } = await import("node:path");
-  const dir = await mkdtemp(join(tmpdir(), "wiredown-png-"));
-  try {
-    const red = join(dir, "red.png");
-    const box = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">';
+// An SVG document can make resvg read a local file in many ways (an image,
+// an feImage, a pattern's image), so a drawing's SVG images never reach it:
+// a PNG flow render rejects them, and svgToPng refuses any it is handed.
+describe("local files linked from a drawing's SVG images", { timeout: 30000 }, () => {
+  let dir: string;
+  let red: string;
+  let flowWith: (dataURL: string) => ReturnType<typeof newFlow>;
+  const box = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">';
+  const b64 = (text: string) => Buffer.from(text).toString("base64");
+  const redPixels = (png: Uint8Array) => {
+    const image = decodePng(png);
+    let count = 0;
+    for (let y = 0; y < image.height; y++)
+      for (let x = 0; x < image.width; x++) {
+        const [r, g, b] = image.pixel(x, y);
+        if (r > 200 && g < 100 && b < 100) count++;
+      }
+    return count;
+  };
+  const symbol = (href: string) =>
+    `${box}<symbol id="s"><image href="${href}" width="100%" height="100%"></image></symbol>` +
+    `<use href="#s" width="20" height="20"/></svg>`;
+  const REFUSED = "svgToPng: refusing an SVG image that is not one of the trusted screens";
+  let probes: Record<string, string>;
+
+  beforeAll(async () => {
+    const { mkdtemp, writeFile } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    dir = await mkdtemp(join(tmpdir(), "wiredown-png-"));
+    red = join(dir, "red.png");
     await writeFile(
       red,
       (await svgToPng(`${box}<rect width="20" height="20" fill="red"/></svg>`)).png,
     );
-    // resvg itself draws a linked local file
-    const direct = await svgToPng(`${box}<image href="${red}" width="20" height="20"/></svg>`);
-    expect(decodePng(direct.png).pixel(10, 10)).toEqual([255, 0, 0, 255]);
-    const links = [
-      `href="${red}"`,
-      `href = "${red}"`,
-      `href\t=\t"${red}"`,
-      `href=\n"${red}"`,
-      `xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href='${red}'`,
-      `HREF="${red}"`,
-    ];
-    const drawing = async (inner: string) => {
-      const data = Buffer.from(`${box}${inner}</svg>`).toString("base64");
-      const outer =
-        `${box}<symbol id="s"><image href="data:image/svg+xml;base64,${data}" width="100%" height="100%">` +
-        `</image></symbol><use href="#s" width="20" height="20"/></svg>`;
-      return decodePng((await svgToPng(outer, { background: "#ffffff" })).png);
+    const redSvg = join(dir, "red.svg");
+    await writeFile(
+      redSvg,
+      '<svg xmlns="http://www.w3.org/2000/svg"><rect id="a" width="20" height="20" fill="red"/></svg>',
+    );
+    const image = (link: string) => `${box}<image ${link} width="20" height="20"/></svg>`;
+    probes = {
+      feImage: `${box}<filter id="f" x="0" y="0" width="1" height="1"><feImage href="${red}"/></filter><rect width="20" height="20" filter="url(#f)"/></svg>`,
+      pattern: `${box}<pattern id="p" width="20" height="20" patternUnits="userSpaceOnUse"><image href="${red}" width="20" height="20"/></pattern><rect width="20" height="20" fill="url(#p)"/></svg>`,
+      use: `${box}<use href="${redSvg}#a"/></svg>`,
+      href: image(`href="${red}"`),
+      spaces: image(`href = "${red}"`),
+      tabs: image(`href\t=\t"${red}"`),
+      newline: image(`href=\n"${red}"`),
+      xlink: image(`xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href='${red}'`),
+      upper: image(`HREF="${red}"`),
     };
-    // the drawing's SVG image is drawn, just not its link
-    expect((await drawing('<rect width="20" height="20" fill="red"/>')).pixel(10, 10)).toEqual([
-      255, 0, 0, 255,
-    ]);
-    for (const link of links) {
-      const pixels = await drawing(`<image ${link} width="20" height="20"/>`);
-      for (let y = 0; y < 20; y++)
-        for (let x = 0; x < 20; x++) {
-          const [r, g, b] = pixels.pixel(x, y);
-          expect(r > 200 && g < 100 && b < 100, `${link} at ${x},${y}`).toBe(false);
-        }
-    }
-  } finally {
+    flowWith = (dataURL: string) => {
+      const flow = newFlow();
+      addScreen(flow, { screenId: "x", title: "x", path: "screens", size: screen });
+      const element = flow.elements.find((e) => e.type === "image")!;
+      flow.embeds.clear();
+      flow.files[String(element.fileId)] = { id: element.fileId, dataURL, created: 1 };
+      return flow;
+    };
+  });
+  afterAll(async () => {
+    const { rm } = await import("node:fs/promises");
     await rm(dir, { recursive: true, force: true });
-  }
-}, 30000);
+  });
+
+  it("would draw the linked file if such an SVG reached resvg", async () => {
+    expect(redPixels((await svgToPng(probes.href)).png)).toBe(400);
+    expect(redPixels((await svgToPng(probes.feImage)).png)).toBe(400);
+    expect(redPixels((await svgToPng(probes.pattern)).png)).toBe(400);
+  });
+
+  it("rejects a drawing's SVG images in a PNG flow render, in any spelling", async () => {
+    for (const [name, inner] of Object.entries(probes))
+      for (const dataURL of [
+        `data:image/svg+xml;base64,${b64(inner)}`,
+        `data:IMAGE/SVG+XML;charset=utf-8;base64,${b64(inner)}`,
+        `data:image/svg+xml;utf8,${inner}`,
+        `data:image/svg+xml,${encodeURIComponent(inner)}`,
+      ]) {
+        const flow = flowWith(dataURL);
+        const id = Object.keys(flow.files)[0];
+        const rendered = await renderFlowSvg(flow, () => undefined, { raster: true });
+        expect(rendered.rejected, name).toEqual([
+          { id, reason: "SVG images are not drawn in PNG output" },
+        ]);
+        const { png } = await svgToPng(rendered.svg, { inline: rendered.inline });
+        expect(redPixels(png), name).toBe(0);
+        // SVG output keeps them, as inert image data
+        expect((await renderFlowSvg(flow, () => undefined)).rejected, name).toEqual([]);
+      }
+  });
+
+  it("refuses to rasterise an SVG image that is not a trusted screen", async () => {
+    for (const inner of Object.values(probes))
+      await expect(svgToPng(symbol(`data:image/svg+xml;base64,${b64(inner)}`))).rejects.toThrow(
+        REFUSED,
+      );
+    // resvg would sniff these as SVG too, or decode the character reference
+    for (const href of [
+      `data:text/plain;base64,${b64(probes.feImage)}`,
+      `data:;base64,${b64(probes.feImage)}`,
+      `data:image/svg&#43;xml;base64,${b64(probes.feImage)}`,
+      `&#100;ata:image/svg+xml;base64,${b64(probes.feImage)}`,
+      `data:image/svg\n+xml;base64,${b64(probes.feImage)}`,
+    ])
+      await expect(svgToPng(symbol(href))).rejects.toThrow(REFUSED);
+  });
+
+  it("rejects an entity-encoded SVG media type at the scene, which Excalidraw writes verbatim", async () => {
+    const dataURL = `data:image/svg&#43;xml;base64,${b64(probes.feImage)}`;
+    for (const raster of [true, false])
+      expect(
+        (await renderFlowSvg(flowWith(dataURL), () => undefined, { raster })).rejected,
+      ).toEqual([
+        expect.objectContaining({ reason: expect.stringContaining("expected an inline PNG") }),
+      ]);
+  });
+
+  it("still draws a drawing's raster images in PNG output", async () => {
+    const png = Buffer.from(
+      (await svgToPng(`${box}<rect width="20" height="20" fill="red"/></svg>`)).png,
+    ).toString("base64");
+    const rendered = await renderFlowSvg(
+      flowWith(`data:image/png;base64,${png}`),
+      () => undefined,
+      {
+        raster: true,
+      },
+    );
+    expect(rendered.rejected).toEqual([]);
+    expect(
+      redPixels((await svgToPng(rendered.svg, { inline: rendered.inline })).png),
+    ).toBeGreaterThan(100);
+    // an SVG labelled as PNG is decoded as a PNG, which it is not
+    const labelled = await renderFlowSvg(
+      flowWith(`data:image/png;base64,${b64(probes.feImage)}`),
+      () => undefined,
+      { raster: true },
+    );
+    expect(redPixels((await svgToPng(labelled.svg, { inline: labelled.inline })).png)).toBe(0);
+  });
+});

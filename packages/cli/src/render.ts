@@ -190,7 +190,7 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
         ? undefined
         : screenElements(layoutScreen(found.screen!.tree)).elements;
     },
-    svgOptions(options),
+    { ...svgOptions(options), raster: options.format === "png" },
   );
   for (const { id, reason } of rendered.rejected)
     errors.push({ message: `image file ${id}: ${reason}` });

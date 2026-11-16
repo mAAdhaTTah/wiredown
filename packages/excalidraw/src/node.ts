@@ -116,6 +116,14 @@ export async function renderScreenSvg(
   return { ...screen, svg: await renderSvg(elements, options) };
 }
 
+export interface FlowSvgOptions extends SvgOptions {
+  /**
+   * For PNG output: reject the drawing's own SVG images. resvg would draw
+   * local files they link to; raster images are only pixels.
+   */
+  raster?: boolean;
+}
+
 /**
  * Export a drawing with its block embeds supplied as portable SVG images.
  * `screens` gives an embed's screen elements, or undefined when it has none;
@@ -124,7 +132,7 @@ export async function renderScreenSvg(
 export async function renderFlowSvg(
   flow: Flow,
   screens: (embed: ScreenRef) => ExcalidrawElementJson[] | undefined,
-  options: SvgOptions = {},
+  options: FlowSvgOptions = {},
 ): Promise<{
   svg: string;
   width: number;
@@ -141,6 +149,8 @@ export async function renderFlowSvg(
       file && typeof file === "object" && "dataURL" in file ? file.dataURL : undefined;
     if (typeof dataURL !== "string") {
       rejected.push({ id, reason: "missing or non-string dataURL" });
+    } else if (options.raster && /^data:image\/svg\+xml[;,]/i.test(dataURL)) {
+      rejected.push({ id, reason: "SVG images are not drawn in PNG output" });
     } else if (!/^data:image\/(png|jpeg|gif|webp|svg\+xml)(?:;[^,]*)?,/i.test(dataURL)) {
       rejected.push({ id, reason: "expected an inline PNG, JPEG, GIF, WebP or SVG data URL" });
     } else files[id] = file;
@@ -217,7 +227,9 @@ export async function svgToPng(
   const scale = options.scale ?? 1;
   if (!(scale > 0 && Number.isFinite(scale))) throw new RangeError(`bad PNG scale ${scale}`);
   const { Resvg } = await import("@resvg/resvg-js");
-  const flat = inlineSvgImages(svg, options.inline ?? new Set());
+  const trusted = options.inline ?? new Set();
+  refuseUntrustedImages(svg, trusted);
+  const flat = inlineSvgImages(svg, trusted);
   const fonts = await Promise.all(
     [...new Set(flat.match(/(?<=url\(data:font\/woff2;base64,)[^)]+/g))].map(woff2ToSfnt),
   );
@@ -252,6 +264,32 @@ function woff2ToSfnt(base64: string): Promise<Uint8Array> {
     sfnts.set(base64, font);
   }
   return font;
+}
+
+/**
+ * resvg loads an image's data URL as an SVG document by its media type, or by
+ * sniffing a `text/plain` one, and an SVG document can draw local files (an
+ * `feImage`, a pattern's image). So outside the trusted screens, only raster
+ * image and font data URLs may appear. Character references are decoded and
+ * tabs and newlines dropped first, so neither hides a media type; a DTD could
+ * declare entities that do, so one is refused. The SVG's own markup is the
+ * caller's: as exported here it links to nothing but data URLs.
+ */
+function refuseUntrustedImages(svg: string, trusted: ReadonlySet<string>) {
+  let rest = svg;
+  for (const url of trusted) rest = rest.replaceAll(url, "");
+  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+  rest = rest
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (ref, name: string) =>
+      name[0] !== "#"
+        ? (named[name] ?? ref)
+        : String.fromCodePoint(
+            Number(name[1].toLowerCase() === "x" ? "0" + name.slice(1) : name.slice(1)),
+          ),
+    )
+    .replace(/[\t\n\r]/g, "");
+  if (/<!ENTITY|data:(?!image\/(?:png|jpeg|gif|webp)[;,]|font\/woff2[;,])/i.test(rest))
+    throw new Error("svgToPng: refusing an SVG image that is not one of the trusted screens");
 }
 
 /**

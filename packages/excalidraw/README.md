@@ -403,7 +403,8 @@ nudges stay untouched. Far notes beside a decision are handled the same way. A
 label or note with a group absent from its node is left untouched and does not
 take a place in the note stack.
 
-The Node entry exports `renderFlowSvg(flow, screens, options?)`, returning
+The Node entry exports `renderFlowSvg(flow, screens, options?)` (options as
+for `renderSvg`, plus `raster`, below), returning
 `{ svg, width, height, missing, inline }`. The lookup is asked per embed,
 `screens({ path, blockId })`, and returns adapter elements or `undefined`;
 missing entries contain `element`, `path` and `blockId`. Screen SVGs are
@@ -441,6 +442,10 @@ Excalidraw draws images as a `<use>` of a `<symbol>`; resvg sizes those
 wrongly and draws no text inside nested SVG images, so `svgToPng` inlines
 into its symbol each SVG image whose data URL is in `inline`, the set
 `renderFlowSvg` returns for the screens it generated. The SVG output itself
-is unchanged. Inlined, an SVG's links would load local files, so other SVG
-images, such as a drawing's own, are drawn as separate documents with no
-file access, and may be mis-sized or lose their text in a PNG.
+is unchanged. An SVG image can make resvg read local files (through an
+image, an `feImage`, a pattern), so for PNG output pass `raster: true` to
+`renderFlowSvg`: the drawing's own SVG images are then listed in `rejected`
+and not drawn, while its PNG, JPEG, GIF and WebP images are. `svgToPng`
+throws ("refusing an SVG image that is not one of the trusted screens") on
+any data URL other than a trusted screen, a raster image or a font. In SVG
+output a drawing's SVG images stay embedded as inert image data.
