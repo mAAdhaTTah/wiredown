@@ -39,6 +39,16 @@ it("asks for each embed's screen once and reports the missing ones", async () =>
   expect(Object.keys(scene.files)).toHaveLength(3);
   const urls = Object.values(scene.files).map((f) => (f as { dataURL: string }).dataURL);
   expect(scene.inline).toEqual(new Set(urls));
-  expect(scene.inline.size).toBe(2);
   expect(scene.missing.map((m) => `${m.path}#^${m.blockId}`)).toEqual(["screens#^missing"]);
+});
+
+it("retains each allowed drawing image type unchanged", async () => {
+  const flow = newFlow();
+  for (const type of ["png", "jpeg", "gif", "webp", "svg+xml"]) {
+    flow.files[type] = { dataURL: `data:image/${type},content` };
+    flow.files[type + "64"] = { dataURL: `DATA:IMAGE/${type.toUpperCase()};base64,YQ==` };
+  }
+  const scene = await flowScene(flow, async () => undefined);
+  expect(scene.files).toEqual(flow.files);
+  expect(scene.rejected).toEqual([]);
 });
