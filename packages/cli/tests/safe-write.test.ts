@@ -1,4 +1,4 @@
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test, vi } from "vitest";
 import * as fs from "node:fs/promises";
@@ -27,7 +27,7 @@ test("atomic replacement cleans up, and stale edits preserve the directory", asy
 });
 
 test("add-screen refuses a concurrent Obsidian save", async () => {
-  const dir = await fixture({ "screens.md": BASE });
+  const dir = await realpath(await fixture({ "screens.md": BASE }));
   const file = join(dir, "a.excalidraw.md");
   expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
   const original = await readFile(file, "utf8");

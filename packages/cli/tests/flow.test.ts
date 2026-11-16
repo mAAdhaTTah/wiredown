@@ -383,3 +383,21 @@ test.each(["vault", "git", "neither"])(
     expect(await embedPaths(file)).toEqual([kind === "vault" ? "spec/screens" : "screens"]);
   },
 );
+
+test("add-screen refuses newer live metadata before writing", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  const file = join(dir, "a.excalidraw.md");
+  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  const flow = parseFlow(await readFile(file, "utf8"));
+  flow.elements[0].customData = { wiredown: { v: 2 } };
+  const source = serializeFlow(flow);
+  await writeFile(file, source);
+  const screens = await readFile(join(dir, "screens.md"), "utf8");
+  const result = await run(["flow", "add-screen", file, "team"]);
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain(
+    `${file}: this drawing was written by a newer wiredown (data version 2); upgrade wiredown to edit it`,
+  );
+  expect(await readFile(file, "utf8")).toBe(source);
+  expect(await readFile(join(dir, "screens.md"), "utf8")).toBe(screens);
+});

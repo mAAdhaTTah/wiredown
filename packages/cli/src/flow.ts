@@ -1,3 +1,4 @@
+import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
 import { safeWrite } from "./safe-write.js";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -7,7 +8,6 @@ import {
   embedSize,
   flowFrames,
   newFlow,
-  parseFlow,
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
@@ -60,7 +60,7 @@ export async function editFlow(
   try {
     if (command === "new" && (await exists(file))) throw new Error(`flow already exists: ${file}`);
     const original = command === "new" ? "" : await readFile(file, "utf8");
-    const flow = command === "new" ? newFlow() : parseFlow(original);
+    const flow = command === "new" ? newFlow() : parseEditableFlow(original);
     const frames = [];
     let screensFileUpdated = false;
     let screensPath: string | undefined;
@@ -130,7 +130,11 @@ export async function editFlow(
             errors: findings,
           })
         : "",
-      stderr: options.json ? "" : formatFindings(findingFile, findings, []),
+      stderr: options.json
+        ? ""
+        : error instanceof NewerFlowError
+          ? `${file}: ${error.message}\n`
+          : formatFindings(findingFile, findings, []),
     };
   }
 }
