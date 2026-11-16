@@ -131,6 +131,8 @@ export async function renderFlowSvg(
   height: number;
   missing: ({ element: string } & ScreenRef)[];
   rejected: { id: string; reason: string }[];
+  /** The screen images this export generated, for `svgToPng`'s `inline`. */
+  inline: ReadonlySet<string>;
 }> {
   const files: Record<string, unknown> = {};
   const rejected: { id: string; reason: string }[] = [];
@@ -144,6 +146,7 @@ export async function renderFlowSvg(
     } else files[id] = file;
   }
   const cache = new Map<string, string | undefined>();
+  const inline = new Set<string>();
   const missing: ({ element: string } & ScreenRef)[] = [];
   const elements: ExcalidrawElementJson[] = [];
   for (const element of flow.elements) {
@@ -172,6 +175,7 @@ export async function renderFlowSvg(
     }
     const dataURL = cache.get(key);
     if (dataURL) {
+      inline.add(dataURL);
       files[fileId] = { id: fileId, mimeType: "image/svg+xml", dataURL, created: 1 };
       elements.push({ ...element, status: "saved" });
     } else {
@@ -181,7 +185,7 @@ export async function renderFlowSvg(
     }
   }
   const svg = await exportSvg({ elements, appState: flow.appState, files }, options, FLOW_MARGIN);
-  return { svg, ...svgSize(svg), missing, rejected };
+  return { svg, ...svgSize(svg), missing, rejected, inline };
 }
 
 export interface PngOptions {
@@ -189,6 +193,13 @@ export interface PngOptions {
   scale?: number;
   /** A CSS colour painted under the drawing; transparent when omitted. */
   background?: string;
+  /**
+   * SVG image data URLs to draw inline, as `renderFlowSvg` returns them for
+   * its screens. Other SVG images are drawn as separate documents, which
+   * resvg gives no access to files, but it may mis-size them and draws no
+   * text in them.
+   */
+  inline?: ReadonlySet<string>;
 }
 
 /** The canvas colour behind an Excalidraw export: white, and white as dark mode draws it. */
@@ -206,7 +217,7 @@ export async function svgToPng(
   const scale = options.scale ?? 1;
   if (!(scale > 0 && Number.isFinite(scale))) throw new RangeError(`bad PNG scale ${scale}`);
   const { Resvg } = await import("@resvg/resvg-js");
-  const flat = inlineSvgImages(svg);
+  const flat = inlineSvgImages(svg, options.inline ?? new Set());
   const fonts = await Promise.all(
     [...new Set(flat.match(/(?<=url\(data:font\/woff2;base64,)[^)]+/g))].map(woff2ToSfnt),
   );
@@ -246,19 +257,20 @@ function woff2ToSfnt(base64: string): Promise<Uint8Array> {
 /**
  * Excalidraw draws images as `<use>` of a viewBox-less `<symbol>` holding a
  * 100%-sized `<image>`. resvg sizes such an image against the wrong viewport
- * and draws no text inside SVG images, so SVG images are inlined into their
- * symbol, with a viewBox the `<use>` scales.
+ * and draws no text inside SVG images, so trusted SVG images are inlined into
+ * their symbol, with a viewBox the `<use>` scales.
+ *
+ * Once inlined, an SVG's links would be followed by resvg, which reads local
+ * files, so only the exact data URLs in `trusted` are inlined: screens this
+ * module generated, which hold no links. A drawing can only match one by
+ * carrying that same screen, which is harmless.
  */
-function inlineSvgImages(svg: string): string {
+function inlineSvgImages(svg: string, trusted: ReadonlySet<string>): string {
   return svg.replace(
-    /<symbol id="([^"]+)"><image href="data:image\/svg\+xml;base64,([^"]+)"[^>]*><\/image><\/symbol>/g,
-    (symbol, id: string, base64: string) => {
-      // Once inlined, the image's own links would be followed by resvg, which
-      // reads local files; an SVG image may only carry inline data.
-      const inner = inlineSvgImages(Buffer.from(base64, "base64").toString("utf8")).replace(
-        /(\s(?:xlink:)?href=)(["'])(?!data:|#)[^"']*\2/gi,
-        "$1$2$2",
-      );
+    /<symbol id="([^"]+)"><image href="(data:image\/svg\+xml;base64,([^"]+))"[^>]*><\/image><\/symbol>/g,
+    (symbol, id: string, dataURL: string, base64: string) => {
+      if (!trusted.has(dataURL)) return symbol;
+      const inner = Buffer.from(base64, "base64").toString("utf8");
       const root = /<svg[^>]*>/.exec(inner)?.[0] ?? "";
       const width = / width="([\d.]+)"/.exec(root)?.[1];
       const height = / height="([\d.]+)"/.exec(root)?.[1];

@@ -73,6 +73,7 @@ it("pads the nested canvas and places its screen at x=10", () => {
     `width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}"`,
   );
   expect(nested).toContain('<svg x="10" y="0"');
+  expect([...light.inline]).toEqual(["data:image/svg+xml;base64," + urls(light.svg)[0]]);
 });
 it("aligns the invite highlight with the nested screen", () => {
   const image = flowFrames(flow)[0].element;
@@ -125,7 +126,9 @@ it("passes through an ordinary PNG image unchanged", async () => {
     created: 1,
   };
   const lookup = vi.fn();
-  expect((await renderFlowSvg(ordinary, lookup)).svg).toContain(dataURL);
+  const rendered = await renderFlowSvg(ordinary, lookup);
+  expect(rendered.svg).toContain(dataURL);
+  expect(rendered.inline.size).toBe(0);
   expect(lookup).not.toHaveBeenCalled();
 });
 it("exports the real drawing with all three screens missing", async () => {

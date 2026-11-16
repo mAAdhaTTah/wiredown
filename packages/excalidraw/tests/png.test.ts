@@ -66,7 +66,9 @@ describe("svgToPng", { timeout: 30000 }, () => {
     flow.elements = flow.elements.filter((e) => e.type === "image");
     const rendered = await renderFlowSvg(flow, () => screen.elements);
     const pad = (embedSize(screen.width, screen.height).image.width - screen.width) / 2;
-    const whole = decodePng((await svgToPng(rendered.svg, { background: "#fff" })).png);
+    const whole = decodePng(
+      (await svgToPng(rendered.svg, { background: "#fff", inline: rendered.inline })).png,
+    );
     const alone = decodePng((await svgToPng(svg, { background: "#fff" })).png);
     // Nested rendering rounds a few edge pixels by one step.
     let worst = 0;
@@ -76,10 +78,17 @@ describe("svgToPng", { timeout: 30000 }, () => {
         for (let c = 0; c < 4; c++) worst = Math.max(worst, Math.abs(a[c] - b[c]));
       }
     expect(worst).toBeLessThanOrEqual(2);
+    // Inlined, a screen's links would be followed: it must have none.
+    const [image] = rendered.inline;
+    const inner = Buffer.from(image.split(",")[1], "base64").toString("utf8");
+    expect(inner).not.toMatch(/<image/i);
+    expect(inner.match(/href\s*=\s*["'](?!#)/gi)).toBeNull();
   });
 });
 
-it("does not draw a local file that an SVG image links to", async () => {
+// A drawing may carry an SVG image linking to a local file, which resvg would
+// read if the SVG were inlined. Only wiredown's own screens are inlined.
+it("does not draw a local file that a drawing's SVG image links to", async () => {
   const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
@@ -91,13 +100,36 @@ it("does not draw a local file that an SVG image links to", async () => {
       red,
       (await svgToPng(`${box}<rect width="20" height="20" fill="red"/></svg>`)).png,
     );
-    const inner = `${box}<image href="${red}" width="20" height="20"/></svg>`;
-    const data = Buffer.from(inner).toString("base64");
-    const outer =
-      `${box}<symbol id="s"><image href="data:image/svg+xml;base64,${data}" width="100%" height="100%">` +
-      `</image></symbol><use href="#s" width="20" height="20"/></svg>`;
-    const { png } = await svgToPng(outer, { background: "#ffffff" });
-    expect([...decodePng(png).pixel(10, 10)]).toEqual([255, 255, 255, 255]);
+    // resvg itself draws a linked local file
+    const direct = await svgToPng(`${box}<image href="${red}" width="20" height="20"/></svg>`);
+    expect(decodePng(direct.png).pixel(10, 10)).toEqual([255, 0, 0, 255]);
+    const links = [
+      `href="${red}"`,
+      `href = "${red}"`,
+      `href\t=\t"${red}"`,
+      `href=\n"${red}"`,
+      `xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href='${red}'`,
+      `HREF="${red}"`,
+    ];
+    const drawing = async (inner: string) => {
+      const data = Buffer.from(`${box}${inner}</svg>`).toString("base64");
+      const outer =
+        `${box}<symbol id="s"><image href="data:image/svg+xml;base64,${data}" width="100%" height="100%">` +
+        `</image></symbol><use href="#s" width="20" height="20"/></svg>`;
+      return decodePng((await svgToPng(outer, { background: "#ffffff" })).png);
+    };
+    // the drawing's SVG image is drawn, just not its link
+    expect((await drawing('<rect width="20" height="20" fill="red"/>')).pixel(10, 10)).toEqual([
+      255, 0, 0, 255,
+    ]);
+    for (const link of links) {
+      const pixels = await drawing(`<image ${link} width="20" height="20"/>`);
+      for (let y = 0; y < 20; y++)
+        for (let x = 0; x < 20; x++) {
+          const [r, g, b] = pixels.pixel(x, y);
+          expect(r > 200 && g < 100 && b < 100, `${link} at ${x},${y}`).toBe(false);
+        }
+    }
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

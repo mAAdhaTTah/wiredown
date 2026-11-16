@@ -404,7 +404,7 @@ label or note with a group absent from its node is left untouched and does not
 take a place in the note stack.
 
 The Node entry exports `renderFlowSvg(flow, screens, options?)`, returning
-`{ svg, width, height, missing }`. The lookup is asked per embed,
+`{ svg, width, height, missing, inline }`. The lookup is asked per embed,
 `screens({ path, blockId })`, and returns adapter elements or `undefined`;
 missing entries contain `element`, `path` and `blockId`. Screen SVGs are
 cached by embed path and block id, padded using `embedSize`, and supplied as SVG data
@@ -414,7 +414,7 @@ flows, so nested screens are always exported light.
 
 ### PNG
 
-`svgToPng(svg, { scale?, background? })` rasterises an SVG from the
+`svgToPng(svg, { scale?, background?, inline? })` rasterises an SVG from the
 functions above with `@resvg/resvg-js` (native, prebuilt for Linux, macOS
 and Windows; loaded on first use, no browser) and resolves to
 `{ png, width, height }`: the PNG bytes and their size in pixels, the SVG
@@ -439,4 +439,8 @@ with a system font that has them; if none does, resvg draws an empty box,
 so their look depends on the machine (`check` warns about them).
 Excalidraw draws images as a `<use>` of a `<symbol>`; resvg sizes those
 wrongly and draws no text inside nested SVG images, so `svgToPng` inlines
-each SVG image into its symbol first. The SVG output itself is unchanged.
+into its symbol each SVG image whose data URL is in `inline`, the set
+`renderFlowSvg` returns for the screens it generated. The SVG output itself
+is unchanged. Inlined, an SVG's links would load local files, so other SVG
+images, such as a drawing's own, are drawn as separate documents with no
+file access, and may be mis-sized or lose their text in a PNG.

@@ -96,6 +96,8 @@ instead of SVG; one format per run. PNGs are rasterised in Node by resvg,
 with no browser, from the same SVG, so they look like it: Excalifont text,
 hand-drawn strokes, the theme's colours and, in flows, the embedded
 screens. The same input gives byte-identical PNGs on the same machine.
+A flow's own SVG images (not its screens) are drawn with no access to local
+files, so in a PNG they may be mis-sized or lose their text.
 
 - `--scale <n>`, a whole number from 1 to 4 (default 2), multiplies the
   pixel size, so text stays legible.

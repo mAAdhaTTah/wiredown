@@ -86,7 +86,7 @@ const svgOptions = (options: RenderOptions) => ({
 /** Write `<base>.svg` or `<base>.png`; a failure is an error finding. */
 async function writeImage(
   base: string,
-  image: { svg: string; width: number; height: number },
+  image: { svg: string; width: number; height: number; inline?: ReadonlySet<string> },
   options: RenderOptions,
   errors: Finding[],
   screen?: string,
@@ -103,6 +103,7 @@ async function writeImage(
     try {
       const png = await svgToPng(image.svg, {
         scale: options.scale ?? 2,
+        inline: image.inline,
         ...(options.transparent ? {} : { background: BACKGROUND[options.theme ?? "light"] }),
       });
       bytes = png.png;
