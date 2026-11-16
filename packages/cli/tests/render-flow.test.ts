@@ -152,3 +152,20 @@ it("reports a missing hand-made embed by block id without an element id", async 
   expect(result.stderr).not.toContain(image.id);
   expect(await readFile(join(dir, "f.svg"), "utf8")).toContain("<svg");
 });
+
+it("reports rejected drawing images and still writes the flow", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  const file = join(dir, "flows", "f.excalidraw.md");
+  await run(["flow", "new", file, "team"]);
+  const flow = parseFlow(await readFile(file, "utf8"));
+  flow.files.remote = { dataURL: "https://attacker.invalid/x" };
+  await writeFile(file, serializeFlow(flow));
+  const args = ["render", file, "--out", dir];
+  const result = await run(args);
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain(`${file}: error: image file remote:`);
+  expect(await readFile(join(dir, "f.svg"), "utf8")).toContain("<svg");
+  const json = await run([...args, "--json"]);
+  expect(json.exitCode).toBe(1);
+  expect(JSON.parse(json.stdout).errors[0].message).toContain("image file remote:");
+});
