@@ -349,3 +349,15 @@ test("lint reports an arrow and a note an older refresh left behind", async () =
     `${file}: F1: error: arrow F1 -> F2 no longer meets F1; run "wiredown flow refresh"\n`,
   );
 });
+
+test("flow lint reports unsupported metadata without refusing the file", async () => {
+  const { file } = await setup();
+  const flow = parseFlow(await readFile(file, "utf8"));
+  flow.elements.push({ ...flow.elements[0], id: "newer001", customData: { wiredown: { v: 2 } } });
+  await writeFile(file, serializeFlow(flow));
+  expect(await run(["flow", "lint", file])).toEqual({
+    exitCode: 1,
+    stdout: `${file}: error: this drawing was written by a newer wiredown (data version 2)\n${file}: 1 error\n`,
+    stderr: "",
+  });
+});
