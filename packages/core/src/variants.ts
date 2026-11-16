@@ -60,14 +60,20 @@ function index(tree: SpecNode): Map<string, { parent: SpecNode; node: SpecNode }
   return ids;
 }
 
-/** Errors for directives outside a variant block. */
+/** Errors for directives outside a variant block, or inside another change of one. */
 function check(tree: SpecNode, errors: ParseError[], variant: boolean): void {
-  walk(tree, (node) => {
+  walk(tree, (node, parent) => {
+    if (!DIRECTIVES.has(node.type)) return;
     const line = node.line ?? 0;
-    if (!variant && DIRECTIVES.has(node.type)) {
+    if (!variant) {
       errors.push({
         line,
         message: `"${node.type}:" only works in a block whose first line is "extends: <screen id>"`,
+      });
+    } else if (parent !== tree && parent !== tree.children[0]) {
+      errors.push({
+        line,
+        message: `"${node.type}:" can't go inside "${parent.type}:"; put it at the top level of the variant`,
       });
     }
   });

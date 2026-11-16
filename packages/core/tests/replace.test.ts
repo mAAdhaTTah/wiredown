@@ -160,4 +160,20 @@ rows: members
       },
     ]);
   });
+
+  it("rejects a change nested inside another change", () => {
+    const inside = (source: string) => run(source).errors;
+    expect(inside("extends: team-members\nreplace: seats\n  remove: seats")).toEqual([
+      {
+        line: 3,
+        message: '"remove:" can\'t go inside "replace:"; put it at the top level of the variant',
+      },
+    ]);
+    expect(inside("extends: team-members\nafter: seats\n  replace: seats\n    text: x")).toEqual([
+      {
+        line: 3,
+        message: '"replace:" can\'t go inside "after:"; put it at the top level of the variant',
+      },
+    ]);
+  });
 });
