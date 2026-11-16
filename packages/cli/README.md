@@ -250,9 +250,9 @@ there corrects both embed sizing and overlay placement.
 screens change. Each frame's screen comes from the screens file its embed
 names, so one flow may use several. For each frame whose screen exists it
 sets the `## Embedded Files` link size (writing the link's path as new
-embeds are written, from the root, if it was another form), resizes the image to the new screen
-size at the scale it had (a frame a person scaled stays scaled; its top-left
-stays put), and moves the frame's highlights and marks to where
+embeds are written, from the root, if it was another form), resizes the
+image to the new screen size at the scale it had (a frame a person scaled
+stays scaled; its top-left stays put), and moves the frame's highlights and marks to where
 `flow highlight` and `flow mark` would put them now. Notes under the frame
 move with its bottom edge, keeping their order and gaps; a note dragged
 onto the frame goes back under it, with the notes below it. Every straight arrow of ours whose ends
