@@ -26,7 +26,9 @@ export type {
   ConnectOptions,
   FlowNode,
   Place,
-} from "./flow-edit";
+} from "./flow-edit.js";
+export { bindingFailures, lintFlow, refreshFlow } from "./flow-refresh.js";
+export type { FlowChange, FlowFinding, ScreenLookup, ScreenState, Size } from "./flow-refresh.js";
 export {
   embedCandidates,
   embedNotFound,

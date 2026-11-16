@@ -67,7 +67,7 @@ export interface FlowNode {
  * frame's image (and a decision's diamond, once it has notes) also records
  * `group`, the Excalidraw group that holds the node's parts.
  */
-interface Identity {
+export interface Identity {
   v?: number;
   id?: string;
   role: string;
@@ -91,11 +91,12 @@ function supportedVersion(data: Identity): boolean {
   return (data.v ?? 1) <= DATA_VERSION;
 }
 /** An element's wiredown data; undefined for a hand-drawn element or one from a newer wiredown. */
-function identity(e: ExcalidrawElementJson): Identity | undefined {
+export function identity(e: ExcalidrawElementJson): Identity | undefined {
   const data = dataOf(e);
   return data && supportedVersion(data) && (data.id === undefined || data.id === e.id)
     ? data
     : undefined;
+
 }
 /**
  * The data version of live elements from a newer wiredown: the highest
@@ -200,7 +201,7 @@ function element(
     customData: { wiredown: { v: DATA_VERSION, ...data, id: elementId } },
   };
 }
-/** Tell Excalidraw an existing element changed. */
+/** Records a change to an existing element, as Excalidraw does on every edit. */
 export function touch(e: ExcalidrawElementJson) {
   e.version = Number(e.version ?? 0) + 1;
   e.versionNonce = random(2147483646) + 1;
@@ -715,21 +716,21 @@ function overlayAnchor(flow: Flow, frame: string, options: OverlayOptions, label
 export function markCentre(x: number, y: number, diameter: number) {
   return { x: x - diameter / 3, y: y - diameter / 3 };
 }
+/** A highlight's outline: the component's box with a 4px drawing-coordinate outset. */
+export function highlightBounds(b: ReturnType<typeof overlayBox>) {
+  return { x: b.x - 4, y: b.y - 4, width: b.width + 8, height: b.height + 8 };
+}
+/** The top-left that centres a `width`×`height` element on (x, y), as a mark on its centre. */
+export function centredOn(x: number, y: number, width: number, height: number) {
+  return { x: x - width / 2, y: y - height / 2 };
+}
 
 /** Append an outline with a 4px drawing-coordinate outset; return its element id. */
 export function addHighlight(flow: Flow, frame: string, options: OverlayOptions): string {
-  const { box: b, data, groupIds } = overlayAnchor(flow, frame, options);
+  const { box, data, groupIds } = overlayAnchor(flow, frame, options);
+  const b = highlightBounds(box);
   const e = {
-    ...element(
-      "rectangle",
-      b.x - 4,
-      b.y - 4,
-      b.width + 8,
-      b.height + 8,
-      nextIndices(flow, 1)[0],
-      data,
-      groupIds,
-    ),
+    ...element("rectangle", b.x, b.y, b.width, b.height, nextIndices(flow, 1)[0], data, groupIds),
     roundness: { type: 3 },
     strokeWidth: 2,
     strokeColor: DEFAULT_THEME.colors.highlight,
@@ -751,22 +752,15 @@ export function addMark(
   // Fit text inside the circle's inscribed square, with 5px container padding.
   const diameter = Math.max(32, Math.ceil(Math.SQRT2 * Math.max(measured.w, measured.h) + 10));
   const c = markCentre(b.x, b.y, diameter);
+  const at = centredOn(c.x, c.y, diameter, diameter);
   const badge: ExcalidrawElementJson = {
-    ...element(
-      "ellipse",
-      c.x - diameter / 2,
-      c.y - diameter / 2,
-      diameter,
-      diameter,
-      keys[0],
-      data,
-      groupIds,
-    ),
+    ...element("ellipse", at.x, at.y, diameter, diameter, keys[0], data, groupIds),
     backgroundColor: DEFAULT_THEME.colors.highlight,
   };
+  const text = centredOn(c.x, c.y, measured.w, measured.h);
   const label = textElement(
-    c.x - measured.w / 2,
-    c.y - measured.h / 2,
+    text.x,
+    text.y,
     options.label,
     FONT_SIZE,
     keys[1],
