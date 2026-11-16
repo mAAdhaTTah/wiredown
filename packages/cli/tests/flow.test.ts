@@ -401,3 +401,33 @@ test("add-screen refuses newer live metadata before writing", async () => {
   expect(await readFile(file, "utf8")).toBe(source);
   expect(await readFile(join(dir, "screens.md"), "utf8")).toBe(screens);
 });
+
+test.each([2, "2"])("add-screen refuses unsupported version %s as JSON", async (v) => {
+  const dir = await fixture({ "screens.md": BASE });
+  const file = join(dir, "a.excalidraw.md");
+  await run(["flow", "new", file, "team"]);
+  const flow = parseFlow(await readFile(file, "utf8"));
+  flow.elements[0].customData = { wiredown: { v } };
+  await writeFile(file, serializeFlow(flow));
+  const result = await run(["flow", "add-screen", file, "team", "--json"]);
+  expect(result.exitCode).toBe(1);
+  expect(JSON.parse(result.stdout)).toMatchObject({
+    flow: file,
+    errors: [{ message: expect.stringContaining("data version") }],
+  });
+});
+
+test("add-screen ignores deleted newer metadata", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  const file = join(dir, "a.excalidraw.md");
+  await run(["flow", "new", file, "team"]);
+  const flow = parseFlow(await readFile(file, "utf8"));
+  flow.elements.push({
+    ...flow.elements[0],
+    id: "deleted1",
+    isDeleted: true,
+    customData: { wiredown: { v: 2 } },
+  });
+  await writeFile(file, serializeFlow(flow));
+  expect((await run(["flow", "add-screen", file, "team"])).exitCode).toBe(0);
+});
