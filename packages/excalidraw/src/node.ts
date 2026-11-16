@@ -4,6 +4,7 @@ import { screenElements } from "./elements.js";
 import type { ExcalidrawElementJson, ScreenElements } from "./elements.js";
 import { embedSize } from "./flow-edit.js";
 import type { Flow } from "./flow.js";
+import type { ScreenRef } from "./flow-refresh.js";
 import { sceneOf } from "./scene.js";
 
 export interface SvgOptions {
@@ -108,48 +109,56 @@ export async function renderScreenSvg(
   return { ...screen, svg: await renderSvg(elements, options) };
 }
 
-/** Export a drawing with its block embeds supplied as portable SVG images. */
+/**
+ * Export a drawing with its block embeds supplied as portable SVG images.
+ * `screens` gives an embed's screen elements, or undefined when it has none;
+ * it is asked once per embed path and block id.
+ */
 export async function renderFlowSvg(
   flow: Flow,
-  screens: (blockId: string) => ExcalidrawElementJson[] | undefined,
+  screens: (embed: ScreenRef) => ExcalidrawElementJson[] | undefined,
   options: SvgOptions = {},
 ): Promise<{
   svg: string;
   width: number;
   height: number;
-  missing: { element: string; blockId: string }[];
+  missing: ({ element: string } & ScreenRef)[];
 }> {
   const files = { ...flow.files };
   const cache = new Map<string, string | undefined>();
-  const missing: { element: string; blockId: string }[] = [];
-  const elements = [];
+  const missing: ({ element: string } & ScreenRef)[] = [];
+  const elements: ExcalidrawElementJson[] = [];
   for (const element of flow.elements) {
     const fileId = String(element.fileId);
-    const blockId = flow.embeds.get(fileId)?.blockId;
-    if (element.isDeleted || element.type !== "image" || !blockId) {
+    const embed = flow.embeds.get(fileId);
+    const blockId = embed?.blockId;
+    if (element.isDeleted || element.type !== "image" || !embed || !blockId) {
       elements.push(element);
       continue;
     }
-    if (!cache.has(blockId)) {
-      const screen = screens(blockId);
-      if (!screen) cache.set(blockId, undefined);
+    // one screen per embed path and block id: same-named blocks in two files differ
+    const key = `${embed.path}#^${blockId}`;
+    if (!cache.has(key)) {
+      const screen = screens({ path: embed.path, blockId });
+      if (!screen) cache.set(key, undefined);
       else {
         // The outer dark export filters SVG images; avoid double inversion.
         const svg = await renderSvg(screen, { ...options, theme: "light" });
         const size = svgSize(svg);
         const padded = embedSize(size.width, size.height).image;
         const x = (padded.width - size.width) / 2;
+        // This replacement relies on the exporter output starting with "<svg ".
         const image = `<svg xmlns="http://www.w3.org/2000/svg" width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}">${svg.replace("<svg ", `<svg x="${x}" y="0" `)}</svg>`;
-        cache.set(blockId, "data:image/svg+xml;base64," + Buffer.from(image).toString("base64"));
+        cache.set(key, "data:image/svg+xml;base64," + Buffer.from(image).toString("base64"));
       }
     }
-    const dataURL = cache.get(blockId);
+    const dataURL = cache.get(key);
     if (dataURL) {
       files[fileId] = { id: fileId, mimeType: "image/svg+xml", dataURL, created: 1 };
       elements.push({ ...element, status: "saved" });
     } else {
       delete files[fileId];
-      missing.push({ element: element.id, blockId });
+      missing.push({ element: element.id, path: embed.path, blockId });
       elements.push(element);
     }
   }

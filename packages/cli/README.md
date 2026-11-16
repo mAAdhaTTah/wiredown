@@ -359,36 +359,19 @@ nudges stay untouched. Far notes beside a decision are handled the same way. A
 label or note with a group absent from its node is left untouched and does not
 take a place in the note stack.
 
-## API
+`wiredown render flows/example.excalidraw.md --out out --json` exports the
+whole drawing to `out/example.svg`. Each frame's screen comes from the
+screens file its embed names, resolved from the flow as the flow commands
+do. `--screen` is only for screens files.
+Missing or invalid screens, and embeds that name no screens file (one
+finding per frame), leave placeholders; the SVG is still written, findings
+are reported, and the command exits 1. Flow JSON is
+`{ file, flow: { svg, width, height }, errors, warnings }`.
 
-The root export runs the commands without a terminal. Each resolves to a
-`Result`, `{ exitCode, stdout, stderr }`, and never writes to the terminal
-or exits; `bin/wiredown.js` prints the result. Build the package
-(`pnpm build`) before running the bin.
-
-- **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
-  the script, as `bin/wiredown.js` does. Bad usage and unreadable files
-  give exit code 2, and the `flow` commands report file and input problems
-  with exit code 1; any other error rejects.
-- **Check** (`check`): `check(files, options?)` runs the `check` command
-  on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
-  entry of the JSON document's `files`.
-- **Render** (`render`): `render(file, options?)` runs the `render`
-  command. `RenderOptions` are all optional: `screens` (ids; all screens
-  with an id when empty), `out` (default `.`), `theme` (`"light"` or
-  `"dark"`), `fonts` (default true) and `json`. `RenderedScreen` is one
-  entry of the JSON document's `screens`.
-- **Lint** (`lint`, `flow`): `lint(paths, options?)` runs the `lint`
-  command on files and directories (`.` when empty). `LintOptions` is
-  `{ json? }`; `LintedFlow`, `{ file, findings }`, is one entry of the JSON
-  document's `flows`.
-- **Output** (`output`): `UsageError`, which `check`, `lint` and `render`
-  throw for an unreadable file and `run` turns into exit code 2. `Finding`
-  is a finding as above; a flow's names a `frame` and an `element` instead
-  of a `screen`. `Result` is what every command returns.
-
-```ts
-import { render } from "@wiredown/cli";
-
-const { exitCode, stdout } = await render("screens.md", { out: "out", json: true });
-```
+Flow embeds include their own Excalifont copy, since nested SVG images cannot
+use the outer SVG's fonts. Each distinct screen is rendered once. This adds
+about 33 KB per screen before data URL encoding, plus the outer font copy.
+A measured three-screen flow was 244,120 bytes with fonts and 77,374
+without. Use `--no-fonts` for smaller files when font portability is
+unnecessary.
+Dark flows use light screen images with Excalidraw's own dark image filter.
