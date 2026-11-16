@@ -477,6 +477,8 @@ test.each([
   ["decision", "Choice"],
   ["connect", "F1", "F1"],
   ["note", "F1", "Note"],
+  ["highlight", "F1", "#target"],
+  ["mark", "F1", "#target", "Label"],
 ])("%s refuses newer live metadata before writing", async (...args) => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "a.excalidraw.md");
