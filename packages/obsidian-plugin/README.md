@@ -1,5 +1,9 @@
 # Wiredown for Obsidian
 
+Prototype behavior carried over but unverified in this build includes SVG
+export and font embedding, export caching, embed timing and re-entrancy,
+startup readiness, theme filtering, and Obsidian lifecycle integration.
+
 Renders `wiredown` code blocks as Excalidraw SVGs in notes and flow embeds.
 The Excalidraw community plugin is a hard dependency. Install and enable it;
 without it Wiredown shows an error and the source. There are no settings or
@@ -34,11 +38,14 @@ notes immediately, while the drawing handles its embedded images' theme.
 2. Inspect text for Excalifont and an embedded font stylesheet.
 3. Toggle Obsidian theme; screens should change immediately.
 4. Embed blocks in a flow with `[[screens#^id|WxH]]`. Check first load,
-   including a cold start; no blank, code-only, cropped or scaled images.
+   including the first render in a session when the screens note has never
+   been opened (the cold embed timing risk); no blank, code-only, cropped
+   or scaled images.
 5. Zoom beyond 300%; text and strokes should remain sharp.
 6. Check all four note/drawing theme combinations: embeds must follow the
    drawing theme and match its labels' font.
-7. Edit a base, then its variant; verify both embeds update. Double-click
+7. Edit a base screen and verify its variants update on note autosave.
+   Then edit its variant; verify both embeds update. Double-click
    an embed and confirm that it opens the source block for editing.
 8. Export the drawing as SVG in light and dark mode; check embedded screens.
 9. Remove the frontmatter, reload, and check the expected border change.

@@ -14,8 +14,7 @@
   color: var(--text-error);
   font-size: var(--font-ui-small);
 }
-.wiredown-warning,
-.wiredown-note {
+.wiredown-warning {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
