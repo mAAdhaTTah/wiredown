@@ -222,8 +222,8 @@ test("an overlay whose target is gone is left in place and reported", () => {
   ]);
   expect(byId(flow, hi)).toEqual(before);
   expect(lintFlow(flow, screens).map((f) => f.message)).toEqual([
-    "highlight #invite: ^home has no #invite any more",
-    "mark 3 #invite: ^home has no #invite any more",
+    'highlight #invite: ^home has no #invite any more; remove it with "wiredown flow remove <flow> F1#invite"',
+    'mark 3 #invite: ^home has no #invite any more; remove it with "wiredown flow remove <flow> F1#invite:3"',
   ]);
 });
 
@@ -241,7 +241,7 @@ test("an overlay whose frame is gone is reported and left alone", () => {
   expect(lintFlow(flow, screens)).toContainEqual({
     frame: "F1",
     element: hi,
-    message: "highlight #invite is on a frame that no longer exists",
+    message: `highlight #invite is on a frame that no longer exists; remove it with "wiredown flow remove <flow> ${hi}"`,
   });
 });
 
@@ -276,7 +276,10 @@ test("dangling arrows: a deleted node, and a hand-drawn arrow bound to nothing",
   // our arrow's node record lost while the binding still works
   (arrow.customData as { wiredown: { to: string } }).wiredown.to = "F9";
   expect(lintFlow(flow, screens)).toEqual([
-    { element: arrow.id, message: "arrow F1 -> F9: F9 no longer exists" },
+    {
+      element: arrow.id,
+      message: `arrow F1 -> F9: F9 no longer exists; remove it with "wiredown flow remove <flow> ${arrow.id}"`,
+    },
   ]);
   (arrow.customData as { wiredown: { to: string } }).wiredown.to = "F2";
   flow.elements.push(
@@ -366,7 +369,7 @@ test("overlays follow their frame's image by id; copies and other screens are re
   // a frame renamed by hand keeps its overlays (only its arrow's record is off)
   (f1.customData as { wiredown: { frame: string } }).wiredown.frame = "F7";
   expect(lintFlow(flow, screens).map((f) => f.message)).toEqual([
-    "arrow F1 -> F2: F1 no longer exists",
+    `arrow F1 -> F2: F1 no longer exists; remove it with "wiredown flow remove <flow> ${flow.elements.find((e) => e.type === "arrow")!.id}"`,
   ]);
   (f1.customData as { wiredown: { frame: string } }).wiredown.frame = "F1";
   // a pasted copy of F1 is a person's element; its overlays still belong to the original
@@ -387,12 +390,12 @@ test("overlays follow their frame's image by id; copies and other screens are re
     {
       frame: "F1",
       element: "copy0001",
-      message: `F1 is claimed by elements ${f1.id} and copy0001; delete the copy`,
+      message: `F1 is claimed by elements ${f1.id} and copy0001; remove the copy with "wiredown flow remove <flow> <id>"`,
     },
   ]);
   const before = serializeFlow(flow);
   expect(() => refreshFlow(flow, lookup({ home: grown, other }))).toThrow(
-    `F1 is claimed by elements ${f1.id} and copy0001; delete the copy`,
+    `F1 is claimed by elements ${f1.id} and copy0001; remove the copy with "wiredown flow remove <flow> <id>"`,
   );
   expect(serializeFlow(flow)).toBe(before);
   copy.isDeleted = true;
@@ -410,7 +413,7 @@ test("overlays follow their frame's image by id; copies and other screens are re
   expect(lintFlow(flow, screens).at(-1)).toEqual({
     frame: "F1",
     element: mark,
-    message: "mark 3 #invite is on a frame that no longer exists",
+    message: `mark 3 #invite is on a frame that no longer exists; remove it with "wiredown flow remove <flow> ${mark}"`,
   });
   expect(refreshFlow(flow, screens)).toContainEqual({
     frame: "F1",
@@ -493,8 +496,16 @@ test("a note whose frame or decision is gone is reported", () => {
   flowNodes(flow).find((n) => n.node === "D1")!.element.isDeleted = true;
   const notes = lintFlow(flow, screens).filter((f) => f.message.startsWith("note "));
   expect(notes).toEqual([
-    { frame: "F1", element: note.id, message: 'note "A note" is on a node that no longer exists' },
-    { frame: "D1", element: why, message: 'note "Why" is on a node that no longer exists' },
+    {
+      frame: "F1",
+      element: note.id,
+      message: `note "A note" is on a node that no longer exists; remove it with "wiredown flow remove <flow> ${note.id}"`,
+    },
+    {
+      frame: "D1",
+      element: why,
+      message: `note "Why" is on a node that no longer exists; remove it with "wiredown flow remove <flow> ${why}"`,
+    },
   ]);
 });
 

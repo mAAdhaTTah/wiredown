@@ -161,8 +161,10 @@ export function flowNodes(flow: Flow): FlowNode[] {
     return [];
   });
 }
+/** How a duplicate-name message ends; `<flow>` and `<id>` are for the reader to fill in. */
+export const REMOVE_COPY = 'remove the copy with "wiredown flow remove <flow> <id>"';
 const claimed = (name: string, ids: string[]) =>
-  `${name} is claimed by elements ${ids.join(" and ")}; delete the copy`;
+  `${name} is claimed by elements ${ids.join(" and ")}; ${REMOVE_COPY}`;
 /** Each name two live nodes claim (data without `id`, or edited by hand), and why it is refused. */
 export function claimedNames(flow: Flow) {
   const named = new Map<string, string[]>();
@@ -811,4 +813,236 @@ export function addMark(
   badge.boundElements = [{ type: "text", id: label.id }];
   flow.elements.push(badge, label);
   return badge.id;
+}
+
+/** One thing `removeFromFlow` removed, as its target named it. */
+export interface Removed {
+  kind: "frame" | "decision" | "arrow" | "highlight" | "mark" | "note" | "label";
+  /** The element the target named; for an arrow target, its first arrow. */
+  element: string;
+  /** Every element it marked deleted, `element` first. */
+  elements: string[];
+  /** The frame or decision, or the node an overlay, note or label is on. */
+  node?: string;
+  from?: string;
+  to?: string;
+  target?: string;
+  label?: string;
+  /** A node's notes, overlays and arrows of ours, removed with it; an arrow target's arrows. */
+  notes?: number;
+  overlays?: number;
+  arrows?: number;
+  /** Set when the target was one of two elements claiming `node`. */
+  copy?: true;
+  /** A copy whose label could not be told from the other claimant's: the label stays. */
+  labelLeft?: true;
+}
+/** An arrow a person drew whose end was bound to a removed element; that binding is now null. */
+export interface Unbound {
+  element: string;
+  /** The removed node's name, or the removed element's id. */
+  from: string;
+}
+
+const groupsOf = (e: ExcalidrawElementJson) =>
+  Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
+const bindingOf = (e: ExcalidrawElementJson, end: "startBinding" | "endBinding") =>
+  (e[end] as { elementId?: string } | null | undefined)?.elementId;
+const TARGETS =
+  "a node (F2, D1), an arrow (F1->F2), an overlay (F2#id, or F2#id:label for a mark), notes (F2:note, F2:note:2) or an element id";
+
+/**
+ * Removes each target and what belongs to it, as Excalidraw deletes: the
+ * elements are marked `isDeleted` and touched, never spliced out. A node
+ * takes its label or bound text, notes, overlays and our arrows bound to it;
+ * an arrow or mark takes its bound text. Arrows a person drew lose their
+ * binding to a removed element and are returned as `unbound`; live elements
+ * drop removed ids from `boundElements`. Elements without wiredown data are
+ * never removed. Every target is checked before anything changes, so an
+ * unknown target throws with the drawing untouched.
+ */
+export function removeFromFlow(
+  flow: Flow,
+  targets: string[],
+): { removed: Removed[]; unbound: Unbound[] } {
+  const live = flow.elements.filter((e) => !e.isDeleted);
+  const byId = new Map(live.map((e) => [e.id, e]));
+  /** `ids` with the text bound to them. */
+  const withText = (ids: string[]) => [
+    ...new Set([
+      ...ids,
+      ...live.filter((e) => ids.includes(String(e.containerId))).map((e) => e.id),
+    ]),
+  ];
+  const nodeOf = (e: ExcalidrawElementJson) =>
+    flowNodes(flow).find((n) => n.element.id === identity(e)?.anchor)?.node;
+
+  const removeNode = (n: FlowNode): Removed => {
+    const claimants = flowNodes(flow).filter((o) => o.node === n.node);
+    const others = new Set(
+      claimants
+        .filter((o) => o.element !== n.element)
+        .flatMap((o) => groupsOf(o.element).slice(0, 1)),
+    );
+    const group = groupsOf(n.element)[0];
+    // its label, notes and overlays; of two claimants (a pasted copy, which
+    // Excalidraw gives a new group), only those anchored to it or in its
+    // own group, never those in the other's
+    const parts = live.filter((e) => {
+      const d = identity(e);
+      // bound text comes with its container
+      if (!d || d.from || e.containerId || ["screen", "decision", "arrow"].includes(d.role))
+        return false;
+      const mine = d.anchor === n.element.id;
+      if (!mine && (d.frame ?? d.node) !== n.node) return false;
+      if (groupsOf(e).some((g) => others.has(g))) return false;
+      return claimants.length === 1 || mine || groupsOf(e).includes(group);
+    });
+    const arrows = live.filter(
+      (e) =>
+        identity(e)?.role === "arrow" &&
+        [bindingOf(e, "startBinding"), bindingOf(e, "endBinding")].includes(n.element.id),
+    );
+    const count = (...roles: string[]) =>
+      parts.filter((e) => roles.includes(identity(e)!.role)).length;
+    const copy = claimants.length > 1;
+    return {
+      kind: n.kind,
+      element: n.element.id,
+      elements: withText([n.element, ...parts, ...arrows].map((e) => e.id)),
+      node: n.node,
+      notes: count("note"),
+      overlays: count("highlight", "mark"),
+      arrows: arrows.length,
+      ...(copy ? { copy: true as const } : {}),
+      ...(copy && n.kind === "frame" && !count("label") ? { labelLeft: true as const } : {}),
+    };
+  };
+  const removeOne = (e: ExcalidrawElementJson): Removed => {
+    const d = identity(e)!;
+    const kind = d.role === "highlight" || d.role === "mark" || d.role === "note" ? d.role : null;
+    if (d.role === "arrow")
+      return { kind: "arrow", element: e.id, elements: withText([e.id]), from: d.from, to: d.to };
+    return {
+      kind: kind ?? "label",
+      element: e.id,
+      elements: withText([e.id]),
+      node: nodeOf(e) ?? d.frame ?? d.node ?? d.from,
+      ...(d.target ? { target: d.target } : {}),
+      ...(d.label !== undefined ? { label: d.label } : {}),
+    };
+  };
+  const plan = (target: string): Removed => {
+    const arrow = /^(.+)->(.+)$/.exec(target);
+    if (arrow) {
+      const [from, to] = [findNode(flow, arrow[1]), findNode(flow, arrow[2])];
+      const ours = live.filter(
+        (e) =>
+          identity(e)?.role === "arrow" &&
+          bindingOf(e, "startBinding") === from.element.id &&
+          bindingOf(e, "endBinding") === to.element.id,
+      );
+      if (!ours.length) {
+        const names = new Map(flowNodes(flow).map((n) => [n.element.id, n.node]));
+        const all = live.flatMap((e) => {
+          const [s, t] = [bindingOf(e, "startBinding"), bindingOf(e, "endBinding")];
+          return identity(e)?.role === "arrow" && names.has(s!) && names.has(t!)
+            ? [`${names.get(s!)}->${names.get(t!)}`]
+            : [];
+        });
+        throw new Error(`no arrow ${from.node}->${to.node} (arrows: ${all.join(", ") || "none"})`);
+      }
+      return {
+        kind: "arrow",
+        element: ours[0].id,
+        elements: withText(ours.map((e) => e.id)),
+        from: from.node,
+        to: to.node,
+        arrows: ours.length,
+      };
+    }
+    const overlay = /^([^#]+)#([^:]+)(?::(.+))?$/.exec(target);
+    if (overlay) {
+      const [, frame, name, label] = overlay;
+      const image = frameImage(flow, frame);
+      const all = live.filter((e) => {
+        const d = identity(e);
+        return (d?.role === "highlight" || d?.role === "mark") && d.anchor === image.id;
+      });
+      const found = all.find((e) => {
+        const d = identity(e)!;
+        return (
+          d.target === name && (label === undefined ? d.role === "highlight" : d.label === label)
+        );
+      });
+      if (!found) {
+        const list = all.map((e) => {
+          const d = identity(e)!;
+          return d.role === "mark" ? `${frame}#${d.target}:${d.label}` : `${frame}#${d.target}`;
+        });
+        const what = label === undefined ? `highlight on #${name}` : `mark ${label} on #${name}`;
+        throw new Error(`${frame} has no ${what} (overlays: ${list.join(", ") || "none"})`);
+      }
+      return { ...removeOne(found), node: frame };
+    }
+    const note = /^([^:]+):note(?::(\d+))?$/.exec(target);
+    if (note) {
+      const n = findNode(flow, note[1]);
+      const notes = live
+        .filter((e) => identity(e)?.role === "note" && identity(e)?.anchor === n.element.id)
+        .sort((a, b) => Number(a.y) - Number(b.y) || Number(a.x) - Number(b.x));
+      const at = note[2] === undefined ? undefined : Number(note[2]);
+      if (!notes.length || (at !== undefined && (at < 1 || at > notes.length)))
+        throw new Error(
+          `${n.node} has ${notes.length || "no"} note${notes.length === 1 ? "" : "s"}` +
+            (notes.length ? `; ${target} is not one of ${n.node}:note:1 to :${notes.length}` : ""),
+        );
+      const picked = at === undefined ? notes : [notes[at - 1]];
+      return {
+        kind: "note",
+        element: picked[0].id,
+        elements: picked.map((e) => e.id),
+        node: n.node,
+        notes: picked.length,
+      };
+    }
+    const named = /^[FD]\d+$/.test(target) && flowNodes(flow).some((n) => n.node === target);
+    if (named || (/^[FD]\d+$/.test(target) && !byId.has(target)))
+      return removeNode(findNode(flow, target));
+    const e = byId.get(target);
+    if (!e) throw new Error(`no element "${target}"; name ${TARGETS}`);
+    if (!identity(e))
+      throw new Error(
+        `element ${target} has no wiredown data, so a person drew it; flow remove only removes what flow commands made`,
+      );
+    const n = flowNodes(flow).find((n) => n.element.id === e.id);
+    return n ? removeNode(n) : removeOne(e);
+  };
+
+  const removed = targets.map(plan);
+  const gone = new Set(removed.flatMap((r) => r.elements));
+  const names = new Map(flowNodes(flow).map((n) => [n.element.id, n.node]));
+  for (const id of gone) {
+    const e = byId.get(id)!;
+    e.isDeleted = true;
+    touch(e);
+  }
+  const unbound: Unbound[] = [];
+  for (const e of live.filter((e) => !gone.has(e.id))) {
+    let changed = false;
+    for (const end of ["startBinding", "endBinding"] as const) {
+      const id = bindingOf(e, end);
+      if (id === undefined || !gone.has(id)) continue;
+      e[end] = null;
+      unbound.push({ element: e.id, from: names.get(id) ?? id });
+      changed = true;
+    }
+    const bound = e.boundElements as { id: string }[] | null | undefined;
+    if (Array.isArray(bound) && bound.some((b) => gone.has(b.id))) {
+      e.boundElements = bound.filter((b) => !gone.has(b.id));
+      changed = true;
+    }
+    if (changed) touch(e);
+  }
+  return { removed, unbound };
 }

@@ -15,15 +15,16 @@ import {
   newFlow,
   parseFlow,
   refreshFlow,
+  removeFromFlow,
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
-import type { Flow, FlowChange, ScreenRef, ScreenState } from "@wiredown/excalidraw";
-import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds";
-import { formatFindings, json, plural, readSource, unknownScreen, UsageError } from "./output";
-import type { Finding, Result } from "./output";
-import { NewerFlowError, parseEditableFlow } from "./read-flow";
-import { safeWrite } from "./safe-write";
+import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds.js";
+import type { Flow, FlowChange, Removed, ScreenRef, ScreenState } from "@wiredown/excalidraw";
+import { formatFindings, json, plural, readSource, unknownScreen, UsageError } from "./output.js";
+import type { Finding, Result } from "./output.js";
+import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
+import { safeWrite } from "./safe-write.js";
 
 export interface FlowOptions {
   screens?: string;
@@ -513,6 +514,57 @@ export async function editNodes(
     };
   }
 }
+function removedLine(r: Removed): string {
+  if (r.kind === "frame" || r.kind === "decision") {
+    const parts = [
+      r.kind,
+      ...(r.notes ? [plural(r.notes, "note")] : []),
+      ...(r.overlays ? [plural(r.overlays, "overlay")] : []),
+      ...(r.arrows ? [plural(r.arrows, "arrow")] : []),
+    ].join(", ");
+    return r.copy
+      ? `removed ${r.element}, one of the elements claiming ${r.node} (${parts})\n` +
+          (r.labelLeft
+            ? `left the labels of ${r.node}: the copy has no group of its own; remove its label by element id\n`
+            : "")
+      : `removed ${r.node} (${parts})\n`;
+  }
+  if (r.kind === "arrow")
+    return `removed ${r.arrows && r.arrows > 1 ? `${r.arrows} arrows` : "arrow"} ${r.from} -> ${r.to}\n`;
+  if (r.kind === "highlight") return `removed highlight ${r.node} #${r.target}\n`;
+  if (r.kind === "mark") return `removed mark ${r.node} #${r.target} ${r.label}\n`;
+  if (r.kind === "note")
+    return `removed ${r.notes && r.notes > 1 ? `${r.notes} notes` : `note ${r.element}`} on ${r.node}\n`;
+  return `removed label ${r.element}${r.node ? ` of ${r.node}` : ""}\n`;
+}
+/** flow remove: every target is checked first; the drawing is written once, or not at all. */
+export async function removeFlowItems(
+  file: string,
+  targets: string[],
+  options: FlowOptions = {},
+): Promise<Result> {
+  try {
+    const original = await readFile(file, "utf8");
+    const flow = parseFlow(original);
+    const { removed, unbound } = removeFromFlow(flow, targets);
+    await safeWrite(file, original, serializeFlow(flow));
+    return {
+      exitCode: 0,
+      stderr: "",
+      stdout: options.json
+        ? json({ flow: file, removed, unbound })
+        : removed.map(removedLine).join("") +
+          unbound.map((u) => `unbound a hand-drawn arrow ${u.element} from ${u.from}\n`).join(""),
+    };
+  } catch (error) {
+    const findings: Finding[] = [{ message: (error as Error).message }];
+    return {
+      exitCode: 1,
+      stdout: options.json ? json({ flow: file, removed: [], unbound: [], errors: findings }) : "",
+      stderr: options.json ? "" : formatFindings(file, findings, []),
+    };
+  }
+}
 const place = (options: FlowOptions) =>
   options.rightOf
     ? { rightOf: options.rightOf }
@@ -531,6 +583,7 @@ const ARITY: Record<string, [number, number, string]> = {
   connect: [2, 1, "a file, two nodes and an optional label"],
   note: [2, 0, "a file, a node and the note's text"],
   decision: [1, 0, "a file and the decision's text"],
+  remove: [1, Infinity, "a file and at least one thing to remove"],
 };
 
 export function flowCommand(
@@ -564,6 +617,7 @@ export function flowCommand(
   if (command === "lint") return lintFlows([file, ...rest], options);
   if (command === "highlight" || command === "mark")
     return editOverlay(command, file, rest, options);
+  if (command === "remove") return removeFlowItems(file, rest, options);
   if (command === "connect" || command === "note" || command === "decision")
     return editNodes(command, file, rest, options);
   return editFlow(command, file, rest, options);
