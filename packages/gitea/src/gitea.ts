@@ -1,17 +1,14 @@
 // What wiredown reads from a Gitea page. Every assumption about Gitea's HTML
 // and URLs is here; `pnpm test:gitea` checks them on Gitea 28.4.0:
 // - A fenced block renders as `pre > code.language-<lang>`, possibly inside
-//   a `.code-block-container` (from the round-2 page script prototype).
+//   a `.code-block-container`.
 // - A `^id` line after a block renders as the next element, a paragraph
-//   whose whole text is `^id` (same prototype).
-// - Each rendered Markdown document (a file view, a comment, a comment's
-//   preview) is a `.markup` element.
+//   whose whole text is `^id`.
 // - The theme is named on `<html data-theme>`; names containing "dark" are
-//   dark, names containing "auto" follow the OS (same prototype).
+//   dark, names containing "auto" follow the OS.
 // - A file view is `.../src/{branch|tag|commit}/<ref>/<path>` and its raw
 //   text is the same URL with `/raw/` for `/src/`; rendered Markdown in a
-//   file view is in `.file-view.markup` (not from a prototype: the Excalidraw
-//   prototype had no Gitea page integration).
+//   file view is in `.file-view.markup`.
 // - The repository's raw-content root, which bounds the search for a flow's
 //   screens files, is `.../raw/{branch|tag|commit}/<ref>/`. A ref containing
 //   `/` cannot be told from the path after it, so the root is taken at the

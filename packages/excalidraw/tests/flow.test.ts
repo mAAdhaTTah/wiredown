@@ -288,7 +288,7 @@ describe("serializeFlow after a change", () => {
 });
 
 describe("newFlow", () => {
-  it("writes the prototype's header and an empty drawing", () => {
+  it("writes the Excalidraw Markdown header and an empty drawing", () => {
     const text = serializeFlow(newFlow());
     expect(text.slice(0, text.indexOf("# Excalidraw Data"))).toBe(
       FIXTURE.slice(0, FIXTURE.indexOf("# Excalidraw Data")),

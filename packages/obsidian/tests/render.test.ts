@@ -25,7 +25,7 @@ it("exports core elements into the required container", async () => {
   expect(el.querySelector('.wiredown-block[data-renderer="excalidraw"] svg')).not.toBeNull();
   expect(ea.destroy).toHaveBeenCalledOnce();
 });
-it("follows prototype dark-note logic: light export", async () => {
+it("exports light for a dark note", async () => {
   const { el, ea, api } = setup();
   await renderBlock(el, source, fence(source), api, "dark");
   expect(el.querySelector<HTMLElement>(".wiredown-block")?.dataset.theme).toBeUndefined();
