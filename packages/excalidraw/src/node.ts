@@ -3,12 +3,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { layoutScreen } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
-import { screenElements } from "./elements";
-import type { ExcalidrawElementJson, ScreenElements } from "./elements";
-import type { Flow } from "./flow";
-import { embedSize } from "./flow-edit";
-import type { ScreenRef } from "./flow-refresh";
-import { sceneOf } from "./scene";
+import { screenElements } from "./elements.js";
+import type { ExcalidrawElementJson, ScreenElements } from "./elements.js";
+import { FLOW_MARGIN, flowScene, svgSize } from "./flow-render.js";
+import type { Flow } from "./flow.js";
+import type { ScreenRef } from "./flow-refresh.js";
+import type { Flow } from "./flow.js";
+import { sceneOf } from "./scene.js";
+
+export { FLOW_MARGIN };
 
 export interface SvgOptions {
   theme?: "light" | "dark";
@@ -77,9 +80,6 @@ export async function renderSvg(
   return exportSvg(sceneOf(elements), options);
 }
 
-/** Space around a whole flow, so labels at its edge aren't cut. A screen pads itself. */
-export const FLOW_MARGIN = 16;
-
 async function exportSvg(
   data: {
     elements: ExcalidrawElementJson[];
@@ -142,59 +142,15 @@ export async function renderFlowSvg(
   /** The screen images this export generated, for `svgToPng`'s `inline`. */
   inline: ReadonlySet<string>;
 }> {
-  const files: Record<string, unknown> = {};
-  const rejected: { id: string; reason: string }[] = [];
-  for (const [id, file] of Object.entries(flow.files)) {
-    const dataURL =
-      file && typeof file === "object" && "dataURL" in file ? file.dataURL : undefined;
-    if (typeof dataURL !== "string") {
-      rejected.push({ id, reason: "missing or non-string dataURL" });
-    } else if (options.raster && /^data:image\/svg\+xml[;,]/i.test(dataURL)) {
-      rejected.push({ id, reason: "SVG images are not drawn in PNG output" });
-    } else if (!/^data:image\/(png|jpeg|gif|webp|svg\+xml)(?:;[^,]*)?,/i.test(dataURL)) {
-      rejected.push({ id, reason: "expected an inline PNG, JPEG, GIF, WebP or SVG data URL" });
-    } else files[id] = file;
-  }
-  const cache = new Map<string, string | undefined>();
-  const inline = new Set<string>();
-  const missing: ({ element: string } & ScreenRef)[] = [];
-  const elements: ExcalidrawElementJson[] = [];
-  for (const element of flow.elements) {
-    const fileId = String(element.fileId);
-    const embed = flow.embeds.get(fileId);
-    const blockId = embed?.blockId;
-    if (element.isDeleted || element.type !== "image" || !embed || !blockId) {
-      elements.push(element);
-      continue;
-    }
-    // one screen per embed path and block id: same-named blocks in two files differ
-    const key = `${embed.path}#^${blockId}`;
-    if (!cache.has(key)) {
-      const screen = screens({ path: embed.path, blockId });
-      if (!screen) cache.set(key, undefined);
-      else {
-        // The outer dark export filters SVG images; avoid double inversion.
-        const svg = await renderSvg(screen, { ...options, theme: "light" });
-        const size = svgSize(svg);
-        const padded = embedSize(size.width, size.height).image;
-        const x = (padded.width - size.width) / 2;
-        // This replacement relies on the exporter output starting with "<svg ".
-        const image = `<svg xmlns="http://www.w3.org/2000/svg" width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}">${svg.replace("<svg ", `<svg x="${x}" y="0" `)}</svg>`;
-        cache.set(key, "data:image/svg+xml;base64," + Buffer.from(image).toString("base64"));
-      }
-    }
-    const dataURL = cache.get(key);
-    if (dataURL) {
-      inline.add(dataURL);
-      files[fileId] = { id: fileId, mimeType: "image/svg+xml", dataURL, created: 1 };
-      elements.push({ ...element, status: "saved" });
-    } else {
-      delete files[fileId];
-      missing.push({ element: element.id, path: embed.path, blockId });
-      elements.push(element);
-    }
-  }
-  const svg = await exportSvg({ elements, appState: flow.appState, files }, options, FLOW_MARGIN);
+  const { missing, rejected, inline, ...scene } = await flowScene(
+    flow,
+    async (embed) => {
+      const screen = screens(embed);
+      return screen && renderSvg(screen, { ...options, theme: "light" });
+    },
+    { raster: options.raster },
+  );
+  const svg = await exportSvg(scene, options, FLOW_MARGIN);
   return { svg, ...svgSize(svg), missing, rejected, inline };
 }
 
@@ -322,11 +278,4 @@ function inlineSvgImages(svg: string, trusted: ReadonlySet<string>): string {
       return `<symbol id="${id}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">${inner}</symbol>`;
     },
   );
-}
-
-function svgSize(svg: string): { width: number; height: number } {
-  return {
-    width: Number(/<svg[^>]* width="([^"]+)"/.exec(svg)![1]),
-    height: Number(/<svg[^>]* height="([^"]+)"/.exec(svg)![1]),
-  };
 }

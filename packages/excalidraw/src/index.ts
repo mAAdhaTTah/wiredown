@@ -35,7 +35,9 @@ export type {
   ScreenRef,
   ScreenState,
   Size,
-} from "./flow-refresh";
+} from "./flow-refresh.js";
+export { FLOW_MARGIN, flowScene, paddedScreenSvg, svgDataUrl, svgSize } from "./flow-render.js";
+export type { FlowScene } from "./flow-render.js";
 export {
   embedCandidates,
   embedNotFound,
