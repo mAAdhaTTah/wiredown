@@ -221,11 +221,44 @@ describe("local files linked from a drawing's SVG images", { timeout: 30000 }, (
       redPixels((await svgToPng(rendered.svg, { inline: rendered.inline })).png),
     ).toBeGreaterThan(100);
     // an SVG labelled as PNG is decoded as a PNG, which it is not
-    const labelled = await renderFlowSvg(
-      flowWith(`data:image/png;base64,${b64(probes.feImage)}`),
-      () => undefined,
-      { raster: true },
-    );
-    expect(redPixels((await svgToPng(labelled.svg, { inline: labelled.inline })).png)).toBe(0);
+    for (const mime of ["image/png", "image/jpeg", "image/gif", "image/webp"]) {
+      const labelled = await renderFlowSvg(
+        flowWith(`data:${mime};base64,${b64(probes.feImage)}`),
+        () => undefined,
+        { raster: true },
+      );
+      expect(redPixels((await svgToPng(labelled.svg, { inline: labelled.inline })).png)).toBe(0);
+    }
   });
+});
+
+it("renders literal data URLs in flow text", async () => {
+  const flow = newFlow();
+  addScreen(flow, {
+    screenId: "s",
+    title: "data:text/plain;base64,AAAA",
+    path: "screens",
+    size: screen,
+  });
+  const rendered = await renderFlowSvg(flow, () => screen.elements, { raster: true });
+  expect(rendered.svg).toContain("data:text/plain;base64,AAAA");
+  const result = await svgToPng(rendered.svg, { inline: rendered.inline });
+  expect(result.png.length).toBeGreaterThan(0);
+});
+
+it("refuses out-of-range character references with the normal error", async () => {
+  await expect(
+    svgToPng('<svg xmlns="http://www.w3.org/2000/svg"><image href="&#99999999;"/></svg>'),
+  ).rejects.toThrow("svgToPng: refusing an SVG image that is not one of the trusted screens");
+});
+
+it.each([
+  "<style>.x { fill: url(data:text/plain;base64,AAAA); }</style>",
+  '<rect style="fill: url(DATA:IMAGE/SVG+XML;base64,AAAA)"/>',
+  '<image href="&#100;ata:image/svg+xml;base64,AAAA"/>',
+  '<!DOCTYPE svg [<!ENTITY link "data:image/svg+xml;base64,AAAA">]>',
+])("refuses untrusted data URLs in markup and CSS: %s", async (content) => {
+  await expect(
+    svgToPng(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">${content}</svg>`),
+  ).rejects.toThrow("svgToPng: refusing an SVG image that is not one of the trusted screens");
 });
