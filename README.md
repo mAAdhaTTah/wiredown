@@ -53,4 +53,12 @@ The design and syntax proposal live in `docs/prds/initial-implementation/`.
 Wiredown's core (`packages/core`) is forked from
 [Sketchdown](https://github.com/magnushaggren/sketchdown) at commit `e790382`,
 by Magnus Haggren. Wiredown is MIT licensed; the upstream copyright notice
-is preserved in [packages/core/LICENSE](packages/core/LICENSE).
+is preserved in [LICENSE](LICENSE).
+
+## Agent skill
+
+[skills/wiredown](skills/wiredown/SKILL.md) guides agents writing screens and
+flows. Copy or symlink `skills/wiredown` into your agent's skills directory;
+the `wiredown` CLI must be on PATH. The directory is self-contained at use
+time. After building, run `pnpm skill` to regenerate its catalog reference.
+Tests fail if the committed reference is out of date.
