@@ -95,16 +95,34 @@ describe.skipIf(!hasBaseline)("the old arm (baseline parser)", () => {
     );
   });
 
-  it("reports block-level problems like checkScreens", () => {
-    const file =
-      screen("a", ["text: A"]) + screen("a", ["text: B"]) + "```wiredown\ntext: C\n```\n";
-    const report = arms.old.check(file);
-    expect(report.errors).toEqual([{ line: 10, message: 'duplicate block id "a"', screen: "a" }]);
-    expect(report.warnings).toEqual([
-      { line: 15, message: "screen has no ^id; it can't be embedded in a flow" },
-    ]);
-    expect(arms.old.check("```wiredown\ntext: x\n").errors).toEqual([
-      { line: 1, message: "unclosed code fence" },
+  // Blocks valid in both syntaxes, so file-level problems are the only findings.
+  const ok = (id: string | null, text = "text: A") =>
+    ["## S", "", "```wiredown", text, "```", "", ...(id === null ? [] : [id]), ""].join("\n");
+  const unclosed = "```wiredown\ntext: C\n";
+  const parity: [string, string][] = [
+    ["no id", ok("^a") + ok(null)],
+    ["invalid id", ok("^a") + ok("^not valid!")],
+    ["duplicate ids", ok("^a") + ok("^b") + ok("^a")],
+    ["unclosed fence after valid blocks", ok("^a") + ok("^b") + unclosed],
+    ["duplicate ids, then an unclosed fence", ok("^a") + ok("^a") + unclosed],
+    [
+      "no id, invalid and duplicate ids, unclosed",
+      ok(null) + ok("^x y") + ok("^a") + ok("^a") + unclosed,
+    ],
+    ["a variant of a duplicated id", ok("^a") + ok("^a", "text: B") + ok("^v", "extends: a")],
+  ];
+
+  it.for(parity)("reports file-level problems exactly as the new arm: %s", ([, file]) => {
+    const neu = arms.new.check(file);
+    expect(neu.errors.length + neu.warnings.length).toBeGreaterThan(0);
+    expect(arms.old.check(file)).toEqual(neu);
+  });
+
+  it("keeps the findings of complete blocks before an unclosed fence", () => {
+    const report = arms.old.check(ok("^a") + ok("^a") + unclosed);
+    expect(report.errors.map((e) => [e.line, e.message])).toEqual([
+      [15, "unclosed code fence"],
+      [14, 'duplicate block id "a"; first used on line 7'],
     ]);
   });
 
