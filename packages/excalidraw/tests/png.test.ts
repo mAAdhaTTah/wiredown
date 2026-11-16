@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { layoutScreen, parse } from "@wiredown/core";
 import { addScreen, embedSize, newFlow, screenElements } from "../src/index.js";
-import { BACKGROUND, renderFlowSvg, renderSvg, svgToPng } from "../src/node.js";
+import { BACKGROUND, FLOW_MARGIN, renderFlowSvg, renderSvg, svgToPng } from "../src/node.js";
 import { decodePng } from "./png.js";
 
 const proposal = readFileSync(
@@ -72,7 +72,7 @@ describe("svgToPng", { timeout: 30000 }, () => {
     let worst = 0;
     for (let y = 0; y < alone.height; y++)
       for (let x = 0; x < alone.width; x++) {
-        const [a, b] = [whole.pixel(x + pad, y), alone.pixel(x, y)];
+        const [a, b] = [whole.pixel(x + pad + FLOW_MARGIN, y + FLOW_MARGIN), alone.pixel(x, y)];
         for (let c = 0; c < 4; c++) worst = Math.max(worst, Math.abs(a[c] - b[c]));
       }
     expect(worst).toBeLessThanOrEqual(2);
