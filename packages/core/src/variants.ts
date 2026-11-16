@@ -59,15 +59,10 @@ function index(tree: SpecNode): Map<string, { parent: SpecNode; node: SpecNode }
   return ids;
 }
 
-/** Errors for ids used twice and for directives outside a variant block. */
+/** Errors for directives outside a variant block. */
 function check(tree: SpecNode, errors: ParseError[], variant: boolean): void {
-  const seen = new Set<string>();
   walk(tree, (node) => {
     const line = node.line ?? 0;
-    if (node.id) {
-      if (seen.has(node.id)) errors.push({ line, message: `the id "${node.id}" is used twice` });
-      seen.add(node.id);
-    }
     if (!variant && DIRECTIVES.has(node.type)) {
       errors.push({
         line,
@@ -235,6 +230,20 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
       }
     }
   }
+  // Replacements have already removed the old node; only actual collisions remain.
+  if (!errors.length) {
+    const seen = new Map<string, number>();
+    walk(out, (node) => {
+      if (!node.id) return;
+      const first = seen.get(node.id);
+      if (first !== undefined) {
+        errors.push({
+          line: node.line ?? 0,
+          message: `the id "${node.id}" is used twice; first used on line ${first}`,
+        });
+      } else seen.set(node.id, node.line ?? 0);
+    });
+  }
   return { tree: out, errors };
 }
 
@@ -246,12 +255,19 @@ export function resolve(source: string, options: ResolveOptions = {}): ParseResu
 // ---------- back to text ----------
 function line(node: SpecNode): string {
   const opts = Object.entries(node.opts).map(([k, v]) => (v === 1 ? k : `${k}=${v}`));
-  if (node.id) opts.push(`id=${node.id}`);
+  const shorthand = node.id && /^[a-z][a-z0-9-]*$/.test(node.id) ? `#${node.id}` : "";
+  if (node.id && !shorthand) opts.push(`id=${node.id}`);
   if (node.type === "field" && node.children[0]) {
     const inner = node.children[0];
     return `field: ${node.text} | ${line({ ...inner, id: node.id, opts: { ...inner.opts, ...node.opts } })}`;
   }
-  const text = [node.text, opts.length ? `(${opts.join(", ")})` : ""].filter(Boolean).join(" ");
+  const text = [
+    node.text.replace(/#/g, "\\#"),
+    shorthand,
+    opts.length ? `(${opts.join(", ")})` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return text ? `${node.type}: ${text}` : node.type;
 }
 

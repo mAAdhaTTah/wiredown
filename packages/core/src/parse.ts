@@ -191,13 +191,27 @@ export function parseOptions(s: string): {
   const opts: Record<string, number> = {};
   let id: string | undefined;
   const skipped: string[] = [];
+  const finish = (rest: string) => {
+    const shorthand = /(?:^|\s)#([a-z][a-z0-9-]*)$/.exec(rest);
+    if (shorthand) {
+      if (id) skipped.push("use either #id or (id=...), not both");
+      else id = shorthand[1];
+      rest = rest.slice(0, shorthand.index).trimEnd();
+    }
+    return {
+      rest: rest.replace(/\\#/g, "#"),
+      opts,
+      ...(id ? { id } : {}),
+      ...(skipped.length ? { skipped } : {}),
+    };
+  };
   const m = s.match(/\(([^()]*)\)\s*$/);
-  if (!m || m.index === undefined) return { rest: s.trim(), opts };
+  if (!m || m.index === undefined) return finish(s.trim());
   const entries = m[1].split(",").map((t) => t.trim());
   if (!m[1].includes("=") && !entries.every((e) => FLAGS.has(e.toLowerCase()))) {
     // "(disbled)": every entry is a flag or one letter off, so it was meant as options
     const meant = entries.every((e) => FLAGS.has(e.toLowerCase()) || nearest(e, FLAGS));
-    if (!meant) return { rest: s.trim(), opts };
+    if (!meant) return finish(s.trim());
   }
   entries.forEach((entry) => {
     if (FLAGS.has(entry.toLowerCase())) {
@@ -214,12 +228,7 @@ export function parseOptions(s: string): {
       skipped.push(`unknown option "${entry}"${flag ? `; did you mean "${flag}"?` : ""}`);
     } else skipped.push(`option "${entry}" needs a number, as in "${k}=200"`);
   });
-  return {
-    rest: s.slice(0, m.index).trim(),
-    opts,
-    ...(id ? { id } : {}),
-    ...(skipped.length ? { skipped } : {}),
-  };
+  return finish(s.slice(0, m.index).trim());
 }
 
 /** Options of a field's component that also apply to the field itself. */
@@ -260,7 +269,9 @@ export function parse(source: string): ParseResult {
       const indent = (raw.match(/^[ \t]*/) ?? [""])[0].replace(/\t/g, "    ").length;
       const s = raw.trim();
       // "keyword: content", or a bare keyword optionally followed by options
-      const m = s.match(/^([a-zA-Z][a-zA-Z0-9]*)\s*(?::\s*(.*)|(\([^()]*\)))?$/);
+      const m = s.match(
+        /^([a-zA-Z][a-zA-Z0-9]*)\s*(?::\s*(.*)|((?:(?<=\s)#[a-z][a-z0-9-]*(?:\s+\([^()]*\))?|\([^()]*\))))?$/,
+      );
       const type = m ? KEYWORDS.get(m[1].toLowerCase()) : undefined;
       const hasColon = /^[a-zA-Z][a-zA-Z0-9]*\s*:/.test(s);
       const bareOpts = m?.[3] ? parseOptions(m[3]) : null;
@@ -352,5 +363,19 @@ export function parse(source: string): ParseResult {
         errors.push({ line: i + 1, message: notUnderstood(s, m?.[1], type) });
       }
     });
+  const seen = new Map<string, number>();
+  const checkIds = (node: SpecNode) => {
+    if (node.id) {
+      const first = seen.get(node.id);
+      if (first !== undefined) {
+        errors.push({
+          line: node.line ?? 0,
+          message: `the id "${node.id}" is used twice; first used on line ${first}`,
+        });
+      } else seen.set(node.id, node.line ?? 0);
+    }
+    node.children.forEach(checkIds);
+  };
+  checkIds(root);
   return { tree: root, errors };
 }
