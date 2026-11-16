@@ -128,7 +128,7 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
     const loaded = screens.file(m.path);
     if (typeof loaded === "string") {
       const what = frame ? "embeds" : "an image embeds";
-      errors.push({ ...at, message: `${what} [[${m.path}#^${m.blockId}]], but ${loaded}` });
+      errors.push({ ...at, message: `${what} [[${m.path}#^${m.blockId}]], ${loaded}` });
     } else
       for (const finding of loaded.screen(m.blockId).errors)
         errors.push({
