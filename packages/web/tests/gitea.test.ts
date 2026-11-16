@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import { gitea, rawRoot, rawUrl } from "../src/gitea";
 import { DONE } from "../src/host";
 
-// The fixtures' structure is assumed from the prototypes, not captured from a live Gitea.
+// The fixtures model assumed HTML structure, not a captured live Gitea page.
 export function page(fixture: string, url: string, dark = false): Document {
   const window = new Window({ url });
   window.matchMedia = ((query: string) => ({

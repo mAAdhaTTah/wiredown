@@ -66,3 +66,13 @@ time. After building, run `pnpm skill` to regenerate its syntax reference:
 the component sections come from core's catalog, and the grammar, escapes
 and variants text is written in `scripts/skill.mjs`, where tests check its
 examples. Tests fail if the committed reference is out of date.
+
+Run `pnpm metrics` to regenerate Excalifont advance widths from the installed
+`@excalidraw/utils` font. After building, run
+`node packages/core/scripts/check-metrics.mjs` with Playwright Chromium
+installed to check sample canvas widths. Kerning retains browser-measured
+ASCII pairs; the generator does not regenerate those measurements.
+
+The Excalidraw main entry has only browser-safe dependencies. Its Node-only
+packages are optional peers, installed by the CLI and as adapter development
+dependencies. Consumers of `@wiredown/excalidraw/node` must install them.

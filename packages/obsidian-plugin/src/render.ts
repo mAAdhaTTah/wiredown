@@ -2,7 +2,7 @@ import { check, checkScreens, extendsId, formatError, layoutScreen } from "@wire
 import type { Screen } from "@wiredown/core";
 import { screenElements } from "@wiredown/excalidraw";
 
-/** API subset verified by the prototype against Excalidraw plugin 2.29.0. */
+/** API subset supported by Excalidraw plugin 2.29.0. */
 export interface Automate {
   copyViewElementsToEAforEditing(elements: readonly unknown[]): void;
   createSVG(
@@ -58,7 +58,7 @@ export function showError(el: HTMLElement, source: string, messages: string[]): 
 /** Starts before vault/API waits too, so embeds see activity throughout export. */
 export function keepBusy(el: HTMLElement): () => void {
   // Excalidraw snapshots after 250 ms + 150 ms of DOM stillness, capped at
-  // 2 s. Mutate every 60 ms until export finishes (prototype mechanism).
+  // 2 s. Mutate every 60 ms until export finishes.
   const timer = window.setInterval(() => {
     el.dataset.wiredownBusy = String(Date.now());
   }, 60);

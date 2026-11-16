@@ -202,7 +202,7 @@ export function serializeFlow(flow: Flow): string {
   return head + data + drawing.open.replace("compressed-json", "json") + body + drawing.close;
 }
 
-/** An empty drawing, written as the prototype writes one. */
+/** An empty drawing with the Excalidraw Markdown header. */
 export function newFlow(): Flow {
   const scene = {
     type: "excalidraw",
