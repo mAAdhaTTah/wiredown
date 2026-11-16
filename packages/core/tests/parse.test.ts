@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatError, parse, parseOptions } from "../src/index";
-import type { SpecNode } from "../src/index";
+import { formatError, parse, parseOptions } from "../src/parse.js";
+import type { SpecNode } from "../src/types.js";
 
 // One block per rule in docs/SYNTAX.md.
 

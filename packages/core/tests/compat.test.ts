@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { parse } from "../src/index";
-import { VALID_SPECS } from "./fixtures/specs";
-import { prototype } from "./helpers/prototype";
+import { parse } from "../src/parse.js";
+import { VALID_SPECS } from "./fixtures/specs.js";
+import { prototype } from "./helpers/prototype.js";
 
 // Backwards compatibility: sources written for the v2 prototype are stored in
 // existing drawings and must keep parsing cleanly.

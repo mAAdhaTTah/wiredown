@@ -1,10 +1,33 @@
+import { checkScreensInternal } from "../src/internal.js";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkScreens, layoutScreen, parseScreens } from "../src/index";
+import { checkScreens, parseScreens } from "../src/screens.js";
+import { layoutScreen } from "../src/screen.js";
 
 const block = (source: string, id = "base") => `\`\`\`wiredown\n${source}\n\`\`\`\n^${id}`;
 
 describe("screens documents", () => {
+  it("checks each block with an injected block checker, keeping file-level findings", () => {
+    const seen: string[] = [];
+    const md =
+      block("text: A", "a") + "\n\n" + block("text: B", "a") + "\n\n```wiredown\ntext: C\n";
+    const result = checkScreensInternal(md, (source, options) => {
+      seen.push(`${source} ${options.known?.().join(",")}`);
+      return {
+        tree: { type: "root", text: "", opts: {}, body: [], children: [] },
+        errors: [{ line: 1, message: "bad" }],
+        warnings: [],
+      };
+    });
+    expect(seen).toEqual(["text: A a", "text: B a"]);
+    expect(result.errors.map((e) => [e.line, e.message])).toEqual([
+      [11, "unclosed code fence"],
+      [9, 'duplicate block id "a"; first used on line 4'],
+      [2, "bad"],
+      [7, "bad"],
+    ]);
+  });
+
   it("resolves the syntax proposal's running example across blocks", () => {
     const md = readFileSync(new URL("./fixtures/screens.md", import.meta.url), "utf8");
     const result = checkScreens(md);
