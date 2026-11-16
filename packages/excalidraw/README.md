@@ -118,14 +118,20 @@ share a new Excalidraw group, recorded as `group` in the image's
 (`DATA_VERSION`, now 1); data without `v` is version 1, and data with a
 higher `v` is ignored.
 
-An embed's path names its screens file, searched for only within a root
-`{ url, vault }`: the vault root, else the repository root, else the parent
-of the flow's directory (on a forge, the repository's raw-content root).
-`embedPathFor(screensUrl, root)` is the path to write: from the vault root
-inside a vault, else the bare name; undefined for a file outside the root.
-`resolveEmbedPath(flowUrl, embedPath, exists, root)` is the one rule readers
-use to find the file: it tries `embedCandidates(...)` in order and returns
-`{ url }` for the first that `exists` (a file check in Node, a fetch in the
-browser), `{ outside: true }` for a path that is absolute, has a `..`
-segment or normalises outside the root, or undefined. Locations are URLs,
-`file:` ones in Node.
+An embed's path names its screens file within a root, a directory URL
+ending in `/`: the git repository's root, else the Obsidian vault's, else
+the folder above the nearest `flows/` folder, else the parent of the flow's
+directory (on a forge, the repository's raw-content root). Locations are
+URLs, `file:` ones in Node. `embedPathFor(screensUrl, root)` is the path to
+write, the file's path from the root without `.md`, such as
+`docs/checkout/screens`; undefined for a file outside the root.
+`embedCandidates(flowUrl, embedPath, root)` lists where the file may be:
+for `./x` or `../x` only that file from the flow's directory; otherwise the
+path from the root first, then the path from the flow's directory and each
+one above it, nearest first. It is undefined for a path that is absolute,
+has a `..` segment without starting `./` or `../`, or normalises outside the
+root. `resolveEmbedPath(flowUrl, embedPath, exists, root)` returns `{ url }`
+for the first candidate that `exists` (a fetch in the browser),
+`{ outside: true }`, or undefined. The CLI, which can list the root, instead
+matches a path not found from the root against the end of every `.md`
+file's path and refuses more than one match.

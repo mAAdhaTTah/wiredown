@@ -104,28 +104,32 @@ relative to the current image position. Default placement is right of the
 rightmost frame. Titles default to the screen heading, then its id.
 
 Each frame embeds its screen as `[[<path>#^<id>|WxH]]`, and that path says
-which screens file the frame uses. Inside an Obsidian vault (a directory
-holding `.obsidian/`, at or above the flow) the path is the screens file's
-path from the vault root without `.md`, such as `specs/invites/screens`;
-outside one it is the bare name, such as `screens`. Every search stays
-within the flow's root: the nearest directory at or above the flow holding
-`.obsidian/` (the vault root), else the nearest holding `.git`, else the
-parent of the flow's directory. Readers resolve the path from the flow file:
-a path with a `/` from the vault root (outside a vault, from the flow's
-directory and each one above it up to the root, nearest first); a bare name
-as `<name>.md` in the parent of the flow's directory, then the flow's
-directory, then each directory further up to the root. A path that is
-absolute, has a `..` segment, or leads outside the root (a symlink
-included) is rejected: `embeds [[../outside#^members]], which points
-outside <root>`. One flow can embed screens from several files.
+which screens file the frame uses. The path written is the screens file's
+path from the flow's root without `.md`, such as `docs/checkout/screens`.
+The root is the git repository's root (the nearest directory at or above
+the flow holding `.git`), else the Obsidian vault's (holding `.obsidian/`),
+each looked for above the flow's path and then above its real path; else
+the folder above the nearest `flows/` folder holding the flow; else the
+parent of the flow's directory. Readers take:
 
-Without `--screens`, the screens file is `screens.md`, found by that same
-rule. A `--screens` file outside the root is an error (`the screens file
-<file> points outside <root>`), and so is one the written path would not
-lead back to (because a nearer file has its name, or it is not in or above
-the flow's directory): `the embed [[screens]] would lead from <dir> to
-<file>, not <file>`. Missing embed styling frontmatter is added; existing
-values are preserved. Invalid screens and unknown frames leave the drawing untouched.
+- `./x` and `../x` from the flow's directory;
+- any other path from the root, if that file exists;
+- else, as Obsidian does, the one `.md` file in the root whose path ends
+  with it (`screens`, `checkout/screens`), not searching `node_modules` or
+  folders starting with `.`. More than one is an error naming them
+  (`but it matches several files: a/screens.md, b/screens.md; …`).
+
+A path that is absolute, has a `..` segment without starting `./` or `../`,
+or leads outside the root (a symlink included) is rejected:
+`embeds [[../outside#^members]], which points outside <root>`. One flow can
+embed screens from several files.
+
+`--screens` takes any `.md` file inside the root; one outside it is an
+error (`the screens file <file> points outside <root>`). Without it, the
+screens file is the `screens.md` in the parent of the flow's directory,
+else in that directory, else in each directory further up to the root.
+Missing embed styling frontmatter is added; existing values are preserved.
+Invalid screens and unknown frames leave the drawing untouched.
 A frame's image and its `F3 · Title` label share an Excalidraw group, so
 they move together: clicking either selects both; double-click to select
 one. Human output is one `F3  team-members  548x333` line per frame. The size is

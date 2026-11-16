@@ -304,53 +304,101 @@ test("title falls back to id without a heading", async () => {
 const embedPaths = async (file: string) =>
   [...parseFlow(await readFile(file, "utf8")).embeds.values()].map((e) => e.path);
 
-test("the embed names the screens file it was made from", async () => {
+test.each(["git", "vault", "flows", "neither"])(
+  "the embed is the screens file's path from the root: %s",
+  async (kind) => {
+    const dir = await fixture({});
+    const flows = kind === "neither" ? "a/b/c" : "a/b/flows";
+    await mkdir(join(dir, flows), { recursive: true });
+    await writeFile(join(dir, "a/b/screens.md"), BASE);
+    await writeFile(join(dir, "a/ui.md"), BASE);
+    // git wins over a vault nearer the flow
+    if (kind === "git") await writeFile(join(dir, ".git"), "gitdir: elsewhere\n");
+    if (kind === "git" || kind === "vault") await mkdir(join(dir, "a/.obsidian"));
+    const from = kind === "git" ? "a/b/" : kind === "vault" ? "b/" : "";
+    const file = join(dir, flows, "x.excalidraw.md");
+    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    expect(await embedPaths(file)).toEqual([`${from}screens`]);
+    // --screens takes any .md file in the root, beside the flow or not
+    const ui = await run(["flow", "add-screen", file, "team", "--screens", join(dir, "a/ui.md")]);
+    if (kind === "flows" || kind === "neither") {
+      expect(ui.stderr).toContain(`the screens file ${join(dir, "a/ui.md")} points outside`);
+    } else {
+      expect(ui.exitCode).toBe(0);
+      expect(await embedPaths(file)).toEqual([`${from}screens`, `${from.slice(0, -2)}ui`]);
+    }
+  },
+);
+
+test("a flow folder linked into a repository: the repository is the root", async () => {
   const dir = await fixture({});
-  for (const spec of ["spec-a", "spec-b"]) {
-    await mkdir(join(dir, spec, "flows"), { recursive: true });
-    await writeFile(join(dir, spec, "screens.md"), BASE);
-  }
-  await writeFile(join(dir, "spec-a/ui.md"), BASE);
-  // no vault: the bare name, which resolves from the flow to the file used
-  const ui = join(dir, "spec-a/flows/ui.excalidraw.md");
-  const made = await run(["flow", "new", ui, "team", "--screens", join(dir, "spec-a/ui.md")]);
-  expect(made.exitCode).toBe(0);
-  expect(await embedPaths(ui)).toEqual(["ui"]);
-  for (const spec of ["spec-a", "spec-b"]) {
-    const file = join(dir, spec, "flows/a.excalidraw.md");
-    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
-    expect(await embedPaths(file)).toEqual(["screens"]);
-  }
-  // a vault: the path from its root, so same-named files can't be confused
-  await mkdir(join(dir, ".obsidian"));
-  for (const spec of ["spec-a", "spec-b"]) {
-    const file = join(dir, spec, "flows/v.excalidraw.md");
-    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
-    expect(await embedPaths(file)).toEqual([`${spec}/screens`]);
-  }
-  expect((await run(["flow", "add-screen", ui, "team", "--json"])).exitCode).toBe(0);
-  expect(await embedPaths(ui)).toEqual(["ui", "spec-a/screens"]);
+  const repo = join(dir, "repo");
+  await mkdir(join(repo, "spec/flows"), { recursive: true });
+  await writeFile(join(repo, ".git"), "gitdir: elsewhere\n");
+  await writeFile(join(repo, "spec/screens.md"), BASE);
+  await symlink(join(repo, "spec/flows"), join(dir, "linked"));
+  const file = join(dir, "linked/x.excalidraw.md");
+  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  expect(await embedPaths(file)).toEqual(["spec/screens"]);
+  // and from the repository's side of the link
+  const { embedRoot } = await import("../src/embeds.js");
+  expect(await embedRoot(join(repo, "spec/flows/x.excalidraw.md"))).toEqual(await embedRoot(file));
 });
 
-test("an embed that would lead a reader to another file is refused", async () => {
-  const dir = await fixture({ "screens.md": BASE });
-  await mkdir(join(dir, "flows"));
-  await mkdir(join(dir, "other"));
-  await writeFile(join(dir, "other/screens.md"), BASE);
-  const file = join(dir, "flows/a.excalidraw.md");
-  const result = await run([
-    "flow",
-    "new",
-    file,
-    "team",
-    "--screens",
-    join(dir, "other/screens.md"),
-  ]);
-  expect(result.exitCode).toBe(1);
-  expect(result.stderr).toContain(
-    `the embed [[screens]] would lead from ${join(dir, "flows")} to ${join(dir, "screens.md")}, not ${join(dir, "other/screens.md")}`,
-  );
+test("--screens must be a .md file inside the root", async () => {
+  const dir = await fixture({ "screens.md": BASE, "screens.txt": BASE });
+  await mkdir(join(dir, "repo/flows"), { recursive: true });
+  await writeFile(join(dir, "repo/.git"), "");
+  const file = join(dir, "repo/flows/a.excalidraw.md");
+  for (const [screens, error] of [
+    ["screens.md", `points outside ${join(dir, "repo")}`],
+    ["screens.txt", "is not a .md file"],
+  ]) {
+    const result = await run(["flow", "new", file, "team", "--screens", join(dir, screens)]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain(`the screens file ${join(dir, screens)} ${error}`);
+  }
   await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+test("reading an embed: ./ and ../, the path from the root, then a unique suffix", async () => {
+  const { embedRoot, resolveEmbed } = await import("../src/embeds.js");
+  const dir = await fixture({});
+  await writeFile(join(dir, ".git"), "");
+  for (const path of [
+    "screens.md",
+    "a/screens.md",
+    "a/checkout/screens.md",
+    "b/checkout/screens.md",
+    "a/flows/ui.md",
+    "node_modules/x/ui.md",
+    ".hidden/ui.md",
+  ]) {
+    await mkdir(join(dir, path, ".."), { recursive: true });
+    await writeFile(join(dir, path), BASE);
+  }
+  const flow = join(dir, "a/flows/x.excalidraw.md");
+  const root = await embedRoot(flow);
+  const read = async (path: string) => {
+    const found = await resolveEmbed(flow, path, root);
+    return "path" in found ? [found.path.slice(dir.length + 1), found.embedPath] : found.why;
+  };
+  expect(await read("../screens")).toEqual(["a/screens.md", "a/screens"]);
+  expect(await read("./ui.md")).toEqual(["a/flows/ui.md", "a/flows/ui"]);
+  expect(await read("./screens")).toBe(
+    `but no ./screens.md was found from ${join(dir, "a/flows")}`,
+  );
+  expect(await read("../../../outside")).toBe(`which points outside ${dir}`);
+  // the path from the root wins over the files it is a suffix of
+  expect(await read("screens")).toEqual(["screens.md", "screens"]);
+  expect(await read("a/checkout/screens")).toEqual(["a/checkout/screens.md", "a/checkout/screens"]);
+  // node_modules and dot folders are not searched
+  expect(await read("ui")).toEqual(["a/flows/ui.md", "a/flows/ui"]);
+  expect(await read("a/screens")).toEqual(["a/screens.md", "a/screens"]);
+  expect(await read("checkout/screens")).toBe(
+    `but it matches several files: a/checkout/screens.md, b/checkout/screens.md; name one by its path from ${dir}`,
+  );
+  expect(await read("nope")).toBe(`but no nope.md was found in ${dir}`);
 });
 
 test.each(["vault", "git", "neither"])(
@@ -380,7 +428,7 @@ test.each(["vault", "git", "neither"])(
     await rm(join(repo, "spec/screens.md"));
     await writeFile(join(repo, "spec/screens.md"), BASE);
     expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
-    expect(await embedPaths(file)).toEqual([kind === "vault" ? "spec/screens" : "screens"]);
+    expect(await embedPaths(file)).toEqual([kind === "neither" ? "screens" : "spec/screens"]);
   },
 );
 

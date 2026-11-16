@@ -1,10 +1,26 @@
 // Finding the screens file an embed names, in Node, by @wiredown/excalidraw's
-// rule (resolveEmbedPath), within the flow's root.
-import { realpath, stat } from "node:fs/promises";
-import { dirname, join, resolve, sep } from "node:path";
+// rule, within the flow's root. Unlike the browser, Node can list the root,
+// so a path that is not found from the root is matched against the end of
+// every Markdown file's path, and more than one match is an error.
+import { readdir, realpath, stat } from "node:fs/promises";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { embedNotFound, embedPathFor, resolveEmbedPath } from "@wiredown/excalidraw";
-import type { EmbedRoot } from "@wiredown/excalidraw";
+import {
+  embedCandidates,
+  embedNotFound,
+  embedPathFor,
+  isRelativeEmbed,
+} from "@wiredown/excalidraw";
+
+/**
+ * The root every embed search from a flow stays within (`url`, a directory
+ * URL), and the flow's URL beneath it: its symlinks followed when only that
+ * path has a repository or vault above it.
+ */
+export interface EmbedRoot {
+  url: string;
+  flow: string;
+}
 
 const dirUrl = (dir: string) => pathToFileURL(dir.endsWith(sep) ? dir : dir + sep).href;
 
@@ -17,17 +33,31 @@ async function nearest(dir: string, name: string, directory: boolean) {
   }
 }
 
+/** The git repository's root above `dir` (`.git` a file or directory), else the vault's. */
+async function repoOrVault(dir: string) {
+  return (await nearest(dir, ".git", false)) ?? (await nearest(dir, ".obsidian", true));
+}
+
 /**
- * The root every embed search from `file` stays within: the nearest
- * directory at or above the flow holding `.obsidian/` (a vault), else the
- * nearest holding `.git` (a file or directory), else the parent of the
- * flow's directory.
+ * The root of embed searches from `file`: the git repository's root, else
+ * the Obsidian vault's, each looked for above the flow's path and then above
+ * its real path; else the folder above the nearest `flows/` folder holding
+ * the flow; else the parent of the flow's directory.
  */
 export async function embedRoot(file: string): Promise<EmbedRoot> {
-  const dir = dirname(resolve(file));
-  const vault = await nearest(dir, ".obsidian", true);
-  if (vault) return { url: dirUrl(vault), vault: true };
-  return { url: dirUrl((await nearest(dir, ".git", false)) ?? dirname(dir)), vault: false };
+  const logical = resolve(file);
+  const found = await repoOrVault(dirname(logical));
+  if (found) return { url: dirUrl(found), flow: pathToFileURL(logical).href };
+  const realDir = await realpath(dirname(logical)).catch(() => undefined);
+  const real = realDir && (await repoOrVault(realDir));
+  if (real)
+    return { url: dirUrl(real), flow: pathToFileURL(join(realDir, basename(logical))).href };
+  let dir = dirname(logical);
+  while (basename(dir) !== "flows" && dirname(dir) !== dir) dir = dirname(dir);
+  return {
+    url: dirUrl(dirname(basename(dir) === "flows" ? dir : dirname(logical))),
+    flow: pathToFileURL(logical).href,
+  };
 }
 
 /** A root as a path for messages, without its trailing separator. */
@@ -39,58 +69,101 @@ async function inside(path: string, root: EmbedRoot) {
   return real === top || real.startsWith(top.endsWith(sep) ? top : top + sep);
 }
 
+const isFile = (path: string) =>
+  stat(path).then(
+    (s) => s.isFile(),
+    () => false,
+  );
+
+/** Each `.md` file under `dir`, as a `/`-separated path from it, skipping dot folders and node_modules. */
+async function markdownFiles(dir: string): Promise<string[]> {
+  const out: string[] = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+      for (const path of await markdownFiles(join(dir, entry.name)))
+        out.push(`${entry.name}/${path}`);
+    } else if (/\.md$/i.test(entry.name)) out.push(entry.name);
+  }
+  return out;
+}
+
 /**
- * The screens file `embedPath` names from `flowFile` (`{ path }`), or why
- * there is none, as it reads after `embeds [[…]]`: `but no ui.md was found
- * from <dir> upward`, or `which points outside <root>` for a path that
- * leaves the root, symlinks included.
+ * The screens file `embedPath` names from the flow (`{ path, embedPath }`,
+ * with the path to write for it now), or why there is none, as it reads
+ * after `embeds [[…]]`: `but no ui.md was found in <root>`, `but it matches
+ * several files: <a>, <b>; …` when several files end with the path, or
+ * `which points outside <root>` for a path that leaves the root, symlinks
+ * included.
  */
 export async function resolveEmbed(
   flowFile: string,
   embedPath: string,
   root: EmbedRoot,
-): Promise<{ path: string } | { why: string }> {
-  const flowUrl = pathToFileURL(resolve(flowFile)).href;
-  const isFile = (url: string) =>
-    stat(fileURLToPath(url)).then(
-      (s) => s.isFile(),
-      () => false,
-    );
-  const found = await resolveEmbedPath(flowUrl, embedPath, isFile, root);
+): Promise<{ path: string; embedPath: string } | { why: string }> {
   const outside = { why: `which points outside ${rootPath(root)}` };
-  if (!found)
+  const candidates = embedCandidates(root.flow, embedPath, root.url);
+  if (!candidates) return outside;
+  let url: string | undefined = candidates[0];
+  if (!(await isFile(fileURLToPath(url)))) {
+    url = undefined;
+    if (!isRelativeEmbed(embedPath)) {
+      const link = embedPath.replace(/\.md$/i, "");
+      const matches = (await markdownFiles(fileURLToPath(root.url)))
+        .filter((path) => {
+          const name = path.replace(/\.md$/i, "");
+          return name === link || name.endsWith("/" + link);
+        })
+        .sort();
+      if (matches.length > 1)
+        return {
+          why: `but it matches several files: ${matches.join(", ")}; name one by its path from ${rootPath(root)}`,
+        };
+      if (matches.length)
+        url = new URL(matches[0].split("/").map(encodeURIComponent).join("/"), root.url).href;
+    }
+  }
+  if (!url)
     return {
-      why: `but ${embedNotFound(embedPath, dirname(flowFile), root.vault ? rootPath(root) : undefined)}`,
+      why: `but ${embedNotFound(embedPath, dirname(flowFile), rootPath(root))}`,
     };
-  if ("outside" in found) return outside;
-  const path = fileURLToPath(found.url);
-  return (await inside(path, root)) ? { path } : outside;
+  const path = fileURLToPath(url);
+  return (await inside(path, root)) ? { path, embedPath: embedPathFor(url, root.url)! } : outside;
 }
 
 /**
- * The screens file a new frame embeds from (`--screens`, else `screens` by
- * the embed rule) and the embed path to write for it. Throws if the file is
- * outside the flow's root, or the path would lead a reader to another file.
+ * The `screens.md` a new frame embeds from by default: beside the flow's
+ * folder, in it, then in each folder further up to the root.
+ */
+async function defaultScreens(flowFile: string, root: EmbedRoot) {
+  const dirs: string[] = [];
+  for (let dir = new URL(".", root.flow).href; dir.startsWith(root.url);) {
+    dirs.push(dir);
+    if (dir === root.url) break;
+    dir = new URL("..", dir).href;
+  }
+  if (dirs.length > 1) dirs.unshift(...dirs.splice(1, 1));
+  for (const dir of dirs) {
+    const path = fileURLToPath(new URL("screens.md", dir));
+    if (await isFile(path)) return path;
+  }
+  throw new Error(`no screens.md was found from ${dirname(flowFile)} upward`);
+}
+
+/**
+ * The screens file a new frame embeds from (`--screens`, any `.md` file in
+ * the flow's root, else the nearest `screens.md`) and the embed path to
+ * write for it, its path from the root. Throws if the file is outside the
+ * root.
  */
 export async function screensToEmbed(flowFile: string, screens: string | undefined) {
   const root = await embedRoot(flowFile);
-  let path = screens;
-  if (path === undefined) {
-    const found = await resolveEmbed(flowFile, "screens", root);
-    if ("why" in found)
-      throw new Error(found.why.replace(/^but /, "").replace(/^which /, "screens.md "));
-    path = found.path;
-  }
+  const path = screens ?? (await defaultScreens(flowFile, root));
   await stat(path); // a missing --screens file is reported as such
-  const embedPath = (await inside(path, root))
-    ? embedPathFor(pathToFileURL(resolve(path)).href, root)
-    : undefined;
-  if (embedPath === undefined)
+  if (!/\.md$/i.test(path)) throw new Error(`the screens file ${path} is not a .md file`);
+  let url = pathToFileURL(resolve(path)).href;
+  if (!url.startsWith(root.url)) url = pathToFileURL(await realpath(path)).href;
+  if (!url.startsWith(root.url) || !(await inside(path, root)))
     throw new Error(`the screens file ${path} points outside ${rootPath(root)}`);
-  const found = await resolveEmbed(flowFile, embedPath, root);
-  if (!("path" in found) || found.path !== resolve(path))
-    throw new Error(
-      `the embed [[${embedPath}]] would lead from ${dirname(flowFile)} to ${"path" in found ? found.path : "no file"}, not ${path}; keep the screens file in or above the flow's directory, within ${rootPath(root)}`,
-    );
-  return { path, embedPath };
+  return { path, embedPath: embedPathFor(url, root.url)! };
 }

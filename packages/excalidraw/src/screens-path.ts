@@ -1,80 +1,63 @@
-// Which screens file an embed `[[path#^id]]` means. Every reader (the CLI in
-// Node, @wiredown/web in the browser) uses this one rule. Locations are URLs
-// (`file:` in Node), so both runtimes resolve them the same way.
+// Which screens file an embed `[[path#^id]]` means. The CLI (Node) and
+// @wiredown/web (the browser) share these pieces of the rule. Locations are
+// URLs (`file:` in Node), so both runtimes resolve them the same way.
 //
 // Every search is bounded by a root, a directory URL ending in `/` that
-// holds the flow: in Node the nearest directory at or above the flow holding
-// `.obsidian/` (a vault), else the nearest holding `.git`, else the parent
-// of the flow's directory; on a forge, the repository's raw-content root.
-// Nothing outside the root is ever read.
+// holds the flow: in Node the git repository's root, else the Obsidian
+// vault's, else the folder above the nearest `flows/` folder, else the
+// parent of the flow's directory; on a forge, the repository's raw-content
+// root. Nothing outside the root is ever read.
+//
+// The path written is the screens file's path from the root. A reader takes
+// `./x` and `../x` from the flow's directory; any other path names a file by
+// its path from the root or, failing that, by a trailing part of it, as
+// Obsidian links do (`screens`, `checkout/screens`).
 
-/** The directory searches stop at; `vault` when it is an Obsidian vault's root. */
-export interface EmbedRoot {
-  url: string;
-  vault: boolean;
-}
+/** Whether an embed path is relative to the flow's directory (`./x`, `../x`). */
+export const isRelativeEmbed = (embedPath: string) => /^\.\.?\//.test(embedPath);
 
 /**
- * The path to write in a new embed of `screensUrl`, or undefined if the file
- * is outside `root`. Inside a vault it is the path from the vault root, which
- * Obsidian resolves unambiguously; otherwise the bare name, which readers
- * find by walking up from the flow. Either way without `.md`, with forward
- * slashes.
- *
- * To be confirmed by the owner: that Obsidian resolves a vault-root path such
- * as `[[specs/invites/screens#^id]]` to that file even when other files share
- * its name, and resolves a bare name to the nearest one.
+ * The path to write in a new embed of `screensUrl`: its path from `root`,
+ * without `.md`, such as `docs/checkout/screens`. Undefined if the file is
+ * outside `root`.
  */
-export function embedPathFor(screensUrl: string, root: EmbedRoot): string | undefined {
-  if (!screensUrl.startsWith(root.url)) return undefined;
-  const path = root.vault
-    ? screensUrl.slice(root.url.length)
-    : screensUrl.slice(screensUrl.lastIndexOf("/") + 1);
-  return decodeURIComponent(path).replace(/\.md$/i, "");
-}
-
-/** The flow's directory and each one above it, nearest first, up to the root. */
-function ancestors(flowUrl: string, root: EmbedRoot): string[] {
-  const out: string[] = [];
-  for (let dir = new URL(".", flowUrl).href; ;) {
-    out.push(dir);
-    const up = new URL("..", dir).href;
-    if (dir === root.url || up === dir || !up.startsWith(root.url)) return out;
-    dir = up;
-  }
+export function embedPathFor(screensUrl: string, root: string): string | undefined {
+  if (!screensUrl.startsWith(root)) return undefined;
+  return decodeURIComponent(screensUrl.slice(root.length)).replace(/\.md$/i, "");
 }
 
 /**
- * Where an embed's screens file may be, in the order to try, or undefined
- * if the path points outside the root (absolute, a `..` segment, or a
- * candidate that normalises outside it):
- * - a path with a `/`: from the vault root in a vault, else from the flow's
- *   directory and each one above it up to the root, nearest first;
- * - a bare name: `<name>.md` in the parent of the flow's directory, then the
- *   flow's directory, then each directory further up to the root (the order
- *   flow commands have always searched, so `spec/flows/x` finds
- *   `spec/screens.md`).
+ * Where an embed's screens file may be, in the order a reader that cannot
+ * list the root tries them, or undefined if the path points outside the
+ * root (absolute, a `..` segment in a path not starting `./` or `../`, or
+ * a candidate that normalises outside it):
+ * - `./x` or `../x`: only that file, from the flow's directory;
+ * - otherwise the path from the root, then the path from the flow's
+ *   directory and from each one above it, nearest first.
+ * The first candidate is the only one that is never a suffix match.
  */
 export function embedCandidates(
   flowUrl: string,
   embedPath: string,
-  root: EmbedRoot,
+  root: string,
 ): string[] | undefined {
-  if (/^[\\/]|^[a-z][\w+.-]*:/i.test(embedPath) || embedPath.split(/[\\/]/).includes(".."))
+  const relative = isRelativeEmbed(embedPath);
+  if (
+    /^[\\/]|^[a-z][\w+.-]*:/i.test(embedPath) ||
+    embedPath.includes("\\") ||
+    (!relative && embedPath.split("/").includes(".."))
+  )
     return undefined;
   const file =
     embedPath.split("/").map(encodeURIComponent).join("/") +
     (/\.md$/i.test(embedPath) ? "" : ".md");
-  const dirs = ancestors(flowUrl, root);
-  const order = embedPath.includes("/")
-    ? root.vault
-      ? [root.url]
-      : dirs
-    : dirs.length > 1
-      ? [dirs[1], dirs[0], ...dirs.slice(2)]
-      : dirs;
-  const urls = order.map((dir) => new URL(file, dir).href);
-  return urls.every((url) => url.startsWith(root.url)) ? urls : undefined;
+  const flowDir = new URL(".", flowUrl).href;
+  const dirs = relative ? [flowDir] : [root];
+  if (!relative)
+    for (let dir = flowDir; dir !== root && dir.startsWith(root); dir = new URL("..", dir).href)
+      dirs.push(dir);
+  const urls = dirs.map((dir) => new URL(file, dir).href);
+  return urls.every((url) => url.startsWith(root)) ? urls : undefined;
 }
 
 /**
@@ -86,7 +69,7 @@ export async function resolveEmbedPath(
   flowUrl: string,
   embedPath: string,
   exists: (url: string) => Promise<boolean>,
-  root: EmbedRoot,
+  root: string,
 ): Promise<{ url: string } | { outside: true } | undefined> {
   const candidates = embedCandidates(flowUrl, embedPath, root);
   if (!candidates) return { outside: true };
@@ -94,10 +77,13 @@ export async function resolveEmbedPath(
   return undefined;
 }
 
-/** Why an embed's path did not resolve: `no ui.md was found from <dir> upward`. */
-export function embedNotFound(embedPath: string, flowDir: string, vaultRoot?: string): string {
+/**
+ * Why an embed's path did not resolve: `no ../ui.md was found from <dir>`
+ * for a relative path, else `no ui.md was found in <root>`.
+ */
+export function embedNotFound(embedPath: string, flowDir: string, root: string): string {
   const file = /\.md$/i.test(embedPath) ? embedPath : `${embedPath}.md`;
-  return vaultRoot && embedPath.includes("/")
-    ? `no ${file} was found in the vault at ${vaultRoot}`
-    : `no ${file} was found from ${flowDir} upward`;
+  return isRelativeEmbed(embedPath)
+    ? `no ${file} was found from ${flowDir}`
+    : `no ${file} was found in ${root}`;
 }
