@@ -105,12 +105,19 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
     flow = parseEditableFlow(await readSource(file));
   } catch (error) {
     if (!(error instanceof NewerFlowError)) throw error;
+    const message = error.message.replace("to edit it", "to use it");
     return {
       exitCode: 1,
       stdout: options.json
-        ? json({ file, flow: null, errors: [{ message: error.message }], warnings: [] })
+        ? json({
+            file,
+            format: "svg",
+            flow: null,
+            errors: [{ message }],
+            warnings: [],
+          })
         : "",
-      stderr: options.json ? "" : `${file}: ${error.message}\n`,
+      stderr: options.json ? "" : `${file}: ${message}\n`,
     };
   }
   const errors: Finding[] = [];
