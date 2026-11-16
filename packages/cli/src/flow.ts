@@ -298,7 +298,7 @@ function changeLine(c: FlowChange): string {
 export async function refreshFlowFile(file: string, options: FlowOptions = {}): Promise<Result> {
   try {
     const original = await readFile(file, "utf8");
-    const flow = parseFlow(original);
+    const flow = parseEditableFlow(original);
     const { lookup, errors, unresolved: lost } = await screenLookup(file, flow);
     const all = refreshFlow(flow, lookup);
     const changes = all.filter((c) => !("unresolved" in c && c.unresolved));
@@ -354,7 +354,11 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
       stdout: options.json
         ? json({ flow: file, changes: [], unresolved: [], errors: findings })
         : "",
-      stderr: options.json ? "" : formatFindings(file, findings, []),
+      stderr: options.json
+        ? ""
+        : error instanceof NewerFlowError
+          ? `${file}: ${error.message}\n`
+          : formatFindings(file, findings, []),
     };
   }
 }
