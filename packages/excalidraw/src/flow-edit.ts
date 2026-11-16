@@ -20,8 +20,8 @@ const GAP = 340,
   PAR = 70,
   END_GAP = 6;
 // gen-flow.mjs captions: 16px, grey, 20px under the frame.
-const NOTE_GAP = 20,
-  NOTE_COLOR = "#495057",
+export const NOTE_GAP = 20;
+const NOTE_COLOR = "#495057",
   FONT_SIZE = 16,
   LABEL_WIDTH = 200;
 // Allow hand nudges of 60px, and 200px gaps left by a deleted note.

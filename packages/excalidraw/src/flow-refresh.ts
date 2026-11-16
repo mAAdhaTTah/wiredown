@@ -6,6 +6,8 @@ import type { Box } from "@wiredown/core";
 import type { ExcalidrawElementJson } from "./elements.js";
 import type { EmbedLink, Flow } from "./flow.js";
 import {
+  arrowGeometry,
+  arrowsBetween,
   centredOn,
   DATA_VERSION,
   embedSize,
@@ -14,9 +16,12 @@ import {
   highlightBounds,
   identity,
   markCentre,
+  NOTE_GAP,
   overlayBox,
+  positionArrowLabel,
   touch,
 } from "./flow-edit.js";
+import type { FlowNode } from "./flow-edit.js";
 
 /** A screen as it renders now: its export size and the box of each `#id`. */
 export interface ScreenState {
@@ -65,9 +70,20 @@ export type FlowChange =
       label?: string;
       /** Why the overlay was left in place; absent when it was moved. */
       unresolved?: string;
-    };
+    }
+  | {
+      /** The node the arrow no longer met. */
+      frame: string;
+      kind: "arrow";
+      element: string;
+      from: string;
+      to: string;
+      /** Why the arrow was left as it is; absent when it was re-routed. */
+      unresolved?: string;
+    }
+  | { frame: string; kind: "note"; element: string };
 
-/** Overlays and frames within this many drawing px of their place are current. */
+/** Overlays, frames, arrow ends and notes within this many drawing px of their place are current. */
 const TOLERANCE = 1;
 /** Image width:height ratios within this fraction of the screen's are the same aspect. */
 const ASPECT_TOLERANCE = 0.01;
@@ -186,6 +202,83 @@ const link = (path: string, blockId: string) => `[[${path}#^${blockId}]]`;
 const overlayName = (o: Overlay) =>
   o.role === "mark" ? `mark ${o.label} #${o.target}` : `highlight #${o.target}`;
 
+interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+const rect = (e: ExcalidrawElementJson): Rect => ({ x: num(e.x), y: num(e.y), ...size(e) });
+const bottom = (r: Rect) => r.y + r.height;
+/**
+ * Our live notes under the frame image `anchor` whose box was `old`: those
+ * that overlap it sideways with their top below its top. `overlapping` are
+ * the ones whose top is inside it. `shift` is how far they all move, in
+ * order, when the frame's box is now `now`: by the change in its bottom
+ * edge, or, when the top note overlaps the frame, to NOTE_GAP under it.
+ */
+function notesUnder(flow: Flow, anchor: string, old: Rect, now: Rect) {
+  const notes = flow.elements.filter((e) => {
+    const d = identity(e);
+    if (e.isDeleted || d?.role !== "note" || d.anchor !== anchor) return false;
+    const r = rect(e);
+    return r.x < old.x + old.width && r.x + r.width > old.x && r.y > old.y;
+  });
+  const overlapping = notes.filter((e) => num(e.y) < bottom(old) - TOLERANCE);
+  const top = Math.min(...notes.map((e) => num(e.y)));
+  const shift = overlapping.length ? bottom(now) + NOTE_GAP - top : bottom(now) - bottom(old);
+  return { notes, overlapping, shift };
+}
+/** A note's first words, for messages. */
+function noteStart(e: ExcalidrawElementJson) {
+  const words = String(e.text ?? "")
+    .split(/\s+/)
+    .filter(Boolean);
+  return words.slice(0, 4).join(" ") + (words.length > 4 ? "…" : "");
+}
+
+interface Route {
+  arrow: ExcalidrawElementJson;
+  start: FlowNode;
+  end: FlowNode;
+  geometry: ReturnType<typeof arrowGeometry>;
+  /** Not a two-point line: a person bent it, so we leave it. */
+  shaped: boolean;
+  /** The nodes whose end of the arrow is not where `connect` puts it now. */
+  missed: string[];
+}
+/**
+ * Each live arrow of ours bound at both ends to two live nodes, with the
+ * geometry `connect` gives its slot between the nodes as they are now.
+ */
+function arrowRoutes(flow: Flow): Route[] {
+  const nodes = new Map(flowNodes(flow).map((n) => [n.element.id, n]));
+  const bound = (b: unknown) => nodes.get(String((b as { elementId?: string } | null)?.elementId));
+  return flow.elements.flatMap((arrow) => {
+    const d = identity(arrow);
+    if (arrow.isDeleted || arrow.type !== "arrow" || d?.role !== "arrow") return [];
+    if (!Array.isArray(arrow.points) || !arrow.points.length) return [];
+    const start = bound(arrow.startBinding),
+      end = bound(arrow.endBinding);
+    if (!start || !end || start === end) return [];
+    const geometry = arrowGeometry(start, end, d.slot ?? 0);
+    const points = arrow.points as number[][];
+    const [gx, gy] = geometry.points[1];
+    const ends: [FlowNode, number[], number[]][] = [
+      [start, points[0], [0, 0]],
+      [end, points.at(-1)!, [gx, gy]],
+    ];
+    const missed = ends
+      .filter(([, [px, py], [wx, wy]]) => {
+        const dx = num(arrow.x) + px - (geometry.x + wx),
+          dy = num(arrow.y) + py - (geometry.y + wy);
+        return Math.abs(dx) > TOLERANCE || Math.abs(dy) > TOLERANCE;
+      })
+      .map(([n]) => n.node);
+    return [{ arrow, start, end, geometry, shaped: points.length !== 2, missed }];
+  });
+}
+
 /**
  * Bound arrows and bound text whose other end is missing, deleted, or does
  * not list them in `boundElements`, as Excalidraw's binding requires.
@@ -294,16 +387,20 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
   for (const e of flow.elements) {
     const d = identity(e);
     if (e.isDeleted || d?.role !== "note" || nodeIds.has(d.anchor ?? "")) continue;
-    const words = String(e.text ?? "")
-      .split(/\s+/)
-      .filter(Boolean);
-    const start = words.slice(0, 4).join(" ") + (words.length > 4 ? "…" : "");
     out.push({
       ...(d.node ? { frame: d.node } : {}),
       element: e.id,
-      message: `note "${start}" is on a node that no longer exists`,
+      message: `note "${noteStart(e)}" is on a node that no longer exists`,
     });
   }
+  // as refresh, which moves them, only on frames whose screen exists
+  for (const { frame, image, screen } of states)
+    for (const e of screen ? notesUnder(flow, image.id, rect(image), rect(image)).overlapping : [])
+      out.push({
+        frame,
+        element: e.id,
+        message: `note "${noteStart(e)}" overlaps ${frame}; run "wiredown flow refresh" or move it`,
+      });
   for (const o of liveOverlays(flow)) {
     const at = { frame: o.frame, element: o.element.id };
     const s = states.find((s) => s.image.id === o.anchor);
@@ -331,6 +428,14 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
       if (!nodes.has(n))
         out.push({ element: a.id, message: `arrow ${d.from} -> ${d.to}: ${n} no longer exists` });
   }
+  for (const r of arrowRoutes(flow)) {
+    if (r.shaped || !r.missed.length || bindings.some((f) => f.element === r.arrow.id)) continue;
+    out.push({
+      frame: r.missed[0],
+      element: r.arrow.id,
+      message: `arrow ${r.start.node} -> ${r.end.node} no longer meets ${r.missed[0]}; run "wiredown flow refresh"`,
+    });
+  }
   const entries = new Set(flow.source.fileEntries.map((e) => e.fileId));
   for (const e of flow.elements) {
     const fileId = String(e.fileId);
@@ -347,17 +452,22 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
 
 /**
  * Brings each frame whose screen exists up to date: its embed link size,
- * its image size (same top-left and width-based scale), and its overlays.
- * An overlay whose target or frame is gone is left in place and returned
- * with `unresolved`. Nothing else moves. Returns the changes; none means the
- * flow is untouched.
+ * its image size (same top-left and width-based scale), the notes under it
+ * (moved by the change in its bottom edge, or out from under it), and its
+ * overlays. Then re-routes each two-point arrow of ours whose ends are not
+ * where `connect` would put them now, in its slot, label included. An
+ * overlay whose target or frame is gone, or a bent arrow on a frame that
+ * was resized, is left in place and returned with `unresolved`. Nothing
+ * else moves. Returns the changes; none means the flow is untouched.
  */
 export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
   const out: FlowChange[] = [];
   const overlays = liveOverlays(flow);
   const states = frameStates(flow, screens);
+  const resized = new Set<string>();
   for (const s of states) {
     if (!s.screen) continue;
+    const old = rect(s.image);
     if (s.stale) {
       const from = size(s.image);
       const link: Partial<Size> = {};
@@ -366,6 +476,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       flow.embeds.set(String(s.image.fileId), { ...s.embed, ...s.stale.link });
       Object.assign(s.image, s.stale.image);
       touch(s.image);
+      resized.add(s.image.id);
       out.push({
         frame: s.frame,
         kind: "embed",
@@ -374,6 +485,13 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
         image: { from, to: s.stale.image },
       });
     }
+    const { notes, shift } = notesUnder(flow, s.image.id, old, rect(s.image));
+    if (shift)
+      for (const e of notes) {
+        e.y = num(e.y) + shift;
+        touch(e);
+        out.push({ frame: s.frame, kind: "note", element: e.id });
+      }
     for (const o of overlays.filter((o) => o.anchor === s.image.id)) {
       const change = overlayChange(o);
       const plan = placeOverlay(flow, o, s as typeof s & { screen: ScreenState }, s.image);
@@ -386,6 +504,28 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
         out.push(change);
       }
     }
+  }
+  for (const { arrow, start, end, geometry: g, shaped, missed } of arrowRoutes(flow)) {
+    if (!missed.length) continue;
+    const change = {
+      frame: missed[0],
+      kind: "arrow" as const,
+      element: arrow.id,
+      from: start.node,
+      to: end.node,
+    };
+    if (shaped) {
+      if (resized.has(start.element.id) || resized.has(end.element.id))
+        out.push({ ...change, unresolved: "it was bent by hand; reconnect it by hand" });
+      continue;
+    }
+    Object.assign(arrow, { x: g.x, y: g.y, width: g.width, height: g.height, points: g.points });
+    arrow.startBinding = { ...(arrow.startBinding as object), fixedPoint: g.startFixedPoint };
+    arrow.endBinding = { ...(arrow.endBinding as object), fixedPoint: g.endFixedPoint };
+    touch(arrow);
+    const pair = arrowsBetween(flow, start.element.id, end.element.id);
+    positionArrowLabel(flow, arrow, pair.length > 1 ? 1 / 3 : 1 / 2);
+    out.push(change);
   }
   const images = new Set(flowFrames(flow).map((f) => f.element.id));
   for (const o of overlays.filter((o) => !images.has(o.anchor ?? "")))
