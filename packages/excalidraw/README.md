@@ -21,8 +21,11 @@ Flows are Obsidian Excalidraw drawings (`flows/<name>.excalidraw.md`).
 `parseFlow` reads one into `{ elements, appState, files, embeds }`;
 `serializeFlow` writes it back, regenerating `## Text Elements`,
 `## Embedded Files` and the drawing JSON from the scene and keeping
-everything else (frontmatter, other sections, unknown fields, a compressed
-drawing's form) as read. `newFlow` is an empty drawing.
+everything else (frontmatter, other sections, unknown fields) as read.
+Compressed drawings can be read, but writes always use diffable JSON.
+The flow exposes `compressed` to identify compressed input. Turn off
+"Compress Excalidraw JSON in Markdown" in the Excalidraw plugin's Saving
+settings to keep drawings diffable. `newFlow` is an empty drawing.
 
 ```ts
 import { formatEmbed, parseFlow, serializeFlow } from "@wiredown/excalidraw";

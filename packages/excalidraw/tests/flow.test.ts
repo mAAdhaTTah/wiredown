@@ -78,7 +78,7 @@ function image(id: string, fileId: string): ExcalidrawElementJson {
 function write(flow: Flow, before: string): string {
   const out = serializeFlow(flow);
   expect(pluginFailures(out)).toEqual([]);
-  expect(unowned(out)).toBe(unowned(before));
+  expect(unowned(out)).toBe(unowned(before).replace("compressed-json", "json"));
   const { elements, rest } = sceneOfText(out);
   expect(elements).toEqual(flow.elements);
   expect(rest).toEqual(sceneOfText(before).rest);
@@ -143,33 +143,22 @@ describe("parseFlow", () => {
 describe("serializeFlow round trip", () => {
   for (const [name, text] of Object.entries(variants)) {
     it(`reproduces the ${name} file byte for byte`, () => {
-      expect(serializeFlow(parseFlow(text))).toBe(text);
+      expect(serializeFlow(parseFlow(text))).toBe(name === "compressed-json" ? FIXTURE : text);
     });
   }
 
-  it("rewrites the compressed drawing in the same form after a change", () => {
-    const text = compressed(FIXTURE);
-    const flow = parseFlow(text);
-    flow.elements[0].x = 10;
-    const out = write(flow, text);
-    const body = /```compressed-json\n([\s\S]*)\n```/.exec(out)![1];
-    const lines = body.split("\n\n");
-    expect(lines.length).toBeGreaterThan(1);
-    expect(lines.slice(0, -1).every((l) => l.length === 256)).toBe(true);
-    expect(LZString.decompressFromBase64(lines.join(""))).toBe(
-      JSON.stringify(
-        {
-          ...JSON.parse(
-            LZString.decompressFromBase64(
-              /```compressed-json\n([\s\S]*)\n```/.exec(text)![1].replace(/\n/g, ""),
-            ),
-          ),
-          elements: flow.elements,
-        },
-        null,
-        "\t",
-      ),
-    );
+  it("rewrites compressed drawings as plugin-compatible JSON", () => {
+    for (const changed of [false, true]) {
+      const flow = parseFlow(compressed(FIXTURE));
+      expect(flow.compressed).toBe(true);
+      if (changed) flow.elements[0].x = 10;
+      const out = serializeFlow(flow);
+      expect(out).toContain("```json");
+      expect(out).not.toContain("```compressed-json");
+      expect(pluginFailures(out)).toEqual([]);
+      expect(parseFlow(out).elements).toEqual(flow.elements);
+      expect(parseFlow(out).compressed).toBe(false);
+    }
   });
 
   it("regenerates the owned parts exactly as the plugin wrote them", () => {
@@ -443,7 +432,7 @@ describe("structure is found from the plugin's markers, not text content", () =>
     const note = "\n\nA note after the drawing:\n\n```js\nconsole.log(1);\n```\n";
     for (const base of [FIXTURE, compressed(FIXTURE)]) {
       const text = base + note;
-      expect(passes(text)).toBe(text);
+      expect(passes(text)).toBe(FIXTURE + note);
       const flow = parseFlow(text);
       flow.elements[0].x = 5;
       const out = passes(serializeFlow(flow));

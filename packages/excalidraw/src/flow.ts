@@ -16,6 +16,8 @@ export interface EmbedLink {
 }
 
 export interface Flow {
+  /** Whether the source drawing used compressed-json. */
+  readonly compressed: boolean;
   /** The scene's elements, as read: unknown fields are kept. */
   elements: ExcalidrawElementJson[];
   appState: Record<string, unknown>;
@@ -121,6 +123,7 @@ export function parseFlow(text: string): Flow {
   for (const e of fileEntries) if (e.link !== undefined) embeds.set(e.fileId, parseEmbed(e.link));
 
   return {
+    compressed,
     elements: scene.elements as ExcalidrawElementJson[],
     appState: isRecord(scene.appState) ? scene.appState : {},
     files: isRecord(scene.files) ? scene.files : {},
@@ -200,13 +203,8 @@ export function serializeFlow(flow: Flow): string {
   next.appState = flow.appState;
   next.files = flow.files;
   const json = JSON.stringify(next, null, drawing.indent);
-  const body =
-    json === drawing.json
-      ? drawing.body
-      : drawing.compressed
-        ? chunk(LZString.compressToBase64(json), drawing.chunk).join(drawing.separator)
-        : json;
-  return head + data + drawing.open + body + drawing.close;
+  const body = !drawing.compressed && json === drawing.json ? drawing.body : json;
+  return head + data + drawing.open.replace("compressed-json", "json") + body + drawing.close;
 }
 
 /** An empty drawing, written as the prototype writes one. */
@@ -320,12 +318,6 @@ function sameEmbed(a: EmbedLink, b: EmbedLink): boolean {
     a.width === b.width &&
     a.height === b.height
   );
-}
-
-function chunk(s: string, size: number): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < s.length; i += size) out.push(s.slice(i, i + size));
-  return out;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
