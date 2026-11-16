@@ -228,8 +228,8 @@ name: Framedown.
 | Headless export works in Node | Prototype run, re-run 2026-11-16 | Confirmed |
 | Excalifont metrics match Excalidraw | Prototype measurement | Measured |
 | Variants, wrapping grids, validation work | Prototype fork, 1,024 tests passing | Prototyped |
-| Overlays line up with elements inside embeds | Screen size and place inside the embed measured in headless Obsidian, for a screens file with the CLI's styling front matter (`pnpm test:obsidian`); not checked by eye | Measured |
-| Gitea script | Bundle built, never run on Gitea | Open |
+| Overlays line up with elements inside embeds | Not tested; embed padding unknown | Open |
+| Forge renderer | Bundle run in headless Chromium against Gitea-shaped pages (`pnpm smoke:web`); never run on a forge | Open |
 
 ## Open questions and risks
 

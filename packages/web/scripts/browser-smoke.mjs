@@ -1,0 +1,246 @@
+// MANUAL check, outside Vitest and CI. These are Gitea-shaped STAND-IN pages,
+// using src/gitea.ts's HTML/URL assumptions, not a test of a live Gitea.
+import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { extname, join, resolve } from "node:path";
+import { parseArgs } from "node:util";
+import { chromium } from "playwright-core";
+
+const { values } = parseArgs({
+  options: {
+    out: { type: "string" },
+    browser: { type: "string" },
+  },
+});
+const dist = new URL("../dist/", import.meta.url);
+const { run } = await import("../../cli/dist/index.js");
+const site = await mkdtemp(join(tmpdir(), "wiredown-smoke-site-"));
+const out = values.out
+  ? resolve(values.out)
+  : await mkdtemp(join(tmpdir(), "wiredown-smoke-shots-"));
+const note = "Maja accepts the invitation.";
+const types = {
+  ".js": "text/javascript",
+  ".woff2": "font/woff2",
+  ".md": "text/plain; charset=utf-8",
+};
+const esc = (s) => s.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+function renderMd(md) {
+  const lines = md.split("\n"),
+    out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const fence = /^```(\w*)/.exec(lines[i]);
+    if (fence) {
+      const body = [];
+      while (++i < lines.length && !/^```\s*$/.test(lines[i])) body.push(lines[i]);
+      out.push(
+        `<div class="code-block-container"><pre><code class="language-${fence[1]}">${esc(body.join("\n"))}\n</code></pre></div>`,
+      );
+    } else if (lines[i].trim()) out.push(`<p>${esc(lines[i])}</p>`);
+  }
+  return out.join("\n");
+}
+function html(theme, body) {
+  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><link rel="icon" href="data:,"><style>body{font-family:sans-serif;margin:24px;${theme === "gitea-dark" ? "background:#1e1e1e;color:#ddd" : ""}}</style></head><body><div class="file-view markup">${body}</div><script src="/assets/wiredown/wiredown.js" defer></script></body></html>`;
+}
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url, "http://localhost");
+  try {
+    if (url.pathname.startsWith("/assets/wiredown/")) {
+      const file = new URL(url.pathname.slice("/assets/wiredown/".length), dist);
+      const body = await readFile(file);
+      res.writeHead(200, {
+        "content-type": types[extname(file.pathname)] ?? "application/octet-stream",
+      });
+      res.end(body);
+      return;
+    }
+    const match = /^\/me\/app\/(raw|src)\/branch\/main\/(.+)$/.exec(url.pathname);
+    if (match) {
+      // rawUrl() discards query parameters, so give the failure page its own
+      // file URL; its Referer carries the flag to the raw endpoint.
+      if (
+        match[1] === "raw" &&
+        new URL(req.headers.referer ?? "http://localhost").searchParams.has("failRaw")
+      ) {
+        res.writeHead(500);
+        res.end("Deliberate raw-file failure");
+        return;
+      }
+      const md = await readFile(join(site, match[2]), "utf8");
+      res.setHeader("content-type", match[1] === "raw" ? types[".md"] : "text/html; charset=utf-8");
+      res.end(
+        match[1] === "raw"
+          ? md
+          : html(url.searchParams.get("theme") ?? "gitea-light", renderMd(md)),
+      );
+      return;
+    }
+    if (url.pathname === "/plain") {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(html("gitea-light", "<p>No wireframes here.</p>"));
+      return;
+    }
+    res.writeHead(404);
+    res.end("Not found");
+  } catch (error) {
+    res.writeHead(404);
+    res.end(String(error));
+  }
+});
+let browser;
+try {
+  await mkdir(out, { recursive: true });
+  // Copy the proposal's running example and explicit-replace variant verbatim.
+  const proposal = await readFile(
+    new URL("../../../docs/prds/initial-implementation/syntax-proposal.md", import.meta.url),
+    "utf8",
+  );
+  const examples = [
+    ...proposal.matchAll(/```wiredown\n([^`]*?)```\n\^(team-members(?:-after-remove)?)/g),
+  ];
+  assert.equal(examples.length, 2, "running examples missing from syntax proposal");
+  await writeFile(
+    join(site, "screens.md"),
+    examples.map((m) => `\`\`\`wiredown\n${m[1]}\`\`\`\n^${m[2]}\n`).join("\n"),
+  );
+  const flow = join(site, "flows/f.excalidraw.md");
+  for (const args of [
+    ["new", flow, "team-members", "team-members-after-remove"],
+    ["highlight", flow, "F1", "invite"],
+    ["mark", flow, "F1", "members", "3"],
+    ["note", flow, "F2", note],
+  ]) {
+    const result = await run(["flow", ...args]);
+    assert.equal(result.exitCode, 0, `flow ${args[0]}: ${result.stderr}`);
+  }
+  const executablePath = values.browser ?? process.env.WIREDOWN_SMOKE_BROWSER;
+  try {
+    // Default headless launch honors PLAYWRIGHT_BROWSERS_PATH or the standard cache.
+    browser = await chromium.launch(executablePath ? { executablePath } : {});
+  } catch (error) {
+    throw new Error(
+      `${error.message}\nRun: pnpm --filter @wiredown/web exec playwright-core install chromium-headless-shell (or pass --browser /path/to/chromium)`,
+    );
+  }
+  console.log(`Chromium ${browser.version()}`);
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  async function visit(name, path, kind) {
+    const page = await browser.newPage({ viewport: { width: 1500, height: 900 } });
+    const errors = [],
+      assets = [],
+      responses = [];
+    page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(`console error: ${m.text()}`);
+    });
+    page.on("requestfailed", (r) => errors.push(`request failed: ${r.url()}`));
+    page.on("response", (r) => responses.push({ url: r.url(), status: r.status() }));
+    page.on("request", (r) => {
+      const url = new URL(r.url());
+      if (!["data:", "blob:"].includes(url.protocol) && url.origin !== base)
+        errors.push(`external request: ${url.href}`);
+      if (url.pathname.startsWith("/assets/wiredown/")) assets.push(url.pathname);
+    });
+    try {
+      await page.goto(base + path);
+      if (kind === "screens")
+        await page.waitForFunction(
+          () => document.querySelectorAll(".wiredown-block svg").length === 2,
+        );
+      if (kind === "flow") await page.waitForSelector(".wiredown-flow svg");
+      if (kind === "failure") await page.waitForSelector(".wiredown-notice");
+      await page.waitForLoadState("networkidle");
+      if (kind === "plain") {
+        assert.deepEqual(assets, ["/assets/wiredown/wiredown.js"], `${name}: unexpected assets`);
+        assert.equal(await page.locator(".wiredown-block, svg").count(), 0);
+      }
+      if (kind === "screens") {
+        assert.match(
+          await page.locator(".wiredown-block svg").nth(1).textContent(),
+          /2 of 5 seats used/,
+        );
+        assert.equal(
+          await page
+            .locator("details summary")
+            .allTextContents()
+            .then((s) => s.join(",")),
+          "Source,Source",
+        );
+        for (const details of await page.locator("details").all()) {
+          await details.locator("summary").click();
+          assert(
+            await details.locator("pre code.language-wiredown").isVisible(),
+            "Source must open",
+          );
+        }
+        assert.match(await page.locator(".wiredown-block svg").first().innerHTML(), /@font-face/);
+      }
+      if (kind === "flow") {
+        assert.equal(await page.locator(".wiredown-flow svg").count(), 1);
+        const svg = page.locator(".wiredown-flow svg");
+        for (const text of ["F1", "F2", note])
+          assert((await svg.textContent()).includes(text), `flow missing ${text}`);
+        assert.equal(await svg.locator("image").count(), 2, "both screens embedded");
+      }
+      if (kind === "failure") {
+        assert(
+          responses.some((r) => r.url.includes("/raw/") && r.status === 500),
+          "raw request must fail",
+        );
+        assert(await page.locator(".file-view").isVisible(), "original flow must stay visible");
+        assert((await page.locator(".file-view").textContent()).includes("excalidraw"));
+        assert.equal(await page.locator(".wiredown-flow svg").count(), 0);
+        // Chromium reports the deliberately served HTTP 500 as a console error.
+        assert.equal(
+          errors.filter(
+            (e) =>
+              e ===
+              "console error: Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+          ).length,
+          1,
+        );
+        errors.splice(
+          errors.indexOf(
+            "console error: Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+          ),
+          1,
+        );
+      } else assert.equal(await page.locator(".wiredown-notice, .wiredown-error").count(), 0);
+      assert.deepEqual(errors, [], `${name}: browser errors`);
+      await page.screenshot({ path: join(out, `${name}.png`), fullPage: true });
+      console.log(
+        `PASS ${name}: ${assets.length} asset requests; no unexpected errors, failed requests or external requests`,
+      );
+      return await page
+        .locator(".wiredown-block svg")
+        .evaluateAll((svgs) => svgs.map((s) => s.outerHTML).join("\n"));
+    } catch (error) {
+      throw new Error(`${name}: ${error.message}`, { cause: error });
+    } finally {
+      await page.close();
+    }
+  }
+  await visit("plain", "/plain", "plain");
+  for (const kind of ["screens", "flow"]) {
+    const path = `/me/app/src/branch/main/${kind === "screens" ? "screens.md" : "flows/f.excalidraw.md"}`;
+    const light = await visit(`${kind}-light`, path, kind);
+    const dark = await visit(`${kind}-dark`, `${path}?theme=gitea-dark`, kind);
+    assert.notEqual(dark, light, `${kind}: dark SVG must differ from light`);
+  }
+  await visit("raw-failure", "/me/app/src/branch/main/flows/f.excalidraw.md?failRaw=1", "failure");
+  console.log(`PASS browser smoke. Screenshots: ${out}`);
+} catch (error) {
+  console.error(`FAIL browser smoke: ${error.message}`);
+  process.exitCode = 1;
+} finally {
+  await browser?.close();
+  if (server.listening) await new Promise((resolve) => server.close(resolve));
+  await rm(site, { recursive: true, force: true });
+}
