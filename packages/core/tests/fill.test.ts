@@ -167,9 +167,14 @@ describe("grid width defaults", () => {
     ).toBeGreaterThan(natural);
   });
 
-  it("accepts fit on other components as a no-op", () => {
-    expect(parse("button: Save (fit)").errors).toEqual([]);
-    expect(draw("button: Save (fit)")).toEqual(draw("button: Save"));
+  it("rejects fit on other components", () => {
+    expect(parse("button: Save (fit)").errors).toEqual([
+      {
+        line: 1,
+        message:
+          'button doesn\'t take "fit" (it takes: w, h, fill, round, disabled, invalid, focus)',
+      },
+    ]);
   });
 
   it("fills a grid inserted into a window by after without mutating the tree", () => {
