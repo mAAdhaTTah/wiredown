@@ -68,37 +68,79 @@ const PARENT_SESSION = [
   "AI_AGENT",
 ];
 
-interface ResultJson {
-  is_error?: boolean;
-  result?: string;
-  total_cost_usd?: number;
-  usage?: {
-    input_tokens?: number;
-    cache_creation_input_tokens?: number;
-    cache_read_input_tokens?: number;
-    output_tokens?: number;
-  };
-  modelUsage?: Record<string, unknown>;
-}
+const tail = (text: string) => text.trim().split("\n").slice(-5).join("\n");
 
-function parse(stdout: string): ResultJson | undefined {
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+function parse(stdout: string): Record<string, unknown> | undefined {
   try {
-    return JSON.parse(stdout) as ResultJson;
+    const json: unknown = JSON.parse(stdout);
+    return isRecord(json) ? json : undefined;
   } catch {
     return undefined;
   }
 }
 
-const tail = (text: string) => text.trim().split("\n").slice(-5).join("\n");
+/** An optional number field; anything else but absence is a malformed result. */
+function count(record: Record<string, unknown>, key: string): number | undefined {
+  const value = record[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new ClaudeError(`claude -p's result has a non-numeric "${key}"`);
+  }
+  return value;
+}
 
-/** Run one prompt through `claude -p`, the prompt on stdin. */
-export function runClaude(prompt: string, options: ClaudeOptions): Promise<ClaudeReply> {
-  const { model, timeoutMs, command = "claude" } = options;
-  const env = { ...process.env, ...options.env };
-  for (const name of PARENT_SESSION) delete env[name];
-  const cwd = mkdtempSync(join(tmpdir(), "wiredown-eval-"));
-  return new Promise<ClaudeReply>((resolve, reject) => {
-    const child = spawn(command, claudeArgs(model), { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
+/** The reply in a successful JSON result, its fields validated. */
+export function readResult(json: Record<string, unknown>): ClaudeReply {
+  if (typeof json.result !== "string") {
+    throw new ClaudeError(
+      json.result === undefined
+        ? "claude -p's result has no reply text"
+        : `claude -p's result has a non-string reply (${typeof json.result})`,
+    );
+  }
+  if (!json.result.trim()) throw new ClaudeError("claude -p returned an empty reply");
+  if (json.usage !== undefined && !isRecord(json.usage)) {
+    throw new ClaudeError('claude -p\'s result has a malformed "usage"');
+  }
+  const u = json.usage ?? {};
+  const cost = count(json, "total_cost_usd");
+  const models = isRecord(json.modelUsage) ? Object.keys(json.modelUsage) : [];
+  return {
+    text: json.result,
+    usage: {
+      inputTokens:
+        (count(u, "input_tokens") ?? 0) +
+        (count(u, "cache_creation_input_tokens") ?? 0) +
+        (count(u, "cache_read_input_tokens") ?? 0),
+      outputTokens: count(u, "output_tokens") ?? 0,
+      ...(cost !== undefined ? { costUsd: cost } : {}),
+      ...(models.length ? { model: models.join(", ") } : {}),
+    },
+  };
+}
+
+interface Exit {
+  code: number | null;
+  signal: NodeJS.Signals | null;
+  stdout: string;
+  stderr: string;
+  timedOut: boolean;
+}
+
+/** Run the child to its end; rejects only when it can't start. */
+function spawnClaude(
+  command: string,
+  args: string[],
+  prompt: string,
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+  timeoutMs: number,
+) {
+  return new Promise<Exit>((resolve, reject) => {
+    const child = spawn(command, args, { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
@@ -123,30 +165,38 @@ export function runClaude(prompt: string, options: ClaudeOptions): Promise<Claud
     });
     child.on("close", (code, signal) => {
       clearTimeout(timer);
-      const json = parse(stdout);
-      if (timedOut) return reject(new ClaudeError(`claude -p timed out after ${timeoutMs} ms`));
-      if (code !== 0 || json?.is_error) {
-        const why = json?.result ?? (tail(stderr) || tail(stdout) || `signal ${signal}`);
-        return reject(new ClaudeError(`claude -p failed (exit ${code}): ${why}`));
-      }
-      if (!json)
-        return reject(new ClaudeError(`claude -p printed no JSON result: ${tail(stdout)}`));
-      const text = json.result ?? "";
-      if (!text.trim()) return reject(new ClaudeError("claude -p returned an empty reply"));
-      const u = json.usage ?? {};
-      resolve({
-        text,
-        usage: {
-          inputTokens:
-            (u.input_tokens ?? 0) +
-            (u.cache_creation_input_tokens ?? 0) +
-            (u.cache_read_input_tokens ?? 0),
-          outputTokens: u.output_tokens ?? 0,
-          ...(json.total_cost_usd !== undefined ? { costUsd: json.total_cost_usd } : {}),
-          ...(json.modelUsage ? { model: Object.keys(json.modelUsage).join(", ") } : {}),
-        },
-      });
+      resolve({ code, signal, stdout, stderr, timedOut });
     });
     child.stdin.end(prompt);
-  }).finally(() => rmSync(cwd, { recursive: true, force: true }));
+  });
+}
+
+/**
+ * Run one prompt through `claude -p`, the prompt on stdin. Every failure is
+ * a ClaudeError, and the temp directory is removed on every path.
+ */
+export async function runClaude(prompt: string, options: ClaudeOptions): Promise<ClaudeReply> {
+  const { model, timeoutMs, command = "claude" } = options;
+  const env = { ...process.env, ...options.env };
+  for (const name of PARENT_SESSION) delete env[name];
+  const cwd = mkdtempSync(join(tmpdir(), "wiredown-eval-"));
+  try {
+    const exit = await spawnClaude(command, claudeArgs(model), prompt, cwd, env, timeoutMs);
+    if (exit.timedOut) throw new ClaudeError(`claude -p timed out after ${timeoutMs} ms`);
+    const json = parse(exit.stdout);
+    if (exit.code !== 0 || json?.is_error === true) {
+      const why =
+        (typeof json?.result === "string" && json.result) ||
+        tail(exit.stderr) ||
+        tail(exit.stdout) ||
+        `signal ${exit.signal}`;
+      throw new ClaudeError(`claude -p failed (exit ${exit.code}): ${why}`);
+    }
+    if (!json) throw new ClaudeError(`claude -p printed no JSON result: ${tail(exit.stdout)}`);
+    return readResult(json);
+  } catch (error) {
+    throw error instanceof ClaudeError ? error : new ClaudeError(String(error));
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
 }
