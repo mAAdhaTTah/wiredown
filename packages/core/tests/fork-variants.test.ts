@@ -199,4 +199,10 @@ describe("variant errors", () => {
     const r = resolve("window: A\nremove: x");
     expect(r.errors[0].message).toContain("only works in a block whose first line is");
   });
+
+  it("names a malformed screen id in extends:", () => {
+    expect(resolve("extends: a_b\nremove: x").errors).toEqual([
+      { line: 1, message: 'extends: invalid screen id "a_b"; use letters, digits and hyphens' },
+    ]);
+  });
 });

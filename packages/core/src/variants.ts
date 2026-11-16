@@ -30,7 +30,8 @@ export interface ResolveOptions {
 
 /** A block id: letters, digits and hyphens, as after "^" in a screens document. */
 export const BLOCK_ID = /[A-Za-z0-9-]+/;
-const EXTENDS = new RegExp(`^extends\\s*:\\s*\\^?(${BLOCK_ID.source})\\s*$`, "i");
+// any single word, so that a malformed id gets its own error
+const EXTENDS = /^extends\s*:\s*\^?(\S+)\s*$/i;
 
 const DIRECTIVES = new Set(["extends", "remove", "after", "before", "rows", "replace"]);
 const MAX_DEPTH = 8;
@@ -155,6 +156,9 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
     tree: { ...tree, children: [] },
     errors: [...errors, { line, message }],
   });
+  if (!new RegExp(`^${BLOCK_ID.source}$`).test(baseId)) {
+    return fail(`extends: invalid screen id "${baseId}"; use letters, digits and hyphens`);
+  }
   if (chain.includes(baseId) || chain.length >= MAX_DEPTH) {
     return fail(`extends: "${baseId}" extends itself (${[...chain, baseId].join(" → ")})`);
   }
