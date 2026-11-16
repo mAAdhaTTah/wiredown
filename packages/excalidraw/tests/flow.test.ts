@@ -459,3 +459,13 @@ describe("structure is found from the plugin's markers, not text content", () =>
     });
   });
 });
+
+it("writes a drawing compressed from one-line JSON with tab indentation, so it diffs", () => {
+  const m = /```json\n([\s\S]*)\n```/.exec(FIXTURE)!;
+  const oneLine = JSON.stringify(JSON.parse(m[1]));
+  const text = FIXTURE.replace(
+    m[0],
+    "```compressed-json\n" + LZString.compressToBase64(oneLine) + "\n```",
+  );
+  expect(serializeFlow(parseFlow(text))).toBe(FIXTURE);
+});

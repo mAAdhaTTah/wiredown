@@ -110,7 +110,8 @@ export function parseFlow(text: string): Flow {
   if (!isRecord(scene) || !Array.isArray(scene.elements)) {
     throw new Error("Excalidraw drawing: drawing JSON has no elements array");
   }
-  const indent = /^\{\n([ \t]+)/.exec(json)?.[1];
+  // compressed drawings hold one-line JSON; written out, they get the plugin's tabs so they diff
+  const indent = /^\{\n([ \t]+)/.exec(json)?.[1] ?? (compressed ? "\t" : undefined);
   const lines = body.split("\n").filter(Boolean);
 
   const ex = /^# Excalidraw Data$/m.exec(before);
