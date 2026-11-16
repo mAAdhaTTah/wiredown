@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { checkScreens, parseScreens } from "@wiredown/core";
-import type { Screen } from "@wiredown/core";
+import { checkScreens } from "@wiredown/core";
+import type { SpecNode } from "@wiredown/core";
 import { loadBaseline } from "./baseline.ts";
 import type { BaselineCore } from "./baseline.ts";
 import { PACKAGE, REPO } from "./paths.ts";
@@ -49,52 +49,17 @@ export function newArm(): Arm {
 }
 
 /**
- * The baseline has no `checkScreens`: find the blocks and their `^ids` the
- * same way, then resolve each with a lookup across the file's blocks, so
- * both arms report per screen alike. Block-level findings (no id, a bad or
- * duplicate id) are reported at the block's opening fence.
+ * The baseline has no `checkScreens`, so run the current one with the
+ * baseline's `resolve` as its block checker: scanning, `^id` handling and
+ * every file-level finding (no id, invalid or duplicate id, unclosed fence)
+ * are then the same code in both arms, and only the block parser differs.
  */
 export function checkWithBaseline(core: BaselineCore, markdown: string): Report {
-  let screens: Screen[];
-  try {
-    screens = parseScreens(markdown);
-  } catch (error) {
-    const m = /^line (\d+): (.*)$/.exec((error as Error).message);
-    return {
-      ids: [],
-      errors: [{ line: m ? Number(m[1]) : 1, message: m ? m[2] : String(error) }],
-      warnings: [],
-    };
-  }
-  const errors: Diagnostic[] = [];
-  const warnings: Diagnostic[] = [];
-  const byId = new Map<string, Screen>();
-  for (const screen of screens) {
-    const { id, line } = screen;
-    if (id === undefined) {
-      warnings.push({
-        line: line - 1,
-        message: "screen has no ^id; it can't be embedded in a flow",
-      });
-    } else if (!/^[A-Za-z0-9-]+$/.test(id)) {
-      errors.push({ line: line - 1, message: `invalid block id "${id}"`, screen: id });
-    } else if (byId.has(id)) {
-      errors.push({ line: line - 1, message: `duplicate block id "${id}"`, screen: id });
-    } else byId.set(id, screen);
-  }
-  for (const screen of screens) {
-    const result = core.resolve(screen.source, {
-      lookup: (id) => byId.get(id)?.source,
-      known: () => [...byId.keys()],
-    });
-    for (const e of result.errors) {
-      errors.push({
-        line: screen.line + e.line - 1,
-        message: e.message,
-        ...(screen.id !== undefined ? { screen: screen.id } : {}),
-      });
-    }
-  }
+  const { screens, errors, warnings } = checkScreens(markdown, (source, options) => {
+    const { tree, errors } = core.resolve(source, options);
+    // the baseline's tree is not checked or drawn, only carried along
+    return { tree: tree as unknown as SpecNode, errors, warnings: [] };
+  });
   return { ids: screens.map((s) => s.id), errors, warnings };
 }
 
