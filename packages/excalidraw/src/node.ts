@@ -1,3 +1,6 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { layoutScreen } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
 import { screenElements } from "./elements";
@@ -174,6 +177,85 @@ export async function renderFlowSvg(
   }
   const svg = await exportSvg({ elements, appState: flow.appState, files }, options);
   return { svg, ...svgSize(svg), missing, rejected };
+}
+
+export interface PngOptions {
+  /** Pixels per SVG unit. Defaults to 1. */
+  scale?: number;
+  /** A CSS colour painted under the drawing; transparent when omitted. */
+  background?: string;
+}
+
+/** The canvas colour behind an Excalidraw export: white, and white as dark mode draws it. */
+export const BACKGROUND = { light: "#ffffff", dark: "#121212" } as const;
+
+/**
+ * Rasterise an SVG from this module to PNG with resvg, drawing text in the
+ * Excalifont it embeds. Characters Excalifont lacks use a system font that
+ * has them, if there is one.
+ */
+export async function svgToPng(
+  svg: string,
+  options: PngOptions = {},
+): Promise<{ png: Uint8Array; width: number; height: number }> {
+  const scale = options.scale ?? 1;
+  if (!(scale > 0 && Number.isFinite(scale))) throw new RangeError(`bad PNG scale ${scale}`);
+  const { Resvg } = await import("@resvg/resvg-js");
+  const flat = inlineSvgImages(svg);
+  const fonts = await Promise.all(
+    [...new Set(flat.match(/(?<=url\(data:font\/woff2;base64,)[^)]+/g))].map(woff2ToSfnt),
+  );
+  // resvg 2.6 loads fonts only from files, and ignores @font-face.
+  const dir = await mkdtemp(join(tmpdir(), "wiredown-fonts-"));
+  try {
+    const fontFiles = await Promise.all(
+      fonts.map(async (font, i) => {
+        const path = join(dir, `font-${i}.ttf`);
+        await writeFile(path, font);
+        return path;
+      }),
+    );
+    const image = new Resvg(flat, {
+      fitTo: { mode: "zoom", value: scale },
+      ...(options.background ? { background: options.background } : {}),
+      // Given fonts come first, so they are also the first fallback.
+      font: { fontFiles, loadSystemFonts: true, defaultFontFamily: "Excalifont" },
+      logLevel: "off",
+    }).render();
+    return { png: new Uint8Array(image.asPng()), width: image.width, height: image.height };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+const sfnts = new Map<string, Promise<Uint8Array>>();
+function woff2ToSfnt(base64: string): Promise<Uint8Array> {
+  let font = sfnts.get(base64);
+  if (!font) {
+    font = import("woff2-encoder/decompress").then((m) => m.default(Buffer.from(base64, "base64")));
+    sfnts.set(base64, font);
+  }
+  return font;
+}
+
+/**
+ * Excalidraw draws images as `<use>` of a viewBox-less `<symbol>` holding a
+ * 100%-sized `<image>`. resvg sizes such an image against the wrong viewport
+ * and draws no text inside SVG images, so SVG images are inlined into their
+ * symbol, with a viewBox the `<use>` scales.
+ */
+function inlineSvgImages(svg: string): string {
+  return svg.replace(
+    /<symbol id="([^"]+)"><image href="data:image\/svg\+xml;base64,([^"]+)"[^>]*><\/image><\/symbol>/g,
+    (symbol, id: string, base64: string) => {
+      const inner = inlineSvgImages(Buffer.from(base64, "base64").toString("utf8"));
+      const root = /<svg[^>]*>/.exec(inner)?.[0] ?? "";
+      const width = / width="([\d.]+)"/.exec(root)?.[1];
+      const height = / height="([\d.]+)"/.exec(root)?.[1];
+      if (!width || !height) return symbol;
+      return `<symbol id="${id}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">${inner}</symbol>`;
+    },
+  );
 }
 
 function svgSize(svg: string): { width: number; height: number } {
