@@ -47,6 +47,8 @@ The Obsidian plugin and `@wiredown/web` are bundles; the plugin's dist
 folder is installable.
 
 The design and syntax proposal live in `docs/prds/initial-implementation/`.
+[packages/evals](packages/evals/README.md) holds a manual eval comparing the
+syntax before and after the proposal (`pnpm eval`; never run in CI).
 
 ## Credit
 
