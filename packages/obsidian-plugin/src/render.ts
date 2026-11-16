@@ -1,4 +1,4 @@
-import { check, checkScreens, formatError, layoutScreen } from "@wiredown/core";
+import { check, checkScreens, extendsId, formatError, layoutScreen } from "@wiredown/core";
 import type { Screen } from "@wiredown/core";
 import { screenElements } from "@wiredown/excalidraw";
 
@@ -24,28 +24,32 @@ export interface Section {
   lineStart: number;
   lineEnd: number;
 }
+export function isVariant(source: string): boolean {
+  return extendsId(source) !== null;
+}
+const normalized = (source: string) => source.replace(/\r\n?/g, "\n").trim();
 export function findScreen(screens: Screen[], source: string, section?: Section): number {
   if (section) {
     const index = screens.findIndex(
       (s) => s.line - 1 >= section.lineStart && s.line - 1 <= section.lineEnd,
     );
-    if (index >= 0) return index;
+    if (index >= 0 && normalized(screens[index]!.source) === normalized(source)) return index;
   }
-  return screens.findIndex((s) => s.source.trim() === source.trim());
+  return screens.findIndex((s) => normalized(s.source) === normalized(source));
 }
 
 export const MISSING_PLUGIN =
   "Wiredown needs the Excalidraw plugin. Install and enable it, then reopen this note.";
 export function showError(el: HTMLElement, source: string, messages: string[]): void {
-  const list = document.createElement("ul");
+  const list = el.ownerDocument.createElement("ul");
   list.className = "wiredown-error";
   for (const message of messages) {
-    const li = document.createElement("li");
+    const li = el.ownerDocument.createElement("li");
     li.textContent = message;
     list.append(li);
   }
-  const pre = document.createElement("pre");
-  const code = document.createElement("code");
+  const pre = el.ownerDocument.createElement("pre");
+  const code = el.ownerDocument.createElement("code");
   code.textContent = source;
   pre.append(code);
   el.replaceChildren(list, pre);
@@ -71,11 +75,11 @@ export async function renderBlock(
   api: () => Promise<Automate | undefined>,
   theme: "light" | "dark",
   section?: Section,
+  cache = new Map<string, string>(),
 ): Promise<void> {
-  const block = document.createElement("div");
+  const block = el.ownerDocument.createElement("div");
   block.className = "wiredown-block";
   el.replaceChildren(block);
-  const stop = keepBusy(el);
   try {
     const all = checkScreens(note);
     const index = findScreen(all.screens, source, section);
@@ -92,47 +96,54 @@ export async function renderBlock(
       showError(block, source, errors.map(formatError));
       return;
     }
-    const ea = await api();
-    if (!ea) {
-      showError(block, source, [MISSING_PLUGIN]);
-      return;
-    }
-    try {
-      const result = screenElements(layoutScreen(screen?.tree ?? local.tree));
-      ea.copyViewElementsToEAforEditing(result.elements);
-      // Always light, even for a dark note: CSS follows theme changes without
-      // re-export; embedded images are themed by the drawing, not the note.
-      block.dataset.theme = theme;
-      const svg = await ea.createSVG(
-        undefined,
-        true,
-        { withBackground: false, withTheme: true, isMask: false, skipInliningFonts: false },
-        undefined,
-        "light",
-        0,
-      );
-      if (!svg) throw new Error("Excalidraw returned no SVG");
-      svg.removeAttribute("class");
-      svg.classList.add("wiredown-svg");
-      const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
-      style.textContent = ".wiredown-svg{display:block;max-width:100%;height:auto}";
-      svg.insertBefore(style, svg.firstChild);
-      block.dataset.renderer = "excalidraw";
-      block.append(svg);
-      for (const warning of warnings) {
-        const item = document.createElement("div");
-        item.className = "wiredown-warning";
-        item.textContent = formatError(warning);
-        block.append(item);
+    const result = screenElements(layoutScreen(screen?.tree ?? local.tree));
+    const key = JSON.stringify([result.elements, theme]);
+    let text = cache.get(key);
+    if (text === undefined) {
+      const ea = await api();
+      if (!ea) {
+        showError(block, source, [MISSING_PLUGIN]);
+        return;
       }
-    } finally {
-      ea.destroy();
+      try {
+        ea.copyViewElementsToEAforEditing(result.elements);
+        // Export light; CSS themes notes and Excalidraw themes image embeds.
+        const svg = await ea.createSVG(
+          undefined,
+          true,
+          { withBackground: false, withTheme: true, isMask: false, skipInliningFonts: false },
+          undefined,
+          "light",
+          0,
+        );
+        if (!svg) throw new Error("Excalidraw returned no SVG");
+        svg.removeAttribute("class");
+        svg.classList.add("wiredown-svg");
+        const style = el.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "style");
+        style.textContent = ".wiredown-svg{display:block;max-width:100%;height:auto}";
+        svg.insertBefore(style, svg.firstChild);
+        text = new XMLSerializer().serializeToString(svg);
+      } finally {
+        ea.destroy();
+      }
+      // Reuse exports for note/flow embeds within the design's short snapshot
+      // window; font embedding on a second export can miss that window.
+      if (cache.size > 200) cache.clear();
+      cache.set(key, text);
+    }
+    const parsed = new DOMParser().parseFromString(text, "image/svg+xml").documentElement;
+    const svg = el.ownerDocument.importNode(parsed, true);
+    block.dataset.renderer = "excalidraw";
+    block.append(svg);
+    for (const warning of warnings) {
+      const item = el.ownerDocument.createElement("div");
+      item.className = "wiredown-warning";
+      item.textContent = formatError(warning);
+      block.append(item);
     }
   } catch (error) {
     showError(block, source, [
       `Could not draw this wireframe: ${error instanceof Error ? error.message : String(error)}`,
     ]);
-  } finally {
-    stop();
   }
 }

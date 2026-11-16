@@ -4,9 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "engines": {
-    "node": ">=22.12.0"
-  },
+  "sideEffects": false,
   "exports": {
     ".": {
       "@wiredown/source": "./src/index.ts",
