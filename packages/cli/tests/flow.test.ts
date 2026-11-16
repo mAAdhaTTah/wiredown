@@ -392,7 +392,8 @@ test("reading an embed: ./ and ../, the path from the root, then a unique suffix
   // the path from the root wins over the files it is a suffix of
   expect(await read("screens")).toEqual(["screens.md", "screens"]);
   expect(await read("a/checkout/screens")).toEqual(["a/checkout/screens.md", "a/checkout/screens"]);
-  // node_modules and dot folders are not searched
+  // node_modules, dot folders and folders that cannot be read are not searched
+  await mkdir(join(dir, "locked"), { mode: 0 });
   expect(await read("ui")).toEqual(["a/flows/ui.md", "a/flows/ui"]);
   expect(await read("a/screens")).toEqual(["a/screens.md", "a/screens"]);
   expect(await read("checkout/screens")).toBe(

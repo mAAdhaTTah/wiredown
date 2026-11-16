@@ -78,7 +78,9 @@ const isFile = (path: string) =>
 /** Each `.md` file under `dir`, as a `/`-separated path from it, skipping dot folders and node_modules. */
 async function markdownFiles(dir: string): Promise<string[]> {
   const out: string[] = [];
-  for (const entry of await readdir(dir, { withFileTypes: true })) {
+  // a folder that cannot be read holds no file a reader could use
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
     if (entry.isDirectory()) {
       if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
       for (const path of await markdownFiles(join(dir, entry.name)))
