@@ -177,16 +177,25 @@ Frames (F1, F2, ...) and decisions (D1, D2, ...) are the flow's nodes;
   optional bound-text label; it returns the arrow's element id. Further
   arrows between the same pair are offset so they do not overlap.
 - `addNote(flow, node, text)` appends a free grey text under a node (below
-  its earlier notes), wrapped to the node's width, and returns its id.
+  its earlier notes), wrapped to the node's width, and returns its id. The
+  note takes the node's Excalidraw groups from ours outward, so it moves
+  with the node and stays inside any group a person put the node in; a
+  decision gets its group (diamond and text) on its first note, inserted
+  innermost.
 
 `place` is `{ rightOf: "F2" }` or `{ below: "D1" }`; without it, a new node
 goes right of the rightmost node. Unknown nodes throw and change nothing.
 Existing elements are never moved or restyled; `connect` only adds the
-arrow to its two nodes' `boundElements`, as Excalidraw's binding requires.
-Every element records itself in `customData.wiredown`: frames as
-`{ frame, screen, role: "screen" | "label" }`, decisions as
-`{ node, role: "decision" | "label" }`, arrows as `{ role: "arrow", from,
-to }` (their labels `role: "label"`), notes as `{ role: "note", node }`.
+arrow to its two nodes' `boundElements`, as Excalidraw's binding requires,
+and a note may add the group to its node. Two live nodes with one name
+(a pasted copy) make every command that takes that name throw, naming both
+element ids. Every element records itself in `customData.wiredown`, with
+`v: 1`: frames as `{ frame, screen, role: "screen" | "label" }` (the image
+adds `group`), decisions as `{ node, role: "decision" | "label" }` (the
+diamond adds `group` once it has one), arrows as `{ role: "arrow", from, to,
+slot? }`, where `slot` is the arrow's place among the arrows between its
+pair, 1 for the first offset one (their labels `role: "label"`), notes as
+`{ role: "note", node, anchor }` where `anchor` is the node's element id.
 
 An embed's path names its screens file within a root, a directory URL
 ending in `/`: the git repository's root, else the Obsidian vault's, else

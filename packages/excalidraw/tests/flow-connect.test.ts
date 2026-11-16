@@ -171,6 +171,8 @@ test("further arrows between the same pair are offset, in either direction", () 
   ];
   const ys = ids.map((id) => byId(flow, id).y);
   expect(ys).toEqual([180, 250, 110]);
+  const slots = ids.map((id) => byId(flow, id).customData as { wiredown: { slot?: number } });
+  expect(slots.map((d) => d.wiredown.slot)).toEqual([undefined, 1, 2]);
   expect(new Set(ids.map((id) => JSON.stringify(points(byId(flow, id))))).size).toBe(3);
   expect(node(flow, "F1").boundElements).toEqual(ids.map((id) => ({ id, type: "arrow" })));
   valid(flow);
@@ -237,7 +239,8 @@ test("notes stack under a frame or decision, wrapped to its width", () => {
   expect(second).toMatchObject({ x: 0, y: 400 + Number(first.height) + 20, text: "Second" });
   addDecision(flow, { text: "Ok?" });
   const third = byId(flow, addNote(flow, "D1", "Why"));
-  expect(third).toMatchObject({ x: 460, y: 17.5 + 170 + 20 });
+  // beside the diamond, below the height its rightward arrow leaves at
+  expect(third).toMatchObject({ x: 460 + 260 + 20, y: 17.5 + 85 + 20 });
   valid(flow);
 });
 
@@ -265,4 +268,116 @@ test("the prototype's fixture gains elements and keeps everything else", () => {
   expect(out.slice(0, out.indexOf("## Text Elements"))).toBe(
     source.slice(0, source.indexOf("## Text Elements")),
   );
+});
+
+test("a note records its node's element and joins the node's group", () => {
+  const flow = newFlow();
+  addScreen(flow, small);
+  const image = node(flow, "F1");
+  const group = (image.groupIds as string[])[0];
+  const before = structuredClone(image);
+  const note = byId(flow, addNote(flow, "F1", "A"));
+  expect(note.customData).toEqual({
+    wiredown: { v: 1, role: "note", node: "F1", anchor: image.id },
+  });
+  expect(note.groupIds).toEqual([group]);
+  expect(image).toEqual(before); // a frame's group exists already
+  // a decision gets its group on its first note: the diamond and its text join
+  addDecision(flow, { text: "Ok?" });
+  const diamond = node(flow, "D1");
+  const text = flow.elements.find((e) => e.containerId === diamond.id)!;
+  // a person grouped the decision before its first note: ours goes innermost
+  diamond.groupIds = ["person1"];
+  text.groupIds = ["person1"];
+  const why = byId(flow, addNote(flow, "D1", "Why"));
+  const made = (why.groupIds as string[])[0];
+  expect(made).not.toBe(group);
+  expect(why.groupIds).toEqual([made, "person1"]);
+  expect(diamond).toMatchObject({ groupIds: [made, "person1"], version: 2 });
+  expect(text).toMatchObject({ groupIds: [made, "person1"], version: 2 });
+  expect(byId(flow, addNote(flow, "D1", "Again")).groupIds).toEqual([made, "person1"]);
+  expect(diamond.groupIds).toEqual([made, "person1"]);
+  valid(flow);
+});
+
+test("a note on a frame inside a person's groups stays inside them", () => {
+  const flow = newFlow();
+  addScreen(flow, small);
+  const image = node(flow, "F1");
+  const group = (image.groupIds as string[])[0];
+  image.groupIds = [group, "human", "outer"];
+  flow.elements[0].groupIds = [group, "human", "outer"];
+  const before = structuredClone(flow.elements);
+  const note = byId(flow, addNote(flow, "F1", "A"));
+  expect(note.groupIds).toEqual([group, "human", "outer"]);
+  expect(flow.elements.slice(0, before.length)).toEqual(before);
+});
+
+test("a node name claimed twice is refused, naming both elements", () => {
+  const flow = newFlow();
+  addScreen(flow, small);
+  const image = node(flow, "F1");
+  flow.elements.push({ ...structuredClone(image), id: "copy0001" });
+  const before = structuredClone(flow.elements);
+  expect(() => addNote(flow, "F1", "hi")).toThrow(
+    `F1 is claimed by elements ${image.id} and copy0001; delete the copy`,
+  );
+  expect(flow.elements).toEqual(before);
+});
+
+test("parallel labels move to one third from their own start", () => {
+  const flow = newFlow();
+  addScreen(flow, tall);
+  addScreen(flow, tall);
+  const first = connect(flow, "F1", "F2", { label: "Invite member" });
+  const label = flow.elements.find((e) => e.containerId === first)!;
+  const version = Number(label.version);
+  const second = connect(flow, "F2", "F1", { label: "Sent" });
+  expect(Number(label.version)).toBe(version + 1);
+  const other = flow.elements.find((e) => e.containerId === second)!;
+  expect(Number(label.x) + Number(label.width)).toBeLessThan(Number(other.x));
+  const third = connect(flow, "F1", "F2", { label: "Again" });
+  for (const id of [first, second, third]) {
+    const a = byId(flow, id);
+    const t = flow.elements.find((e) => e.containerId === id)!;
+    const [sx, sy, ex, ey] = points(a);
+    expect(Number(t.x) + Number(t.width) / 2).toBeCloseTo(sx + (ex - sx) / 3);
+    expect(Number(t.y) + Number(t.height) / 2).toBeCloseTo(sy + (ey - sy) / 3);
+  }
+  valid(flow);
+});
+
+test("decision notes stack beside the diamond clear of its downward arrow", () => {
+  const flow = newFlow();
+  addDecision(flow, { text: "Ok?" });
+  addScreen(flow, { ...small, place: { below: "D1" } });
+  const arrow = byId(flow, connect(flow, "D1", "F1"));
+  const a = byId(flow, addNote(flow, "D1", "First"));
+  const b = byId(flow, addNote(flow, "D1", "Second"));
+  expect(Number(a.x)).toBeGreaterThan(Number(arrow.x));
+  expect(b.x).toBe(a.x);
+  expect(b.y).toBe(Number(a.y) + Number(a.height) + 20);
+  valid(flow);
+});
+
+test("a new arrow takes the slot a deleted one freed, not a taken one", () => {
+  const flow = newFlow();
+  addScreen(flow, {
+    screenId: "a",
+    title: "A",
+    path: "screens",
+    size: { width: 300, height: 400 },
+  });
+  addScreen(flow, {
+    screenId: "b",
+    title: "B",
+    path: "screens",
+    size: { width: 300, height: 400 },
+  });
+  const ids = [0, 1, 2].map(() => connect(flow, "F1", "F2"));
+  byId(flow, ids[1]).isDeleted = true;
+  const again = byId(flow, connect(flow, "F1", "F2"));
+  const live = [ids[0], ids[2], again.id].map((id) => byId(flow, id));
+  expect(new Set(live.map((e) => e.y)).size).toBe(3);
+  expect(again.y).toBe(byId(flow, ids[1]).y);
 });
