@@ -113,5 +113,7 @@ screensFileUpdated }`. Operational errors exit 1 (JSON adds an `errors`
 array); usage errors exit 2.
 
 Flow commands refuse to overwrite a drawing or screens file that changed
-while the command was running, and replace files atomically. Close the drawing
-in Obsidian before running flow commands, or retry after a concurrent save.
+while the command was running, and replace files atomically. The check is
+best effort: a save landing in the last instant can still be lost. Close the
+drawing in Obsidian before running flow commands, or retry after a concurrent
+save.

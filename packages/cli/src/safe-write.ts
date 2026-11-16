@@ -1,22 +1,23 @@
 import { randomUUID } from "node:crypto";
-import { open, readFile, rename, rm } from "node:fs/promises";
+import { readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-/** Refuse stale edits and replace the target atomically on its filesystem. */
+/**
+ * Refuse stale edits and replace the target atomically on its filesystem.
+ * Best effort: a save that lands between the check and the rename is lost.
+ */
 export async function safeWrite(path: string, original: string, text: string): Promise<void> {
-  const temporary = join(dirname(path), `.wiredown-${randomUUID()}`);
-  const staged = await open(temporary, "wx");
+  const changed = new Error(
+    `${path} changed while the command was running; nothing was written. Close the drawing in Obsidian, or run the command again.`,
+  );
+  // a symlink keeps pointing at its file, which is the one replaced
+  const target = await realpath(path).catch(() => Promise.reject(changed));
+  const temporary = join(dirname(target), `.wiredown-${randomUUID()}`);
   try {
-    await staged.writeFile(text);
-    await staged.close();
-    if (!(await readFile(path)).equals(Buffer.from(original))) {
-      throw new Error(
-        `${path} changed while the command was running; nothing was written. Close the drawing in Obsidian, or run the command again.`,
-      );
-    }
-    await rename(temporary, path);
+    await writeFile(temporary, text, { flag: "wx", mode: (await stat(target)).mode & 0o777 });
+    if (!(await readFile(target)).equals(Buffer.from(original))) throw changed;
+    await rename(temporary, target);
   } finally {
-    await staged.close();
     await rm(temporary, { force: true });
   }
 }

@@ -49,3 +49,19 @@ test("add-screen refuses a concurrent Obsidian save", async () => {
     spy.mockRestore();
   }
 });
+
+test("keeps the file's mode, writes through a symlink, and reports a deleted file", async () => {
+  const { chmod, lstat, rm, stat, symlink } = await import("node:fs/promises");
+  const dir = await fixture({ "drawing.md": "original" });
+  const file = join(dir, "drawing.md");
+  await chmod(file, 0o600);
+  const link = join(dir, "link.md");
+  await symlink(file, link);
+  await safeWrite(link, "original", "replacement");
+  expect(await readFile(file, "utf8")).toBe("replacement");
+  expect((await stat(file)).mode & 0o777).toBe(0o600);
+  expect((await lstat(link)).isSymbolicLink()).toBe(true);
+  await rm(file);
+  await expect(safeWrite(file, "replacement", "x")).rejects.toThrow(/changed while the command/);
+  expect(await readdir(dir)).toEqual(["link.md"]);
+});
