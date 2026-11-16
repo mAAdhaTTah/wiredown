@@ -25,3 +25,5 @@ export type * from "./types.js";
 export { EXCALIFONT } from "./metrics-excalifont.js";
 export { layoutScreen } from "./screen.js";
 export type { LayoutScreenOptions } from "./screen.js";
+export { parseScreens, checkScreens } from "./screens.js";
+export type { Screen, CheckedScreen, ScreenDiagnostic, CheckScreensResult } from "./screens.js";
