@@ -111,3 +111,7 @@ the embed image size in the drawing. JSON is
 `{ flow, frames: [{ frame, screen, title, x, y, width, height }],
 screensFileUpdated }`. Operational errors exit 1 (JSON adds an `errors`
 array); usage errors exit 2.
+
+Flow commands refuse to overwrite a drawing or screens file that changed
+while the command was running, and replace files atomically. Close the drawing
+in Obsidian before running flow commands, or retry after a concurrent save.

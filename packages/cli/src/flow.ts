@@ -1,3 +1,4 @@
+import { safeWrite } from "./safe-write.js";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
@@ -57,7 +58,8 @@ export async function editFlow(
   let findingFile = file;
   try {
     if (command === "new" && (await exists(file))) throw new Error(`flow already exists: ${file}`);
-    const flow = command === "new" ? newFlow() : parseFlow(await readFile(file, "utf8"));
+    const original = command === "new" ? "" : await readFile(file, "utf8");
+    const flow = command === "new" ? newFlow() : parseFlow(original);
     const frames = [];
     let screensFileUpdated = false;
     let screensPath: string | undefined;
@@ -113,9 +115,10 @@ export async function editFlow(
     const output = serializeFlow(flow);
     const styled = styleScreens(source);
     await mkdir(dirname(file), { recursive: true });
-    await writeFile(file, output, command === "new" ? { flag: "wx" } : undefined);
+    if (command === "new") await writeFile(file, output, { flag: "wx" });
+    else await safeWrite(file, original, output);
     if (screensPath && styled !== source) {
-      await writeFile(screensPath, styled);
+      await safeWrite(screensPath, source, styled);
       screensFileUpdated = true;
     }
     return {
