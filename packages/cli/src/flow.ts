@@ -269,8 +269,15 @@ function changeLine(c: FlowChange): string {
       ? `${c.frame}  image ${sizeText(image.from)} -> ${sizeText(image.to)}\n`
       : `${c.frame}  embed ${sizeText(link.from)} -> ${sizeText(link.to)}\n`;
   }
-  const what = c.kind === "mark" ? `mark ${c.label} #${c.target}` : `highlight #${c.target}`;
-  return `${c.frame}  ${what} ${c.unresolved ? `unresolved: ${c.unresolved}` : "moved"}\n`;
+  if (c.kind === "note") return `${c.frame}  note moved\n`;
+  const what =
+    c.kind === "arrow"
+      ? `arrow ${c.from} -> ${c.to}`
+      : c.kind === "mark"
+        ? `mark ${c.label} #${c.target}`
+        : `highlight #${c.target}`;
+  const done = c.kind === "arrow" ? "re-routed" : "moved";
+  return `${c.frame}  ${what} ${c.unresolved ? `unresolved: ${c.unresolved}` : done}\n`;
 }
 
 /**

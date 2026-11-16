@@ -45,14 +45,18 @@ function build() {
   });
   addScreen(flow, { screenId: "home", title: "Home", path: "screens", size: home });
   addScreen(flow, { screenId: "other", title: "Other", path: "screens", size: other });
-  connect(flow, "F1", "F2", { label: "Go" });
-  addNote(flow, "F1", "A note");
+  const arrow = connect(flow, "F1", "F2", { label: "Go" });
+  const note = addNote(flow, "F1", "A note");
   const overlay = { target: "invite", box, screen: home };
   const hi = addHighlight(flow, "F1", overlay);
   const mark = addMark(flow, "F1", { ...overlay, label: "3" });
-  return { flow, hi, mark };
+  return { flow, hi, mark, arrow, note };
 }
 const byId = (flow: Flow, id: string) => flow.elements.find((e) => e.id === id)!;
+const points = (a: ExcalidrawElementJson) => {
+  const [dx, dy] = (a.points as number[][]).at(-1)!;
+  return [Number(a.x), Number(a.y), Number(a.x) + dx, Number(a.y) + dy];
+};
 const image = (flow: Flow, frame: string) =>
   flowFrames(flow).find((f) => f.frame === frame)!.element;
 const centre = (e: ExcalidrawElementJson) => ({
@@ -81,9 +85,10 @@ test("a fresh flow lints clean and refresh is a no-op", () => {
 });
 
 test("a grown screen: lint reports it, refresh fixes it, lint is clean", () => {
-  const { flow, hi, mark } = build();
+  const { flow, hi, mark, arrow, note } = build();
+  const moving = [hi, mark, arrow, note, image(flow, "F1").id];
   const untouched = flow.elements
-    .filter((e) => ![hi, mark, image(flow, "F1").id].includes(e.id) && e.containerId !== mark)
+    .filter((e) => !moving.includes(e.id) && !moving.includes(String(e.containerId)))
     .map((e) => structuredClone(e));
   const screens = lookup({ home: grown, other });
   const img = image(flow, "F1");
@@ -107,10 +112,15 @@ test("a grown screen: lint reports it, refresh fixes it, lint is clean", () => {
       link: { from: { width: 120, height: 245 }, to: { width: 160, height: 305 } },
       image: { from: { width: 120, height: 205 }, to: { width: 160, height: 265 } },
     },
+    { frame: "F1", kind: "note", element: note },
     { frame: "F1", kind: "highlight", element: hi, target: "invite" },
     { frame: "F1", kind: "mark", element: mark, target: "invite", label: "3" },
+    { frame: "F1", kind: "arrow", element: arrow, from: "F1", to: "F2" },
   ]);
   expect(img).toMatchObject({ x: 0, y: 0, width: 160, height: 265, version: version + 1 });
+  // the note keeps its gap under the frame; the arrow leaves F1's new port
+  expect(byId(flow, note).y).toBe(265 + 20);
+  expect(points(byId(flow, arrow)).slice(0, 2)).toEqual([160 + 6, 265 / 2]);
   expect(flow.embeds.get(String(img.fileId))).toMatchObject({ width: 160, height: 305 });
   // exactly where addHighlight and addMark would put them on the new layout
   const fresh = newFlow();
@@ -131,13 +141,13 @@ test("a grown screen: lint reports it, refresh fixes it, lint is clean", () => {
 });
 
 test("a uniformly scaled frame is not stale; refresh keeps its scale", () => {
-  const { flow, hi, mark } = build();
+  const { flow, hi, mark, arrow } = build();
   const img = image(flow, "F1");
   Object.assign(img, { x: 50, y: 70, width: 60, height: 102.5 });
   const screens = lookup({ home, other });
-  // the overlays were placed on the unscaled frame, so only they are stale
-  expect(lintFlow(flow, screens).map((f) => f.element)).toEqual([hi, mark]);
-  expect(refreshFlow(flow, screens).map((c) => c.kind)).toEqual(["highlight", "mark"]);
+  // the overlays and arrow were placed on the unscaled frame, so only they are stale
+  expect(lintFlow(flow, screens).map((f) => f.element)).toEqual([hi, mark, arrow]);
+  expect(refreshFlow(flow, screens).map((c) => c.kind)).toEqual(["highlight", "mark", "arrow"]);
   expect(img).toMatchObject({ x: 50, y: 70, width: 60, height: 102.5 });
   const b = overlayBox(img, home, box);
   expect(byId(flow, hi)).toMatchObject({
@@ -414,4 +424,227 @@ test("a note whose frame or decision is gone is reported", () => {
     { frame: "F1", element: note.id, message: 'note "A note" is on a node that no longer exists' },
     { frame: "D1", element: why, message: 'note "Why" is on a node that no longer exists' },
   ]);
+});
+
+const shrunk: ScreenState = { width: 100, height: 120, boxes: { invite: box } };
+const add = (flow: Flow, screenId: string, size: ScreenState, place?: { below: string }) =>
+  addScreen(flow, {
+    screenId,
+    title: screenId,
+    path: "screens",
+    size,
+    ...(place ? { place } : {}),
+  });
+const label = (flow: Flow, arrow: string) => flow.elements.find((e) => e.containerId === arrow)!;
+/** Refresh changed something; lint is then clean and a second refresh changes nothing. */
+function settles(flow: Flow, screens: ReturnType<typeof lookup>) {
+  expect(refreshFlow(flow, screens)).not.toEqual([]);
+  expect(lintFlow(flow, screens)).toEqual([]);
+  const out = valid(flow);
+  expect(refreshFlow(flow, screens)).toEqual([]);
+  expect(serializeFlow(flow)).toBe(out);
+}
+
+test("a flow an older refresh left stranded lints dirty, and refresh repairs it", () => {
+  const { flow, hi, mark, arrow, note } = build();
+  // what refresh did before it moved arrows and notes: only the embed grew
+  const img = image(flow, "F1");
+  Object.assign(img, { width: 160, height: 265 });
+  const fileId = String(img.fileId);
+  flow.embeds.set(fileId, { ...flow.embeds.get(fileId)!, width: 160, height: 305 });
+  const screens = lookup({ home: grown, other });
+  expect(lintFlow(flow, screens)).toEqual([
+    {
+      frame: "F1",
+      element: note,
+      message: `note "A note" overlaps F1; run "wiredown flow refresh" or move it`,
+    },
+    { frame: "F1", element: hi, message: "stale overlay: highlight #invite is not on #invite" },
+    { frame: "F1", element: mark, message: "stale overlay: mark 3 #invite is not on #invite" },
+    {
+      frame: "F1",
+      element: arrow,
+      message: `arrow F1 -> F2 no longer meets F1; run "wiredown flow refresh"`,
+    },
+  ]);
+  expect(refreshFlow(flow, screens).map((c) => [c.kind, c.element])).toEqual([
+    ["note", note],
+    ["highlight", hi],
+    ["mark", mark],
+    ["arrow", arrow],
+  ]);
+  expect(byId(flow, note).y).toBe(265 + 20);
+  expect(points(byId(flow, arrow)).slice(0, 2)).toEqual([166, 132.5]);
+  expect(lintFlow(flow, screens)).toEqual([]);
+  const out = valid(flow);
+  expect(refreshFlow(flow, screens)).toEqual([]);
+  expect(serializeFlow(flow)).toBe(out);
+});
+
+test("an arrow to a frame below follows the grown frame's bottom edge", () => {
+  const flow = newFlow();
+  add(flow, "home", home);
+  add(flow, "other", other, { below: "F1" });
+  const arrow = connect(flow, "F1", "F2", { label: "Down" });
+  addNote(flow, "F1", "Between");
+  settles(flow, lookup({ home: grown, other }));
+  const [sx, sy, ex, ey] = points(byId(flow, arrow));
+  expect([sx, sy, ex, ey]).toEqual([80, 265 + 6, 160, 205 + 340 - 6]);
+  expect(byId(flow, arrow).startBinding).toMatchObject({ fixedPoint: [0.5, 1] });
+  // a lone arrow's label sits at its middle
+  expect(centre(label(flow, arrow)).x).toBeCloseTo((sx + ex) / 2);
+  expect(centre(label(flow, arrow)).y).toBeCloseTo((sy + ey) / 2);
+});
+
+test("parallel arrows keep their slots and labels one third from their start", () => {
+  const { flow, arrow } = build();
+  const back = connect(flow, "F2", "F1", { label: "Back" });
+  const again = connect(flow, "F1", "F2");
+  settles(flow, lookup({ home: grown, other }));
+  expect(points(byId(flow, arrow))[1]).toBe(132.5);
+  // offsets stay inside F2's 105px height: 52.5 either side of its port
+  expect(points(byId(flow, back))[3]).toBe(132.5 + 52.5);
+  expect(points(byId(flow, again))[1]).toBe(132.5 - 52.5);
+  for (const id of [arrow, back]) {
+    const [sx, sy, ex, ey] = points(byId(flow, id));
+    expect(centre(label(flow, id)).x).toBeCloseTo(sx + (ex - sx) / 3);
+    expect(centre(label(flow, id)).y).toBeCloseTo(sy + (ey - sy) / 3);
+  }
+});
+
+test("arrows between a frame and a decision follow; the decision's notes stay", () => {
+  const flow = newFlow();
+  add(flow, "home", home);
+  addDecision(flow, { text: "Ok?" });
+  const there = connect(flow, "F1", "D1", { label: "Submit" });
+  const back = connect(flow, "D1", "F1");
+  const notes = [addNote(flow, "D1", "Why"), addNote(flow, "D1", "And why not")];
+  const kept = notes.map((id) => structuredClone(byId(flow, id)));
+  settles(flow, lookup({ home: grown }));
+  expect(points(byId(flow, there)).slice(0, 2)).toEqual([166, 132.5]);
+  expect(points(byId(flow, back))[3]).toBe(132.5 + 70);
+  expect(notes.map((id) => byId(flow, id))).toEqual(kept);
+});
+
+test("a bent arrow is left alone and reported; a hand-drawn one is untouched", () => {
+  const { flow, arrow } = build();
+  const bent = byId(flow, arrow);
+  bent.points = [
+    [0, 0],
+    [100, -40],
+    [214, 0],
+  ];
+  const f1 = image(flow, "F1");
+  const drawn = {
+    ...{ id: "drawnArw", type: "arrow", x: 126, y: 50, width: 214, height: 0 },
+    ...{
+      points: [
+        [0, 0],
+        [214, 0],
+      ],
+      startBinding: { elementId: f1.id, fixedPoint: [1, 0.25] },
+    },
+  };
+  flow.elements.push(drawn);
+  f1.boundElements = [...(f1.boundElements as object[]), { id: "drawnArw", type: "arrow" }];
+  const screens = lookup({ home, other });
+  expect(lintFlow(flow, screens)).toEqual([]);
+  const before = [bent, drawn].map((e) => structuredClone(e));
+  const changes = refreshFlow(flow, lookup({ home: grown, other }));
+  expect(changes.filter((c) => c.kind === "arrow")).toEqual([
+    {
+      frame: "F1",
+      kind: "arrow",
+      element: arrow,
+      from: "F1",
+      to: "F2",
+      unresolved: "it was bent by hand; reconnect it by hand",
+    },
+  ]);
+  expect([byId(flow, arrow), byId(flow, "drawnArw")]).toEqual(before);
+  expect(lintFlow(flow, lookup({ home: grown, other }))).toEqual([]);
+  expect(refreshFlow(flow, lookup({ home: grown, other }))).toEqual([]);
+});
+
+test("stacked notes move together in order; a note moved away stays", () => {
+  const { flow, note } = build();
+  const second = addNote(flow, "F1", "Second");
+  const away = addNote(flow, "F1", "Moved away");
+  Object.assign(byId(flow, away), { x: -300, y: 600 });
+  const ys = [note, second].map((id) => Number(byId(flow, id).y));
+  settles(flow, lookup({ home: grown, other }));
+  expect([note, second].map((id) => byId(flow, id).y)).toEqual(ys.map((y) => y + 60));
+  expect(byId(flow, away)).toMatchObject({ x: -300, y: 600, version: 1 });
+});
+
+test("a note dragged onto its frame is reported, and refresh puts it under", () => {
+  const { flow, note } = build();
+  const second = addNote(flow, "F1", "Second note with more than four words");
+  byId(flow, second).y = 100;
+  const screens = lookup({ home, other });
+  expect(lintFlow(flow, screens)).toEqual([
+    {
+      frame: "F1",
+      element: second,
+      message: `note "Second note with more…" overlaps F1; run "wiredown flow refresh" or move it`,
+    },
+  ]);
+  settles(flow, screens);
+  // the stack keeps its order: the dragged note was on top, so it leads
+  expect(byId(flow, second).y).toBe(205 + 20);
+  expect(Number(byId(flow, note).y)).toBe(225 + 125);
+});
+
+test.each([
+  ["the screen grows", lookup({ home: grown, other }), () => {}],
+  ["the screen shrinks", lookup({ home: shrunk, other }), () => {}],
+  [
+    "a node is moved by hand",
+    lookup({ home, other }),
+    (flow: Flow) => Object.assign(image(flow, "F2"), { x: 600, y: 500 }),
+  ],
+])("lint is clean exactly when refresh has nothing to do: %s", (_name, screens, change) => {
+  const { flow } = build();
+  connect(flow, "F2", "F1", { label: "Back" });
+  addNote(flow, "F2", "Other note");
+  expect(lintFlow(flow, lookup({ home, other }))).toEqual([]);
+  expect(refreshFlow(flow, lookup({ home, other }))).toEqual([]);
+  change(flow);
+  expect(lintFlow(flow, screens)).not.toEqual([]);
+  settles(flow, screens);
+});
+
+test("freshly built flows of every shape lint clean", () => {
+  const screens = lookup({ home, other, grown });
+  for (const [x, y] of [
+    [1000, 50],
+    [-1000, 50],
+    [100, 900],
+    [0, -1000],
+  ]) {
+    const flow = newFlow();
+    add(flow, "home", home);
+    add(flow, "grown", grown);
+    Object.assign(image(flow, "F2"), { x, y });
+    connect(flow, "F1", "F2", { label: "One" });
+    connect(flow, "F2", "F1");
+    connect(flow, "F1", "F2", { label: "Three" });
+    addNote(flow, "F1", "Note");
+    expect(lintFlow(flow, screens)).toEqual([]);
+    expect(refreshFlow(flow, screens)).toEqual([]);
+  }
+  const flow = newFlow();
+  add(flow, "home", home);
+  addDecision(flow, { text: "A question that is long enough to grow the diamond?" });
+  connect(flow, "F1", "D1", { label: "Submit" });
+  connect(flow, "D1", "F1");
+  add(flow, "other", other, { below: "D1" });
+  connect(flow, "D1", "F2", { label: "no" });
+  addNote(flow, "D1", "Why");
+  addNote(flow, "F2", "Below");
+  add(flow, "grown", grown);
+  connect(flow, "F2", "F3");
+  connect(flow, "F3", "D1");
+  expect(lintFlow(flow, screens)).toEqual([]);
+  expect(refreshFlow(flow, screens)).toEqual([]);
 });

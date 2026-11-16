@@ -244,19 +244,30 @@ names, so one flow may use several. For each frame whose screen exists it
 sets the `## Embedded Files` link size, resizes the image to the new screen
 size at the scale it had (a frame a person scaled stays scaled; its top-left
 stays put), and moves the frame's highlights and marks to where
-`flow highlight` and `flow mark` would put them now. Nothing else moves:
-labels, notes, decisions, arrows and other frames keep their geometry. A
-frame that grew may now overlap its neighbour, and arrows keep their
-points; Excalidraw re-routes a bound arrow when a person next moves either
-end. An overlay whose component is gone is left where it is and reported as
+`flow highlight` and `flow mark` would put them now. Notes under the frame
+move with its bottom edge, keeping their order and gaps; a note dragged
+onto the frame goes back under it, with the notes below it. Every straight arrow of ours whose ends
+are not where `flow connect` would put them now, because a frame was
+resized or a person moved a node, is re-routed that way, keeping its place
+among parallel arrows, its label (placed along it as `flow connect` places
+it) and its id. An arrow a person
+bent (more than two points) is left alone and reported as unresolved when
+one of its frames was resized; a note a person moved away from under its
+frame stays where it is, and so do decisions, their notes, hand-drawn
+arrows and frame labels. Frames are never moved apart, so a frame that grew
+may now overlap its neighbouring frame; lint does not report that. An
+overlay whose component is gone is left where it is and reported as
 unresolved. The file is written only if something changed.
 
 Human output is one line per change, or `up to date`:
 
 ```text
 F2  embed 548x373 -> 548x413
+F2  note moved
 F2  highlight #invite moved
 F2  mark 3 #members unresolved: ^team-members has no #members any more
+F2  arrow F2 -> F3 re-routed
+F2  arrow F1 -> F2 unresolved: it was bent by hand; reconnect it by hand
 ```
 
 (`F2  image WxH -> WxH` when only the image's aspect was off.) JSON is
@@ -264,9 +275,12 @@ F2  mark 3 #members unresolved: ^team-members has no #members any more
 screen could not be used. A change is
 `{ frame, kind: "embed", element, link: { from, to }, image: { from, to } }`
 (sizes are `{ width, height }`) or
-`{ frame, kind: "highlight" | "mark", element, target, label? }`; unresolved
-ones add `unresolved`, the reason. An overlay belongs to the frame whose
-image element id it records, whatever the frame is now called. Exit 0; 1
+`{ frame, kind: "highlight" | "mark", element, target, label? }`,
+`{ frame, kind: "note", element }` or
+`{ frame, kind: "arrow", element, from, to }`, where an arrow's `frame` is
+the node it stopped meeting; unresolved ones add `unresolved`, the reason.
+An overlay belongs to the frame whose image element id it records, whatever
+the frame is now called. Exit 0; 1
 if a frame's embed names no screens file (reported as
 `flow: F2: error: embeds [[ui#^members]], but no ui.md was found from
 <flow dir> upward`) or a screen a frame embeds is missing or has errors
@@ -289,14 +303,20 @@ refreshed. Each JSON error adds the `file` it is about.
   its frame now embeds;
 - a note whose frame or decision is gone: `note "<first words…>" is on a
 node that no longer exists`;
+- a note whose top edge lies inside its frame: `note "<first words…>"
+overlaps F1; run "wiredown flow refresh" or move it`;
 - a dangling arrow, ours or hand-drawn: bound to an element that is missing,
   deleted, or does not list the arrow in `boundElements` (the same for bound
   text and its container), or one of ours whose node is gone;
+- a straight arrow of ours whose end is more than 1px from where
+  `flow connect` would put it now: `arrow F1 -> F2 no longer meets F1; run
+"wiredown flow refresh"`;
 - an image whose `fileId` has no `## Embedded Files` entry;
 - data written by a newer wiredown, once: `this drawing was written by a
 newer wiredown (data version N)`; that data is otherwise ignored.
 
-Style, overlaps and working hand-drawn elements are never reported. Exit 1
+Style, overlapping frames, bent arrows and working hand-drawn elements are
+never reported; when lint finds nothing, refresh has nothing to do. Exit 1
 if any file has findings. JSON is `{ files: [{ file, findings }] }`, a
 finding being `{ message, frame?, element? }` (`element` is the element id).
 

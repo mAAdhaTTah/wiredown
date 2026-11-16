@@ -2,6 +2,7 @@ import { mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
+import type { ExcalidrawElementJson } from "@wiredown/excalidraw";
 import { run } from "../src/index.js";
 import { BASE, fixture } from "./helpers.js";
 
@@ -286,3 +287,65 @@ test.each(["vault", "git", "neither"])(
     );
   },
 );
+
+test("refresh moves the arrow and the note after a screen grows", async () => {
+  const dir = await fixture({ "screens.md": TEAM + "\n" + BASE.replace("^team", "^base") });
+  const file = join(dir, "flows/f.excalidraw.md");
+  const screens = join(dir, "screens.md");
+  expect((await run(["flow", "new", file, "team", "base"])).exitCode).toBe(0);
+  expect((await run(["flow", "note", file, "F1", "Shows the members"])).exitCode).toBe(0);
+  expect((await run(["flow", "highlight", file, "F1", "invite"])).exitCode).toBe(0);
+  const read = async () => parseFlow(await readFile(file, "utf8")).elements;
+  const role = (elements: ExcalidrawElementJson[], r: string) =>
+    elements.find((e) => (e.customData as { wiredown?: { role?: string } })?.wiredown?.role === r)!;
+  const before = await read();
+  const image = before.find((e) => e.type === "image")!;
+  await writeFile(screens, grow(await readFile(screens, "utf8")));
+  const result = await run(["flow", "refresh", file]);
+  expect(result).toEqual({
+    exitCode: 0,
+    stdout: expect.stringMatching(
+      /^F1 {2}embed \d+x\d+ -> \d+x\d+\nF1 {2}note moved\nF1 {2}arrow F1 -> F2 re-routed\n$/,
+    ),
+    stderr: "",
+  });
+  const after = await read();
+  const grown = after.find((e) => e.id === image.id)!;
+  const growth = Number(grown.height) - Number(image.height);
+  expect(growth).toBeGreaterThan(0);
+  expect(role(after, "note").y).toBe(Number(role(before, "note").y) + growth);
+  const arrow = role(after, "arrow");
+  expect(arrow.x).toBe(Number(grown.x) + Number(grown.width) + 6);
+  expect(arrow.y).toBe(Number(grown.y) + Math.min(180, Number(grown.height) / 2));
+  expect(await run(["flow", "lint", file])).toEqual({
+    exitCode: 0,
+    stdout: `${file}: 0 errors\n`,
+    stderr: "",
+  });
+  const written = await readFile(file, "utf8");
+  expect((await run(["flow", "refresh", file, "--json"])).stdout).toBe(
+    JSON.stringify({ flow: file, changes: [], unresolved: [] }, null, 2) + "\n",
+  );
+  expect(await readFile(file, "utf8")).toBe(written);
+});
+
+test("lint reports an arrow and a note an older refresh left behind", async () => {
+  const dir = await fixture({ "screens.md": TEAM + "\n" + BASE.replace("^team", "^base") });
+  const file = join(dir, "flows/f.excalidraw.md");
+  await run(["flow", "new", file, "team", "base"]);
+  await run(["flow", "note", file, "F1", "Shows the members of the team"]);
+  // the image and its link grow, as refresh used to leave them
+  const flow = parseFlow(await readFile(file, "utf8"));
+  const image = flow.elements.find((e) => e.type === "image")!;
+  image.height = Number(image.height) + 100;
+  const embed = flow.embeds.get(String(image.fileId))!;
+  flow.embeds.set(String(image.fileId), { ...embed, height: embed.height! + 100 });
+  await writeFile(file, serializeFlow(flow));
+  const lint = await run(["flow", "lint", file]);
+  expect(lint.stdout).toContain(
+    `${file}: F1: error: note "Shows the members of…" overlaps F1; run "wiredown flow refresh" or move it\n`,
+  );
+  expect(lint.stdout).toContain(
+    `${file}: F1: error: arrow F1 -> F2 no longer meets F1; run "wiredown flow refresh"\n`,
+  );
+});

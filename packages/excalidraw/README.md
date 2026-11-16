@@ -280,16 +280,30 @@ from `screenElements`, or a string saying why there is none. `lintFlow`
 returns findings `{ message, frame?, element? }`: missing screens, stale
 embed sizes or image aspect (a uniformly scaled frame is fine), two nodes
 claiming one name, stale overlays, ones whose target or frame is gone or
-that were drawn for another screen, notes whose node is gone, dangling arrow or text bindings
-(`bindingFailures(elements)` on its own), images without an
+that were drawn for another screen, notes whose node is gone, notes whose
+top edge lies inside their frame, straight arrows of ours whose ends are
+more than 1px from where `connect` would put them now, dangling arrow or
+text bindings (`bindingFailures(elements)` on its own), images without an
 `## Embedded Files` entry, and data from a newer wiredown. Overlays belong
 to the frame whose image id their `anchor` records. `refreshFlow` updates
-each frame's link size and image size (same top-left and scale) and moves
-its overlays to where `addHighlight` and `addMark` would place them;
-nothing else moves. It
-returns `{ frame, kind: "embed", element, link, image }` and
-`{ frame, kind: "highlight" | "mark", element, target, label?, unresolved? }`
-changes, where `unresolved` says why an overlay was left in place.
+each frame's link size and image size (same top-left and scale), moves its
+overlays to where `addHighlight` and `addMark` would place them, and moves
+the notes under it (those overlapping it sideways with their top below its
+old top) by the change in its bottom edge, or, when the top one overlaps
+the frame, to 20px under it, keeping their order. It then re-routes each
+two-point arrow of ours whose ends are off with the geometry `connect`
+uses, keeping the arrow's slot, id and bindings' mode, and places its
+label as `connect` does (halfway, or a third along when the pair has
+parallel arrows). Bent arrows, notes moved away,
+decisions and their notes, and hand-drawn elements never move, and frames
+are not moved apart, so a frame that grew may overlap its neighbour. It
+returns `{ frame, kind: "embed", element, link, image }`,
+`{ frame, kind: "highlight" | "mark", element, target, label?, unresolved? }`,
+`{ frame, kind: "note", element }` and
+`{ frame, kind: "arrow", element, from, to, unresolved? }` changes, where
+`unresolved` says why an overlay, or a bent arrow on a resized frame, was
+left in place. A flow that `lintFlow` finds nothing in is one `refreshFlow`
+leaves untouched.
 
 Embed alignment in Obsidian remains unverified. Padding assumptions live in
 `flow-edit.ts`'s existing embed constants: 10px on each side, zero above,
