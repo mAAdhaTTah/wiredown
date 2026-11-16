@@ -165,7 +165,7 @@ test.each(["unknown-screen", "unknown-frame", "bad-block", "later-id", "missing-
         },
       ]);
     if (kind === "unknown-frame")
-      expect(errors[0].message).toContain('unknown frame "F99" (frames: none)');
+      expect(errors[0].message).toContain('unknown node "F99" (nodes: none)');
     if (kind === "bad-block") {
       expect(errors[0]).toMatchObject({ screen: "bad", line: expect.any(Number) });
       const human = await run(["flow", ...args]);
