@@ -33,10 +33,13 @@ export interface CatalogEntry {
 export const COMMON_FLAGS: readonly string[] = ["disabled", "invalid", "focus"];
 
 /** Options the syntax no longer has, with what to write instead. */
-export const RETIRED_OPTIONS: Readonly<Record<string, string>> = {
-  hi: "the highlight option is now (focus)",
-  mark: "number an element on the flow instead with: wiredown flow mark <flow> <frame> '#id' <label>",
-};
+export const RETIRED_OPTIONS: ReadonlyMap<string, string> = new Map([
+  ["hi", "the highlight option is now (focus)"],
+  [
+    "mark",
+    "number an element on the flow instead with: wiredown flow mark <flow> <frame> '#id' <label>",
+  ],
+]);
 
 const BOX_FLAGS = ["fill", "plain", "dark", "collapsible", "collapsed"];
 const FRAME = { container: true, content: true, flags: ["fill"], numbers: ["w", "h"] };

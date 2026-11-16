@@ -46,8 +46,9 @@ function bracketWarning(text: string): string | null {
   const entries = m[1].split(",").map((t) => t.trim());
   if (!staysText(entries)) return null;
   const brackets = m[0].trim();
-  const retired = entries.find((e) => RETIRED_OPTIONS[e.toLowerCase()]);
-  if (retired) return `"${brackets}" is drawn as text; ${RETIRED_OPTIONS[retired.toLowerCase()]}`;
+  const retired = entries.find((e) => RETIRED_OPTIONS.has(e.toLowerCase()));
+  if (retired)
+    return `"${brackets}" is drawn as text; ${RETIRED_OPTIONS.get(retired.toLowerCase())}`;
   if (!entries.some((e) => FLAGS.has(e.toLowerCase()))) return null;
   const others = entries.filter((e) => !FLAGS.has(e.toLowerCase()));
   const why =

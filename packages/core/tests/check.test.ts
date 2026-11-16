@@ -132,4 +132,11 @@ describe("check", () => {
       { line: 3, message: "{chek} is not an icon, so it is drawn as text; did you mean {check}?" },
     ]);
   });
+
+  it("treats a word such as constructor as ordinary text, not a retired option", () => {
+    expect(check("text: Save (constructor)").warnings).toEqual([]);
+    expect(check("button: X (constructor=2)").errors).toEqual([
+      { line: 1, message: 'unknown option "constructor"' },
+    ]);
+  });
 });

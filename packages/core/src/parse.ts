@@ -95,7 +95,7 @@ export function staysText(entries: string[]): boolean {
 
 /** The error for an option no component takes, with a hint if it was retired. */
 function unknownOption(name: string, guess: string | null): string {
-  const retired = RETIRED_OPTIONS[name.toLowerCase()];
+  const retired = RETIRED_OPTIONS.get(name.toLowerCase());
   if (retired) return `"${name}" is not an option; ${retired}`;
   return `unknown option "${name}"${guess ? `; did you mean "${guess}"?` : ""}`;
 }
