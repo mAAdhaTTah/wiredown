@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -40,6 +40,14 @@ process.stdin.on("end", () => {
     process.exit(1);
   } else if (mode === "empty") {
     result("  ");
+  } else if (mode === "nonstring") {
+    console.log(JSON.stringify({ result: 42 }));
+  } else if (mode === "noresult") {
+    console.log(JSON.stringify({ type: "result", is_error: false }));
+  } else if (mode === "badcost") {
+    result("fine", { total_cost_usd: "cheap" });
+  } else if (mode === "array") {
+    console.log("[1, 2]");
   } else if (mode === "text") {
     console.log("plain text, not JSON");
   } else if (mode === "hang") {
@@ -106,6 +114,26 @@ describe("runClaude", () => {
     await expect(call("text")).rejects.toThrow(
       "claude -p printed no JSON result: plain text, not JSON",
     );
+  });
+
+  it("fails, without crashing, on a JSON result of the wrong shape", async () => {
+    await expect(call("nonstring")).rejects.toThrow(
+      new ClaudeError("claude -p's result has a non-string reply (number)"),
+    );
+    await expect(call("noresult")).rejects.toThrow(
+      new ClaudeError("claude -p's result has no reply text"),
+    );
+    await expect(call("badcost")).rejects.toThrow(
+      new ClaudeError('claude -p\'s result has a non-numeric "total_cost_usd"'),
+    );
+    await expect(call("array")).rejects.toThrow("claude -p printed no JSON result: [1, 2]");
+  });
+
+  it("removes its temp directory on every path", async () => {
+    for (const mode of ["ok", "exit", "nonstring", "noresult", "empty"]) {
+      await call(mode).catch(() => {});
+      expect(existsSync(logged().cwd), mode).toBe(false);
+    }
   });
 
   it("fails on a timeout", async () => {
