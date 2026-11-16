@@ -158,7 +158,7 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
       stdout: options.json
         ? json({
             file,
-            format: "svg",
+            format: options.format ?? "svg",
             flow: null,
             errors: [{ message }],
             warnings: [],
