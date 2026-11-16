@@ -138,6 +138,88 @@ describe("rows", () => {
     ]);
   });
 
+  const members = [
+    "grid #members",
+    "[ ] | Name | Email | Role | Status",
+    "[ ] | Maja Berg | maja@example.com | Member | Invited",
+  ].join("\n");
+
+  it("lets rows fill a grid that has none yet", () => {
+    const r = run("extends: base\nrows: empty\n  Name | Role\n  Anna | Admin", {
+      base: "grid #empty",
+    });
+    expect(r.errors).toEqual([]);
+    const grid = r.tree.children[0];
+    expect([grid.text, ...grid.body].filter(Boolean)).toEqual(["Name | Role", "Anna | Admin"]);
+  });
+
+  it.each(["Maja Berg", "Anna Svensson"])("rejects an overwide row for %s", (key) => {
+    const r = run(`extends: base\nrows: members\n  [ ] | ${key} | = | = | = | Active`, {
+      base: members,
+    });
+    expect(r.errors).toEqual([
+      {
+        line: 3,
+        message: `rows: "${key}" has 6 cells, but the grid "members" has 5 columns`,
+      },
+    ]);
+    expect(r.tree.children[0]).toMatchObject({
+      text: "[ ] | Name | Email | Role | Status",
+      body: ["[ ] | Maja Berg | maja@example.com | Member | Invited"],
+    });
+  });
+
+  it("rejects an overwide new row without keep-cell placeholders", () => {
+    const r = run(
+      "extends: base\nrows: members\n  [ ] | Anna Svensson | anna@example.com | Admin | Active | Extra",
+      { base: members },
+    );
+    expect(r.errors).toEqual([
+      {
+        line: 3,
+        message: 'rows: "Anna Svensson" has 6 cells, but the grid "members" has 5 columns',
+      },
+    ]);
+    expect(r.tree.children[0]).toMatchObject({
+      text: "[ ] | Name | Email | Role | Status",
+      body: ["[ ] | Maja Berg | maja@example.com | Member | Invited"],
+    });
+  });
+
+  it.each(["", "*", ">"])("accepts a full-width patch with mark %j", (mark) => {
+    const r = run(`extends: base\nrows: members\n  ${mark}[ ] | Maja Berg | = | = | Active`, {
+      base: members,
+    });
+    expect(r.errors).toEqual([]);
+    expect(r.tree.children[0].body).toEqual([
+      `${mark}[ ] | Maja Berg | maja@example.com | Member | Active`,
+    ]);
+  });
+
+  it("accepts a shorter new row", () => {
+    const r = run("extends: base\nrows: members\n  [ ] | Anna Svensson", { base: members });
+    expect(r.errors).toEqual([]);
+    expect(r.tree.children[0].body).toEqual([
+      "[ ] | Maja Berg | maja@example.com | Member | Invited",
+      "[ ] | Anna Svensson",
+    ]);
+  });
+
+  it("checks comma-separated rows against their header width", () => {
+    const base = members.replaceAll(" | ", ", ");
+    const r = run(
+      "extends: base\nrows: members\n  [ ], Maja Berg, =, =, =, Active\n  >[ ], Maja Berg, =, =, Active",
+      { base },
+    );
+    expect(r.errors).toEqual([
+      {
+        line: 3,
+        message: 'rows: "Maja Berg" has 6 cells, but the grid "members" has 5 columns',
+      },
+    ]);
+    expect(r.tree.children[0].body).toEqual([">[ ], Maja Berg, maja@example.com, Member, Active"]);
+  });
+
   it("never treats the header as a row to change", () => {
     const r = run("extends: base\nrows: boards\n  remove Board");
     expect(r.errors[0].message).toContain('no row "Board"');

@@ -102,6 +102,8 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
   const rows = [grid.text, ...grid.body].filter(Boolean);
   const pipe = [...rows, ...op.body].some((r) => r.includes("|"));
   const sep = pipe ? " | " : ", ";
+  // the header sets the width; a grid with no rows yet takes any
+  const columns = rows.length ? split(rows[0].replace(MARKS, ""), pipe).length : Infinity;
   const find = (key: string) => rows.findIndex((r, i) => i > 0 && rowKey(r, pipe) === key);
   const keys = () => rows.slice(1).map((r) => rowKey(r, pipe));
   op.body.forEach((patch, i) => {
@@ -120,6 +122,13 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
     const marks = (MARKS.exec(patch) ?? [""])[0].replace(/\s/g, "");
     const cells = split(patch.replace(MARKS, ""), pipe);
     const key = cells.find((c) => c && c !== "=" && !parseCheck(c)) ?? "";
+    if (cells.length > columns) {
+      errors.push({
+        line,
+        message: `rows: "${key}" has ${cells.length} cells, but the grid "${grid.id}" has ${columns} columns`,
+      });
+      return;
+    }
     const at = find(key);
     if (at < 0) {
       if (cells.includes("=")) {

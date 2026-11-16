@@ -25,7 +25,7 @@ replace: seats
 replace: notice
   alert: {check} Erik Lund was removed from the team. [Undo]
 rows: members
-  [ ] | Maja Berg | = | = | = | Active
+  [ ] | Maja Berg | = | = | Active
   remove Erik Lund
 after: members
   text: -Removed members keep access until the end of the day-
