@@ -172,7 +172,7 @@ describe("grid width defaults", () => {
       {
         line: 1,
         message:
-          'button doesn\'t take "fit" (it takes: w, h, fill, round, disabled, invalid, focus)',
+          'button doesn\'t take "fit" (it takes: w, h, fill, round, disabled, invalid, focus); to keep "(fit)" as text, write "\\(fit)"',
       },
     ]);
   });

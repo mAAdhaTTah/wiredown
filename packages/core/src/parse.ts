@@ -76,6 +76,9 @@ export function nearest(word: string, known: Iterable<string>): string | null {
   return bestD > 0 && bestD <= Math.max(1, Math.floor(w.length / 3)) ? best : null;
 }
 
+/** Brackets at the end of a line, unless escaped as "\(". */
+const TRAILING = /(?<!\\)\(([^()]*)\)\s*$/;
+
 /** Option names some component reads; anything else in "(k=v)" is a likely typo. */
 const OPTION_KEYS = new Set(CATALOG.flatMap((e) => e.numbers));
 
@@ -83,8 +86,9 @@ const OPTION_KEYS = new Set(CATALOG.flatMap((e) => e.numbers));
  * Reads "(k=v, flag, ...)" at the end of a line. Brackets with a k=v pair
  * are always options (pairs that aren't numeric are skipped, as in v2).
  * Brackets without one are options only if every entry is a known flag,
- * so "box: Title (optional)" keeps its text. `takes`, the options of the
- * component, come first in "did you mean".
+ * so "box: Title (optional)" keeps its text. "\(" keeps brackets as text,
+ * as "\#" does an id. `takes`, the options of the component, come first
+ * in "did you mean".
  */
 export function parseOptions(
   s: string,
@@ -107,13 +111,13 @@ export function parseOptions(
       rest = rest.slice(0, shorthand.index).trimEnd();
     }
     return {
-      rest: rest.replace(/\\#/g, "#"),
+      rest: rest.replace(/\\([#(])/g, "$1"),
       opts,
       ...(id ? { id } : {}),
       ...(skipped.length ? { skipped } : {}),
     };
   };
-  const m = s.match(/\(([^()]*)\)\s*$/);
+  const m = s.match(TRAILING);
   if (!m || m.index === undefined) return finish(s.trim());
   const entries = m[1].split(",").map((t) => t.trim());
   if (!m[1].includes("=") && !entries.every((e) => FLAGS.has(e.toLowerCase()))) {
@@ -213,15 +217,28 @@ export function parse(source: string): ParseResult {
           type: NodeType,
           parsed: ReturnType<typeof parseOptions>,
           extra: string[] = [],
+          content?: string,
         ) => {
           for (const message of parsed.skipped ?? []) errors.push({ line: i + 1, message });
+          const entry = catalogEntry(type)!;
           const takes = takesOf(type, extra);
-          const wrong = Object.keys(parsed.opts).filter((k) => !takes.includes(k));
+          const keys = Object.keys(parsed.opts);
+          const wrong = keys.filter((k) => !takes.includes(k));
+          // flags it takes none of, after text: maybe meant as text
+          const brackets = content && TRAILING.exec(content)?.[0].trim();
+          const hint =
+            brackets &&
+            entry.content &&
+            !entry.directive &&
+            !brackets.includes("=") &&
+            wrong.length === keys.length
+              ? `; to keep "${brackets}" as text, write "\\${brackets}"`
+              : "";
           for (const k of wrong) {
             let message: string;
             if (FLAGS.has(k) || OPTION_KEYS.has(k)) {
               const list = takes.length ? `it takes: ${takes.join(", ")}` : "it takes no options";
-              message = `${keyword} doesn't take "${k}" (${list})`;
+              message = `${keyword} doesn't take "${k}" (${list})${hint}`;
             } else {
               const guess = nearest(k, takes) ?? nearest(k, [...FLAGS, ...OPTION_KEYS]);
               message = `unknown option "${k}"${guess ? `; did you mean "${guess}"?` : ""}`;
@@ -237,7 +254,7 @@ export function parse(source: string): ParseResult {
         ): SpecNode => {
           const parsed = parseOptions(content, takesOf(type, extra));
           const { rest, opts, id } = parsed;
-          optionErrors(keyword, type, parsed, extra);
+          optionErrors(keyword, type, parsed, extra, content);
           if (type === "icon" && !isIcon(rest)) {
             errors.push({
               line: i + 1,

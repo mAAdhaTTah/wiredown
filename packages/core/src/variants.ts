@@ -1,6 +1,6 @@
-import { parseCheck } from "./components/shared";
-import { nearest, parse } from "./parse";
-import type { ParseError, ParseResult, SpecNode } from "./types";
+import { parseCheck } from "./components/shared.js";
+import { nearest, parse, parseOptions } from "./parse.js";
+import type { ParseError, ParseResult, SpecNode } from "./types.js";
 
 // A variant block draws another screen with a few changes:
 //
@@ -274,6 +274,14 @@ export function resolve(source: string, options: ResolveOptions = {}): ParseResu
 }
 
 // ---------- back to text ----------
+/** Text as written in a spec: "\\#" for a #, and "\\(" for brackets that would be read as options. */
+function escape(text: string): string {
+  const out = text.replace(/#/g, "\\#");
+  const tail = /\(([^()]*)\)\s*$/.exec(out);
+  if (!tail || parseOptions(tail[0]).rest) return out;
+  return out.slice(0, tail.index) + "\\" + out.slice(tail.index);
+}
+
 function line(node: SpecNode): string {
   const opts = Object.entries(node.opts).map(([k, v]) => (v === 1 ? k : `${k}=${v}`));
   const shorthand = node.id && /^[a-z][a-z0-9-]*$/.test(node.id) ? `#${node.id}` : "";
@@ -282,11 +290,7 @@ function line(node: SpecNode): string {
     const inner = node.children[0];
     return `field: ${node.text} | ${line({ ...inner, id: node.id, opts: { ...inner.opts, ...node.opts } })}`;
   }
-  const text = [
-    node.text.replace(/#/g, "\\#"),
-    shorthand,
-    opts.length ? `(${opts.join(", ")})` : "",
-  ]
+  const text = [escape(node.text), shorthand, opts.length ? `(${opts.join(", ")})` : ""]
     .filter(Boolean)
     .join(" ");
   return text ? `${node.type}: ${text}` : node.type;

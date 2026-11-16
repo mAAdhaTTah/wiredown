@@ -83,7 +83,7 @@ describe("options per component", () => {
       {
         line: 3,
         message:
-          'button doesn\'t take "striped" (it takes: w, h, fill, round, disabled, invalid, focus)',
+          'button doesn\'t take "striped" (it takes: w, h, fill, round, disabled, invalid, focus); to keep "(striped)" as text, write "\\(striped)"',
       },
     ]);
   });
@@ -132,7 +132,8 @@ describe("options per component", () => {
     expect(parse("checkbox: [x] a (round)").errors).toEqual([
       {
         line: 1,
-        message: 'checkbox doesn\'t take "round" (it takes: disabled, invalid, focus)',
+        message:
+          'checkbox doesn\'t take "round" (it takes: disabled, invalid, focus); to keep "(round)" as text, write "\\(round)"',
       },
     ]);
   });
@@ -175,7 +176,7 @@ describe("options per component", () => {
       {
         line: 1,
         message:
-          'input doesn\'t take "striped" (it takes: w, h, fill, empty, disabled, invalid, focus, floating, required)',
+          'input doesn\'t take "striped" (it takes: w, h, fill, empty, disabled, invalid, focus, floating, required); to keep "(striped)" as text, write "\\(striped)"',
       },
     ]);
   });
