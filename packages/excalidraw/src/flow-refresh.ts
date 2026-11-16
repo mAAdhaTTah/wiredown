@@ -1,15 +1,19 @@
 // flow lint and flow refresh: compare a flow with the current layout of the
-// screens it embeds. Both are pure; the caller supplies the screens.
+// screens it embeds. Both are pure; the caller supplies the screens, looked
+// up by the embed (its path and block id), so two screens files with the
+// same block id are never confused.
 import type { Box } from "@wiredown/core";
 import type { ExcalidrawElementJson } from "./elements.js";
 import type { EmbedLink, Flow } from "./flow.js";
 import {
   centredOn,
+  DATA_VERSION,
   embedSize,
   flowFrames,
   flowNodes,
   highlightBounds,
   identity,
+  markCentre,
   overlayBox,
   touch,
 } from "./flow-edit.js";
@@ -20,8 +24,17 @@ export interface ScreenState {
   height: number;
   boxes: Record<string, Box>;
 }
-/** The current state of a screen by block id; undefined if missing or invalid. */
-export type ScreenLookup = (blockId: string) => ScreenState | undefined;
+/** A screen embed: the path written in its link, and its block id. */
+export interface ScreenRef {
+  path: string;
+  blockId: string;
+}
+/**
+ * The current state of the screen an embed names, or why it has none, as
+ * the sentence `embeds [[path#^id]], …` goes on: `but no ui.md was found
+ * from … upward`, `which points outside …`, `but ui.md has no ^id`.
+ */
+export type ScreenLookup = (embed: ScreenRef) => ScreenState | string;
 
 /** Something broken in a flow; `element` is the element id it is about. */
 export interface FlowFinding {
@@ -68,6 +81,8 @@ interface FrameState {
   embed: EmbedLink;
   blockId: string;
   screen?: ScreenState;
+  /** Why `screen` is missing. */
+  missing?: string;
   /** Set when the embed link or image aspect no longer matches the screen. */
   stale?: { link: Size; image: Size };
 }
@@ -78,9 +93,12 @@ function frameStates(flow: Flow, screens: ScreenLookup): FrameState[] {
     const embed = flow.embeds.get(String(image.fileId));
     if (!embed) return []; // reported as an image without an entry
     const blockId = embed.blockId ?? identity(image)!.screen ?? "";
-    const screen = blockId ? screens(blockId) : undefined;
+    const found = blockId
+      ? screens({ path: embed.path, blockId })
+      : "but it embeds no screen block";
+    if (typeof found === "string") return [{ frame, image, embed, blockId, missing: found }];
+    const screen = found;
     const state: FrameState = { frame, image, embed, blockId, screen };
-    if (!screen) return [state];
     const want = embedSize(screen.width, screen.height);
     const ratio = want.image.width / want.image.height;
     const now = size(image);
@@ -107,13 +125,18 @@ interface Overlay {
   frame: string;
   target: string;
   label?: string;
+  /** The block id it was drawn for. */
+  screen?: string;
+  /** Its frame's image element id. */
+  anchor?: string;
 }
 function liveOverlays(flow: Flow): Overlay[] {
   return flow.elements.flatMap((element) => {
     const d = identity(element);
     if (element.isDeleted || !d?.frame || !d.target) return [];
     if (!(d.role === "highlight" || d.role === "mark")) return [];
-    return [{ element, role: d.role, frame: d.frame, target: d.target, label: d.label }];
+    const { frame, target, label, screen, anchor } = d;
+    return [{ element, role: d.role, frame, target, label, screen, anchor }];
   });
 }
 interface Placement {
@@ -137,11 +160,12 @@ function placeOverlay(
   if (!box) return `^${state.blockId} has no #${o.target} any more`;
   const b = overlayBox(image, state.screen, box);
   if (o.role === "highlight") return [{ element: o.element, ...highlightBounds(b) }];
-  // a mark keeps its size; it and its bound text centre on the anchor
+  // a mark keeps its size; it and its bound text centre where addMark puts them
+  const c = markCentre(b.x, b.y, num(o.element.width));
   const texts = flow.elements.filter((e) => !e.isDeleted && e.containerId === o.element.id);
   return [o.element, ...texts].map((e) => ({
     element: e,
-    ...centredOn(b.x, b.y, num(e.width), num(e.height)),
+    ...centredOn(c.x, c.y, num(e.width), num(e.height)),
     ...size(e),
   }));
 }
@@ -158,6 +182,7 @@ const overlayChange = (o: Overlay) => ({
   target: o.target,
   ...(o.label === undefined ? {} : { label: o.label }),
 });
+const link = (path: string, blockId: string) => `[[${path}#^${blockId}]]`;
 const overlayName = (o: Overlay) =>
   o.role === "mark" ? `mark ${o.label} #${o.target}` : `highlight #${o.target}`;
 
@@ -198,21 +223,49 @@ export function bindingFailures(elements: ExcalidrawElementJson[]): FlowFinding[
 
 /**
  * What is broken in a flow given its screens now: frames whose screen is
- * missing or whose embed size or aspect is stale, overlays that are stale or
- * lost their target or frame, dangling arrows, and images without an
- * `## Embedded Files` entry. Never reports style or hand-drawn elements that work.
+ * missing or whose embed size or aspect is stale, two nodes claiming one
+ * name, overlays that are stale, lost their target or frame, or were drawn
+ * for another screen, dangling arrows, images without an `## Embedded Files`
+ * entry, and data from a newer wiredown. Never reports style or hand-drawn
+ * elements that work.
  */
 export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
   const out: FlowFinding[] = [];
+  const newer = Math.max(
+    ...flow.elements.map((e) => {
+      const v = (e.customData as { wiredown?: { v?: unknown } } | undefined)?.wiredown?.v;
+      return e.isDeleted ? 0 : Number(v ?? 0);
+    }),
+    0,
+  );
+  if (newer > DATA_VERSION)
+    out.push({ message: `this drawing was written by a newer wiredown (data version ${newer})` });
+  if (flow.compressed)
+    out.push({
+      message:
+        'drawing is saved as compressed-json, so it does not diff; run any flow command (e.g. "wiredown flow refresh") to rewrite it as JSON, and turn off "Compress Excalidraw JSON in Markdown" in the Excalidraw plugin\'s Saving settings',
+    });
+  for (const e of flow.elements) {
+    if (!e.isDeleted && e.type === "text" && e.id.length !== 8)
+      out.push({
+        element: e.id,
+        message: `text element "${e.id}" has an id that is not 8 characters; the Excalidraw plugin cannot track it, and flow commands cannot save this drawing until it is renamed`,
+      });
+  }
+  const named = new Map<string, string[]>();
+  for (const n of flowNodes(flow)) named.set(n.node, [...(named.get(n.node) ?? []), n.element.id]);
+  for (const [node, ids] of named)
+    if (ids.length > 1)
+      out.push({
+        frame: node,
+        element: ids.at(-1)!,
+        message: `${node} is claimed by elements ${ids.join(" and ")}; delete the copy`,
+      });
   const states = frameStates(flow, screens);
-  const frames = new Set(flowFrames(flow).map((f) => f.frame));
   for (const s of states) {
     const at = { frame: s.frame, element: s.image.id };
     if (!s.screen)
-      out.push({
-        ...at,
-        message: `embeds ^${s.blockId}, which is not in the screens file or has errors`,
-      });
+      out.push({ ...at, message: `embeds ${link(s.embed.path, s.blockId)}, ${s.missing}` });
     else if (s.stale) {
       const { width, height } = s.embed;
       const want = `^${s.blockId} now needs ${s.stale.link.width}x${s.stale.link.height}`;
@@ -225,12 +278,43 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
       });
     }
   }
+  // a screen embedded by hand has no frame, but its reference can still break
+  const framed = new Set(flowFrames(flow).map((f) => f.element.id));
+  for (const image of flow.elements) {
+    if (image.isDeleted || image.type !== "image" || framed.has(image.id)) continue;
+    const embed = flow.embeds.get(String(image.fileId));
+    const found = embed?.blockId && screens({ path: embed.path, blockId: embed.blockId });
+    if (typeof found === "string")
+      out.push({
+        element: image.id,
+        message: `an image embeds ${link(embed!.path, embed!.blockId!)}, ${found}`,
+      });
+  }
+  const nodeIds = new Set(flowNodes(flow).map((n) => n.element.id));
+  for (const e of flow.elements) {
+    const d = identity(e);
+    if (e.isDeleted || d?.role !== "note" || nodeIds.has(d.anchor ?? "")) continue;
+    const words = String(e.text ?? "")
+      .split(/\s+/)
+      .filter(Boolean);
+    const start = words.slice(0, 4).join(" ") + (words.length > 4 ? "…" : "");
+    out.push({
+      ...(d.node ? { frame: d.node } : {}),
+      element: e.id,
+      message: `note "${start}" is on a node that no longer exists`,
+    });
+  }
   for (const o of liveOverlays(flow)) {
     const at = { frame: o.frame, element: o.element.id };
-    const s = states.find((s) => s.frame === o.frame);
-    if (!frames.has(o.frame))
+    const s = states.find((s) => s.image.id === o.anchor);
+    if (!framed.has(o.anchor ?? ""))
       out.push({ ...at, message: `${overlayName(o)} is on a frame that no longer exists` });
     if (!s?.screen) continue;
+    if (o.screen !== undefined && o.screen !== s.blockId)
+      out.push({
+        ...at,
+        message: `${overlayName(o)} was drawn on ^${o.screen}, but ${s.frame} embeds ^${s.blockId}`,
+      });
     const plan = placeOverlay(flow, o, s as typeof s & { screen: ScreenState }, refreshedImage(s));
     if (typeof plan === "string") out.push({ ...at, message: `${overlayName(o)}: ${plan}` });
     else if (!plan.every(placed))
@@ -290,9 +374,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
         image: { from, to: s.stale.image },
       });
     }
-    // a pasted copy of a frame keeps its name; overlays follow the first, as in lint
-    if (states.find((t) => t.frame === s.frame) !== s) continue;
-    for (const o of overlays.filter((o) => o.frame === s.frame)) {
+    for (const o of overlays.filter((o) => o.anchor === s.image.id)) {
       const change = overlayChange(o);
       const plan = placeOverlay(flow, o, s as typeof s & { screen: ScreenState }, s.image);
       if (typeof plan === "string") out.push({ ...change, unresolved: plan });
@@ -305,8 +387,8 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       }
     }
   }
-  const frames = new Set(flowFrames(flow).map((f) => f.frame));
-  for (const o of overlays.filter((o) => !frames.has(o.frame)))
+  const images = new Set(flowFrames(flow).map((f) => f.element.id));
+  for (const o of overlays.filter((o) => !images.has(o.anchor ?? "")))
     out.push({ ...overlayChange(o), unresolved: `${o.frame} no longer exists` });
   return out;
 }

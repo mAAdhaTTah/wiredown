@@ -5,6 +5,7 @@ headlessly in Node, with JSON output for agents.
 
 ```sh
 wiredown check <file.md>... [--json]
+wiredown lint [<path>...] [--json]
 wiredown render <file.md> [--screen <id>]... [--out <dir>] [--theme light|dark] [--no-fonts] [--json]
 wiredown --help | <command> --help | flow <command> --help | --version
 ```
@@ -84,6 +85,37 @@ errors for an unknown `--screen` id and for nothing to render have no
 
 `--theme dark` lets Excalidraw draw the dark theme; file names don't change,
 so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
+
+## lint
+
+`wiredown lint [<path>...] [--json]` is the check for CI. Each path is a file
+or a directory, walked recursively, skipping `node_modules` and
+dot-directories; with no paths it lints `.`. It runs `check` on every
+Markdown file that has a `wiredown` block and `flow lint` on every
+`*.excalidraw.md` (each frame's screens file is the one its embed names,
+resolved as the `flow` commands do). Markdown without wiredown blocks is ignored. The report is `check`'s
+and `flow lint`'s, one after the other; exit 1 if any screen has errors or
+any flow has findings (screen warnings don't fail). With `--json`:
+
+```text
+{ screens: [<check's per-file objects>], flows: [{ file, findings }] }
+```
+
+In a GitHub Actions workflow of a repo with screens and flows (while the
+package is private, the registry needs a read token):
+
+```yaml
+- uses: actions/checkout@v4
+- uses: actions/setup-node@v4
+- run: npx --yes @wiredown/cli lint
+```
+
+## Programmatic use
+
+`run(argv)` and the commands `check(files, options)`,
+`lint(paths, options)` and `render(file, options)` return `{ exitCode, stdout, stderr }` without
+writing to the terminal or exiting; the `bin/wiredown.js` entry prints the
+result. Build the package (`pnpm build`) before running the bin.
 
 ## flow
 
@@ -210,34 +242,72 @@ axis scales after a distorted resize. Highlights extend 4px beyond the box.
 Alignment inside Obsidian embeds is still an open, unverified risk. The
 shared embed constants in `packages/excalidraw/src/flow-edit.ts` assume
 10px host padding on each side, zero above, and a 5px footer; one change
-there corrects both embed sizing and overlay placement. Refreshing overlays
-after screen edits is future work.
+there corrects both embed sizing and overlay placement.
 
-## API
+### refresh and lint
 
-The root export runs the commands without a terminal. Each resolves to a
-`Result`, `{ exitCode, stdout, stderr }`, and never writes to the terminal
-or exits; `bin/wiredown.js` prints the result. Build the package
-(`pnpm build`) before running the bin.
+`wiredown flow refresh <flow> [--json]` brings a flow up to date after its
+screens change. Each frame's screen comes from the screens file its embed
+names, so one flow may use several. For each frame whose screen exists it
+sets the `## Embedded Files` link size, resizes the image to the new screen
+size at the scale it had (a frame a person scaled stays scaled; its top-left
+stays put), and moves the frame's highlights and marks to where
+`flow highlight` and `flow mark` would put them now. Nothing else moves:
+labels, notes, decisions, arrows and other frames keep their geometry. A
+frame that grew may now overlap its neighbour, and arrows keep their
+points; Excalidraw re-routes a bound arrow when a person next moves either
+end. An overlay whose component is gone is left where it is and reported as
+unresolved. The file is written only if something changed.
 
-- **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
-  the script, as `bin/wiredown.js` does. Bad usage and unreadable files
-  give exit code 2, and the `flow` commands report file and input problems
-  with exit code 1; any other error rejects.
-- **Check** (`check`): `check(files, options?)` runs the `check` command
-  on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
-  entry of the JSON document's `files`.
-- **Render** (`render`): `render(file, options?)` runs the `render`
-  command. `RenderOptions` are all optional: `screens` (ids; all screens
-  with an id when empty), `out` (default `.`), `theme` (`"light"` or
-  `"dark"`), `fonts` (default true) and `json`. `RenderedScreen` is one
-  entry of the JSON document's `screens`.
-- **Output** (`output`): `UsageError`, which `check` and `render` throw
-  for an unreadable file and `run` turns into exit code 2. `Finding` is a
-  finding as above; `Result` is what every command returns.
+Human output is one line per change, or `up to date`:
 
-```ts
-import { render } from "@wiredown/cli";
-
-const { exitCode, stdout } = await render("screens.md", { out: "out", json: true });
+```text
+F2  embed 548x373 -> 548x413
+F2  highlight #invite moved
+F2  mark 3 #members unresolved: ^team-members has no #members any more
 ```
+
+(`F2  image WxH -> WxH` when only the image's aspect was off.) JSON is
+`{ flow, changes: [...], unresolved: [...] }`, with an `errors` array when a
+screen could not be used. A change is
+`{ frame, kind: "embed", element, link: { from, to }, image: { from, to } }`
+(sizes are `{ width, height }`) or
+`{ frame, kind: "highlight" | "mark", element, target, label? }`; unresolved
+ones add `unresolved`, the reason. An overlay belongs to the frame whose
+image element id it records, whatever the frame is now called. Exit 0; 1
+if a frame's embed names no screens file (reported as
+`flow: F2: error: embeds [[ui#^members]], but no ui.md was found from
+<flow dir> upward`) or a screen a frame embeds is missing or has errors
+(reported as findings in that screens file); the other frames are still
+refreshed. Each JSON error adds the `file` it is about.
+
+`wiredown flow lint <flow>... [--json]` never writes. It reports, as
+`path: F2: error: message` and a summary line per file:
+
+- a frame whose embed names no screens file, points outside the flow's
+  root, or whose screen is missing or has errors;
+- two frames or decisions claiming one name, usually a pasted copy of a
+  frame: `F2 is claimed by elements <id> and <id>; delete the copy` (the
+  flow commands refuse that name until then);
+- a stale frame: its link size is not the screen's current size, or its
+  image's aspect ratio no longer matches (more than 1%; scaling a frame
+  uniformly is fine);
+- a stale overlay (more than 1px from where refresh would put it), one
+  whose component or frame is gone, or one drawn for another screen than
+  its frame now embeds;
+- a note whose frame or decision is gone: `note "<first words…>" is on a
+node that no longer exists`;
+- a dangling arrow, ours or hand-drawn: bound to an element that is missing,
+  deleted, or does not list the arrow in `boundElements` (the same for bound
+  text and its container), or one of ours whose node is gone;
+- an image whose `fileId` has no `## Embedded Files` entry;
+- data written by a newer wiredown, once: `this drawing was written by a
+newer wiredown (data version N)`; that data is otherwise ignored.
+
+Style, overlaps and working hand-drawn elements are never reported. Exit 1
+if any file has findings. JSON is `{ files: [{ file, findings }] }`, a
+finding being `{ message, frame?, element? }` (`element` is the element id).
+
+Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"
+in the Excalidraw plugin's Saving settings. `flow lint` reports compressed
+drawings; `flow refresh` rewrites them as JSON even when already up to date.

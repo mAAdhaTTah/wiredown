@@ -274,16 +274,20 @@ highlights or identical mark labels on one component throw; a person's
 copy of an overlay is not one of ours.
 
 `lintFlow(flow, screens)` and `refreshFlow(flow, screens)` compare a flow
-with the screens it embeds as they lay out now. `screens(blockId)` returns
-`{ width, height, boxes }` from `screenElements`, or `undefined` for a
-missing or invalid screen. `lintFlow` returns findings
-`{ message, frame?, element? }`: missing screens, stale embed sizes or image
-aspect (a uniformly scaled frame is fine), stale overlays or ones whose
-target or frame is gone, dangling arrow or text bindings
-(`bindingFailures(elements)` on its own), and images without an
-`## Embedded Files` entry. `refreshFlow` updates each frame's link size and
-image size (same top-left and scale) and moves its overlays to where
-`addHighlight` and `addMark` would place them; nothing else moves. It
+with the screens it embeds as they lay out now. `screens({ path, blockId })`
+is asked per embed (the path as written in the link, so two screens files
+with one block id are never confused) and returns `{ width, height, boxes }`
+from `screenElements`, or a string saying why there is none. `lintFlow`
+returns findings `{ message, frame?, element? }`: missing screens, stale
+embed sizes or image aspect (a uniformly scaled frame is fine), two nodes
+claiming one name, stale overlays, ones whose target or frame is gone or
+that were drawn for another screen, notes whose node is gone, dangling arrow or text bindings
+(`bindingFailures(elements)` on its own), images without an
+`## Embedded Files` entry, and data from a newer wiredown. Overlays belong
+to the frame whose image id their `anchor` records. `refreshFlow` updates
+each frame's link size and image size (same top-left and scale) and moves
+its overlays to where `addHighlight` and `addMark` would place them;
+nothing else moves. It
 returns `{ frame, kind: "embed", element, link, image }` and
 `{ frame, kind: "highlight" | "mark", element, target, label?, unresolved? }`
 changes, where `unresolved` says why an overlay was left in place.
