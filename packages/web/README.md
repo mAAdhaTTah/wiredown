@@ -5,8 +5,20 @@ A browser script for Markdown hosts that allow custom JavaScript. It draws
 and loads Excalidraw only on pages that have one. Gitea is the only host it
 knows.
 
-**Status: built and tested in happy-dom only. It has never run on a Gitea
-instance or in a real browser.** See "Verify on a forge" below.
+**Status: run in headless Chromium 159.0.8154.6 on 2026-11-16 against
+Gitea-shaped stand-in pages; never run on a live Gitea.** See "Verify on a
+forge" below.
+
+The browser run drew two screens (including a variant resolved from the raw
+file) and a flow with both embedded screens, a highlight, a mark and a note,
+in light and dark themes. Excalifont `@font-face` was inlined. The five
+successful pages had no console errors, page errors, failed requests or
+requests to another origin. The architect's initial run requested only the
+loader on the plain page (1 asset request), and 21 assets on drawing pages.
+The reproducible script prints current counts, which may vary with font
+subsetting. It also checks that a deliberate raw-file HTTP 500 preserves the
+original content and shows a notice (the expected HTTP console error is
+allowed only for that page).
 
 ## Files
 
@@ -33,11 +45,12 @@ Sizes (Vite 8.3, `@excalidraw/excalidraw` 0.18.1, React 18.3.1):
 | Renderer and the chunks one drawing used (13 files) | 3.12 MB  | 1.15 MB |
 | Renderer and every chunk (182 files)                | 7.7 MB   | 2.5 MB  |
 
-`pnpm build` prints the size of each file; the last row is their sum. The
-third was measured once in Chromium: the JavaScript a page with two screens
-loaded besides the loader. That page also fetched one 25 KB Excalifont
-file. It matches the design's estimate of about 1.15 MB gzipped. Other
-pages may load somewhat different chunks. This has not been measured.
+The first two rows and the last are printed by `pnpm build`. The third was
+measured once by exporting a screen with the built renderer in Node under
+happy-dom and recording which files were loaded. That run also fetched one
+25 KB Excalifont file. It matches the design's estimate of about 1.15 MB
+gzipped. A real browser may load somewhat different chunks; for example, it
+may subset the font in a worker. The manual browser smoke check below prints current asset request counts.
 
 ## Loading it
 
@@ -206,3 +219,24 @@ non-string values are dropped and listed under "Not drawn:"; image elements
 remain as placeholders. Generated screen SVGs are unaffected. SVG data URLs
 remain images inside Excalidraw's SVG export: the browser smoke observes no
 external fetch from an SVG's nested external image reference.
+
+### Manual browser smoke check
+
+```sh
+pnpm smoke:web
+# Optional screenshot directory and explicit browser:
+pnpm smoke:web --out /tmp/wiredown-shots --browser /path/to/chromium
+```
+
+The root command builds first. After building, the package command is
+`pnpm --filter @wiredown/web smoke --out /tmp/wiredown-shots`.
+`--browser` takes precedence over `WIREDOWN_SMOKE_BROWSER`; otherwise
+Playwright uses its installed headless Chromium, honoring
+`PLAYWRIGHT_BROWSERS_PATH` or its standard cache. If none is installed, run
+`pnpm --filter @wiredown/web exec playwright-core install chromium-headless-shell`.
+Installing dependencies downloads no browser. Screenshots default to a temp
+directory printed at the end; the generated site is always cleaned up.
+
+This is a manual script, outside `pnpm test` and CI. Its Gitea-shaped HTML
+stands in for the assumptions in `src/gitea.ts`; it does not verify live
+Gitea selectors, custom templates or CSP.
