@@ -497,7 +497,7 @@ test.each([
   );
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain(
-    `${file}: this drawing was written by a newer wiredown (data version 2); upgrade wiredown to edit it`,
+    `${file}: this drawing was written by a newer wiredown (data version 2); upgrade wiredown to ${args[0] === "render" ? "use" : "edit"} it`,
   );
   expect(await readFile(file, "utf8")).toBe(source);
   expect(await readFile(join(dir, "screens.md"), "utf8")).toBe(screens);
