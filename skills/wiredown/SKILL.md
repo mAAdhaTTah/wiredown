@@ -112,6 +112,14 @@ Never hand-compute coordinates. Use `--right-of` and `--below` relative to
 existing nodes. A flow is a drawing a person also edits: never regenerate an
 existing flow. Use the commands, which preserve their edits.
 
+Turn off "Compress Excalidraw JSON in Markdown" in the Excalidraw plugin's
+Saving settings; `flow lint` reports compressed drawings and tells you to run
+a flow command such as `flow refresh` to rewrite them as diffable JSON.
+Hand-written text elements need 8-character ids, which elements made in
+Obsidian always have.
+Close the drawing in Obsidian before running flow commands; commands refuse
+to overwrite files changed while they run, so retry after a concurrent save.
+
 ## Diagnostics and JSON
 
 Findings read `path:line: ^id: error: message` (or `warning:`). Lines are
