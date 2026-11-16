@@ -147,9 +147,60 @@ const rendered = await renderScreenSvg(parse("button: Save #save").tree);
 
 The Node entry uses a private happy-dom document and lazily installs a
 `FontFace` stub only if the host has none. No global window or document is
-installed. The pinned exporter cannot subset the font in Node, so it embeds
-the whole font; the Node entry drops the message Excalidraw logs about that
-while it exports. Layout uses core's metrics, without DOM text measurement.
+installed. The pinned exporter logs a font-set warning and a glyph-subsetting
+warning in Node; it still embeds the full Latin font subset, as verified by
+the export tests. Layout uses core's metrics, without DOM text measurement.
 
-The Node entry needs Node 22.12 or later. It is an ES module; CommonJS can
-`require()` it.
+`addScreen(flow, { screenId, title, path, size, place? })` appends a label
+and image and returns its F-number; `size` is the rendered screen size.
+`embedSize(width, height)` converts a screen export size to `{ link, image }`
+dimensions. `flowFrames(flow)` finds live images with Wiredown customData.
+Legacy labels reserve numbers, but legacy images are not placement targets.
+Deleted elements reserve their numbers too. A frame's label carries an
+`anchor` naming its image element. The label and image share a new
+Excalidraw group, recorded as `group` in the image's
+`customData.wiredown`. Every `customData.wiredown` carries `v`
+(`DATA_VERSION`, now 1); data without `v` is version 1, and data with a
+higher `v` is ignored. New elements also carry `id`, equal to the element's
+id. Data naming a different element belongs to a person's pasted copy and
+is ignored by flow commands, though its F-number stays taken. Existing data
+without `id` keeps its previous behaviour; writes do not migrate it.
+
+Frames (F1, F2, ...) and decisions (D1, D2, ...) are the flow's nodes;
+`flowNodes(flow)` lists the live ones as `{ node, kind, element }`.
+
+- `addDecision(flow, { text, place? })` appends a diamond with its text
+  centred inside and returns its D-number.
+- `connect(flow, from, to, { label? })` appends a straight arrow between the
+  facing edges of two nodes, where they are now, bound at both ends, with an
+  optional bound-text label; it returns the arrow's element id. Further
+  arrows between the same pair are offset so they do not overlap.
+- `addNote(flow, node, text)` appends a free grey text under a node (below
+  its earlier notes), wrapped to the node's width, and returns its id.
+
+`place` is `{ rightOf: "F2" }` or `{ below: "D1" }`; without it, a new node
+goes right of the rightmost node. Unknown nodes throw and change nothing.
+Existing elements are never moved or restyled; `connect` only adds the
+arrow to its two nodes' `boundElements`, as Excalidraw's binding requires.
+Every element records itself in `customData.wiredown`: frames as
+`{ frame, screen, role: "screen" | "label" }`, decisions as
+`{ node, role: "decision" | "label" }`, arrows as `{ role: "arrow", from,
+to }` (their labels `role: "label"`), notes as `{ role: "note", node }`.
+
+An embed's path names its screens file within a root, a directory URL
+ending in `/`: the git repository's root, else the Obsidian vault's, else
+the folder above the nearest `flows/` folder, else the parent of the flow's
+directory (on a forge, the repository's raw-content root). Locations are
+URLs, `file:` ones in Node. `embedPathFor(screensUrl, root)` is the path to
+write, the file's path from the root without `.md`, such as
+`docs/checkout/screens`; undefined for a file outside the root.
+`embedCandidates(flowUrl, embedPath, root)` lists where the file may be:
+for `./x` or `../x` only that file from the flow's directory; otherwise the
+path from the root first, then the path from the flow's directory and each
+one above it, nearest first. It is undefined for a path that is absolute,
+has a `..` segment without starting `./` or `../`, or normalises outside the
+root. `resolveEmbedPath(flowUrl, embedPath, exists, root)` returns `{ url }`
+for the first candidate that `exists` (a fetch in the browser),
+`{ outside: true }`, or undefined. The CLI, which can list the root, instead
+matches a path not found from the root against the end of every `.md`
+file's path and refuses more than one match.
