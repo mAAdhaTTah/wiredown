@@ -253,7 +253,12 @@ function inlineSvgImages(svg: string): string {
   return svg.replace(
     /<symbol id="([^"]+)"><image href="data:image\/svg\+xml;base64,([^"]+)"[^>]*><\/image><\/symbol>/g,
     (symbol, id: string, base64: string) => {
-      const inner = inlineSvgImages(Buffer.from(base64, "base64").toString("utf8"));
+      // Once inlined, the image's own links would be followed by resvg, which
+      // reads local files; an SVG image may only carry inline data.
+      const inner = inlineSvgImages(Buffer.from(base64, "base64").toString("utf8")).replace(
+        /(\s(?:xlink:)?href=)(["'])(?!data:|#)[^"']*\2/gi,
+        "$1$2$2",
+      );
       const root = /<svg[^>]*>/.exec(inner)?.[0] ?? "";
       const width = / width="([\d.]+)"/.exec(root)?.[1];
       const height = / height="([\d.]+)"/.exec(root)?.[1];

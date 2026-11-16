@@ -78,3 +78,27 @@ describe("svgToPng", { timeout: 30000 }, () => {
     expect(worst).toBeLessThanOrEqual(2);
   });
 });
+
+it("does not draw a local file that an SVG image links to", async () => {
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = await mkdtemp(join(tmpdir(), "wiredown-png-"));
+  try {
+    const red = join(dir, "red.png");
+    const box = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">';
+    await writeFile(
+      red,
+      (await svgToPng(`${box}<rect width="20" height="20" fill="red"/></svg>`)).png,
+    );
+    const inner = `${box}<image href="${red}" width="20" height="20"/></svg>`;
+    const data = Buffer.from(inner).toString("base64");
+    const outer =
+      `${box}<symbol id="s"><image href="data:image/svg+xml;base64,${data}" width="100%" height="100%">` +
+      `</image></symbol><use href="#s" width="20" height="20"/></svg>`;
+    const { png } = await svgToPng(outer, { background: "#ffffff" });
+    expect([...decodePng(png).pixel(10, 10)]).toEqual([255, 255, 255, 255]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}, 30000);
