@@ -1,4 +1,12 @@
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -94,7 +102,8 @@ describe("runClaude", () => {
     ]);
     expect(input).toBe("hello");
     // an empty temp directory, not this repo, and not tied to the parent session
-    expect(cwd.startsWith(tmpdir())).toBe(true);
+    // process.cwd() is a real path (/private/var/... on macOS); tmpdir() may not be
+    expect(cwd.startsWith(realpathSync(tmpdir()))).toBe(true);
     expect(files).toEqual([]);
     expect(claudecode).toBeNull();
     expect(config).toBe("/config");
