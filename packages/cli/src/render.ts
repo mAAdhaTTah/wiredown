@@ -3,7 +3,8 @@ import { basename, dirname, join } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import type { Box, CheckedScreen } from "@wiredown/core";
 import { renderFlowSvg, renderScreenSvg } from "@wiredown/excalidraw/node";
-import { flowFrames, parseFlow, screenElements } from "@wiredown/excalidraw";
+import { flowFrames, screenElements } from "@wiredown/excalidraw";
+import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
 import { embeddedScreens } from "./flow.js";
 import { formatFindings, json, readSource, unknownScreen, UsageError } from "./output.js";
 import type { Finding, Result } from "./output.js";
@@ -99,7 +100,19 @@ function renderResult(
 
 async function renderFlow(file: string, options: RenderOptions): Promise<Result> {
   if (options.screens?.length) throw new UsageError("--screen cannot be used with a flow");
-  const flow = parseFlow(await readSource(file));
+  let flow;
+  try {
+    flow = parseEditableFlow(await readSource(file));
+  } catch (error) {
+    if (!(error instanceof NewerFlowError)) throw error;
+    return {
+      exitCode: 1,
+      stdout: options.json
+        ? json({ file, flow: null, errors: [{ message: error.message }], warnings: [] })
+        : "",
+      stderr: options.json ? "" : `${file}: ${error.message}\n`,
+    };
+  }
   const errors: Finding[] = [];
   const warnings: Finding[] = [];
   // each embed's screens file is the one its path names, from the flow

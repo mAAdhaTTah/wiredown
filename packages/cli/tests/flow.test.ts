@@ -478,6 +478,7 @@ test.each([
   ["connect", "F1", "F1"],
   ["note", "F1", "Note"],
   ["refresh"],
+  ["render"],
   ["highlight", "F1", "#target"],
   ["mark", "F1", "#target", "Label"],
 ])("%s refuses newer live metadata before writing", async (...args) => {
@@ -489,7 +490,11 @@ test.each([
   const source = serializeFlow(flow);
   await writeFile(file, source);
   const screens = await readFile(join(dir, "screens.md"), "utf8");
-  const result = await run(["flow", args[0], file, ...args.slice(1)]);
+  const result = await run(
+    args[0] === "render"
+      ? ["render", file, "--out", join(dir, "out")]
+      : ["flow", args[0], file, ...args.slice(1)],
+  );
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain(
     `${file}: this drawing was written by a newer wiredown (data version 2); upgrade wiredown to edit it`,
