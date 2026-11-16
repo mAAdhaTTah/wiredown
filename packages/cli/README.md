@@ -249,7 +249,8 @@ there corrects both embed sizing and overlay placement.
 `wiredown flow refresh <flow> [--json]` brings a flow up to date after its
 screens change. Each frame's screen comes from the screens file its embed
 names, so one flow may use several. For each frame whose screen exists it
-sets the `## Embedded Files` link size, resizes the image to the new screen
+sets the `## Embedded Files` link size (writing the link's path as new
+embeds are written, from the root, if it was another form), resizes the image to the new screen
 size at the scale it had (a frame a person scaled stays scaled; its top-left
 stays put), and moves the frame's highlights and marks to where
 `flow highlight` and `flow mark` would put them now. Notes under the frame
@@ -289,17 +290,18 @@ screen could not be used. A change is
 the node it stopped meeting; unresolved ones add `unresolved`, the reason.
 An overlay belongs to the frame whose image element id it records, whatever
 the frame is now called. Exit 0; 1
-if a frame's embed names no screens file (reported as
-`flow: F2: error: embeds [[ui#^members]], but no ui.md was found from
-<flow dir> upward`) or a screen a frame embeds is missing or has errors
+if a frame's embed names no screens file, or several files match it
+(reported as `flow: F2: error: embeds [[ui#^members]], but no ui.md was
+found in <root>`) or a screen a frame embeds is missing or has errors
 (reported as findings in that screens file); the other frames are still
 refreshed. Each JSON error adds the `file` it is about.
 
 `wiredown flow lint <flow>... [--json]` never writes. It reports, as
 `path: F2: error: message` and a summary line per file:
 
-- a frame whose embed names no screens file, points outside the flow's
-  root, or whose screen is missing or has errors;
+- a frame whose embed names no screens file, matches several (naming
+  them), points outside the flow's root, or whose screen is missing or has
+  errors;
 - two frames or decisions claiming one name, usually a pasted copy of a
   frame: `F2 is claimed by elements <id> and <id>; delete the copy` (the
   flow commands refuse that name until then);

@@ -198,17 +198,22 @@ export async function loadScreens(path: string) {
  * The screens lookup lint and refresh take: each embed's path resolved from
  * the flow, each screens file read once, each screen laid out once.
  * `errors` collects, per screens file, why screens asked for are unavailable;
- * `unresolved` holds each embed path that names no file, and why.
+ * `unresolved` holds each embed path that names no file, and why; `paths`
+ * the path new embeds of each resolved one's file are written with.
  */
 async function screenLookup(file: string, flow: Flow) {
   const root = await embedRoot(file);
   const files = new Map<string, Awaited<ReturnType<typeof loadScreens>>>();
   const unresolved = new Map<string, string>();
+  const paths = new Map<string, string>();
   for (const embed of flow.embeds.values()) {
     if (!embed.blockId || files.has(embed.path) || unresolved.has(embed.path)) continue;
     const found = await resolveEmbed(file, embed.path, root);
-    if ("path" in found) files.set(embed.path, await loadScreens(found.path));
-    else unresolved.set(embed.path, found.why);
+    if ("why" in found) unresolved.set(embed.path, found.why);
+    else {
+      files.set(embed.path, await loadScreens(found.path));
+      paths.set(embed.path, found.embedPath);
+    }
   }
   const cache = new Map<string, ScreenState | string>();
   const errors = new Map<string, Finding[]>();
@@ -230,7 +235,7 @@ async function screenLookup(file: string, flow: Flow) {
     if (!cache.has(key)) cache.set(key, state(embed));
     return cache.get(key)!;
   };
-  return { lookup, errors, unresolved };
+  return { lookup, errors, unresolved, paths };
 }
 
 /** One flow's lint result, as `flow lint` and `lint` report it. */
@@ -299,9 +304,16 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
   try {
     const original = await readFile(file, "utf8");
     const flow = parseEditableFlow(original);
-    const { lookup, errors, unresolved: lost } = await screenLookup(file, flow);
+    const { lookup, errors, unresolved: lost, paths } = await screenLookup(file, flow);
     const all = refreshFlow(flow, lookup);
     const changes = all.filter((c) => !("unresolved" in c && c.unresolved));
+    // an embed refresh rewrites takes the path new embeds are written with
+    for (const c of changes) {
+      if (c.kind !== "embed") continue;
+      const fileId = String(flow.elements.find((e) => e.id === c.element)!.fileId);
+      const embed = flow.embeds.get(fileId)!;
+      flow.embeds.set(fileId, { ...embed, path: paths.get(embed.path) ?? embed.path });
+    }
     const unresolved = all.filter((c) => "unresolved" in c && c.unresolved);
     if (changes.length || flow.compressed) await safeWrite(file, original, serializeFlow(flow));
     // each frame whose embed names no file, then each screens file's errors;

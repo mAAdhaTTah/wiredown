@@ -145,7 +145,7 @@ test("refresh with a missing or invalid screen still refreshes the others", asyn
   await writeFile(orphan, await readFile(file, "utf8"));
   const missing = await run(["flow", "refresh", orphan]);
   expect(missing.exitCode).toBe(1);
-  const why = `embeds [[screens#^team]], but no screens.md was found from ${join(lone, "flows")} upward`;
+  const why = `embeds [[screens#^team]], but no screens.md was found in ${lone}`;
   expect(missing.stderr).toContain(`${orphan}: F1: error: ${why}\n`);
   expect((await run(["flow", "lint", orphan])).stdout).toContain(`${orphan}: F1: error: ${why}\n`);
 });
@@ -222,13 +222,19 @@ test("lint follows each embed: the reproduced --screens case, vaults, two spec f
   const stale = await run(["flow", "lint", a, b]);
   expect(stale.stdout).toContain(`${a}: 0 errors\n`);
   expect(stale.stdout).toContain(`${b}: F1: error: stale embed size`);
-  // in a vault, the path from its root
+  // a vault above both spec folders is the root now: [[screens]] could be
+  // either folder's file, and lint names both
   await writeFile(join(dir, "spec-b/screens.md"), BASE);
   await mkdir(join(dir, ".obsidian"));
+  const ambiguous = await run(["flow", "lint", b]);
+  expect(ambiguous.exitCode).toBe(1);
+  expect(ambiguous.stdout).toContain(
+    `${b}: F1: error: embeds [[screens#^team]], but it matches several files: spec-a/screens.md, spec-b/screens.md; name one by its path from ${dir}\n`,
+  );
   const v = join(dir, "spec-b/flows/v.excalidraw.md");
   expect((await run(["flow", "new", v, "team"])).exitCode).toBe(0);
   expect(await readFile(v, "utf8")).toContain("[[spec-b/screens#^team|");
-  expect((await run(["lint", dir])).exitCode).toBe(0);
+  expect((await run(["flow", "lint", v])).exitCode).toBe(0);
 });
 
 test("an embed whose file is gone is reported for its frame; the rest still refresh", async () => {
@@ -238,7 +244,7 @@ test("an embed whose file is gone is reported for its frame; the rest still refr
   await run(["flow", "add-screen", file, "team", "--screens", join(dir, "ui.md")]);
   await rm(join(dir, "ui.md"));
   await writeFile(join(dir, "screens.md"), grow(TEAM));
-  const why = `embeds [[ui#^team]], but no ui.md was found from ${join(dir, "flows")} upward`;
+  const why = `embeds [[ui#^team]], but no ui.md was found in ${dir}`;
   const lint = await run(["flow", "lint", file]);
   expect(lint.stdout).toContain(`${file}: F1: error: stale embed size: `);
   expect(lint.stdout).toContain(`${file}: F2: error: ${why}\n${file}: 2 errors\n`);
@@ -249,6 +255,28 @@ test("an embed whose file is gone is reported for its frame; the rest still refr
   expect(JSON.parse((await run(["flow", "refresh", file, "--json"])).stdout).errors).toEqual([
     { file, frame: "F2", message: why },
   ]);
+});
+
+test("refresh writes each link it rewrites with the path from the root", async () => {
+  const dir = await fixture({});
+  await writeFile(join(dir, ".git"), "");
+  await mkdir(join(dir, "spec/flows"), { recursive: true });
+  const base = BASE.replace("^team", "^base");
+  await writeFile(join(dir, "spec/screens.md"), TEAM + "\n" + base);
+  const file = join(dir, "spec/flows/f.excalidraw.md");
+  expect((await run(["flow", "new", file, "team", "base"])).exitCode).toBe(0);
+  // links in forms other than the one written: relative, and a trailing part
+  const flow = parseFlow(await readFile(file, "utf8"));
+  const paths = ["../screens", "screens"];
+  for (const [fileId, embed] of flow.embeds)
+    flow.embeds.set(fileId, { ...embed, path: paths.shift()! });
+  await writeFile(file, serializeFlow(flow));
+  expect((await run(["flow", "lint", file])).exitCode).toBe(0);
+  // only ^team grows: F1's link is rewritten, F2's is left as it was
+  await writeFile(join(dir, "spec/screens.md"), grow(TEAM) + "\n" + base);
+  expect((await run(["flow", "refresh", file])).exitCode).toBe(0);
+  const after = [...parseFlow(await readFile(file, "utf8")).embeds.values()];
+  expect(after.map((e) => e.path)).toEqual(["spec/screens", "screens"]);
 });
 
 test.each(["vault", "git", "neither"])(
