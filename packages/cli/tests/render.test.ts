@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { mkdir, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { render, run } from "../src/index.js";
@@ -93,5 +93,18 @@ describe("render", { timeout: 30000 }, () => {
     const result = await run(["render", "/nonexistent/screens.md", "--json"]);
     expect(result).toMatchObject({ exitCode: 2, stdout: "" });
     expect(result.stderr).toContain("cannot read /nonexistent/screens.md");
+  });
+
+  it("reports a screen it can't write and keeps the ones it wrote", async () => {
+    const dir = await fixture({ "screens.md": `${BASE}\n\n${VARIANT}\n` });
+    const out = join(dir, "out");
+    await mkdir(join(out, "team-after.svg"), { recursive: true });
+    const result = await render(join(dir, "screens.md"), { out, json: true });
+    expect(result).toMatchObject({ exitCode: 1, stderr: "" });
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.screens.map((s: { id: string }) => s.id)).toEqual(["team"]);
+    expect(parsed.errors).toHaveLength(1);
+    expect(parsed.errors[0]).toMatchObject({ screen: "team-after" });
+    expect(parsed.errors[0].message).toContain(`can't write ${join(out, "team-after.svg")}`);
   });
 });

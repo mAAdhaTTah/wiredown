@@ -58,9 +58,14 @@ export async function render(file: string, options: RenderOptions = {}): Promise
       fonts: options.fonts,
     });
     const path = join(out, `${id}.svg`);
-    await mkdir(out, { recursive: true });
-    await writeFile(path, svg);
-    screens.push({ id, svg: path, width, height, boxes });
+    try {
+      await mkdir(out, { recursive: true });
+      await writeFile(path, svg);
+      screens.push({ id, svg: path, width, height, boxes });
+    } catch (e) {
+      // report it with the rest, so the screens already written aren't lost
+      errors.push({ message: `can't write ${path}: ${(e as Error).message}`, screen: id });
+    }
   }
 
   const exitCode = errors.length ? 1 : 0;

@@ -9,9 +9,13 @@ wiredown render <file.md> [--screen <id>]... [--out <dir>] [--theme light|dark] 
 wiredown --help | <command> --help | --version
 ```
 
-Results go to stdout and diagnostics to stderr. Exit codes: 0 success, 1
-the file has errors, 2 bad usage or an unreadable file (nothing on stdout,
-even with `--json`). With `--json`, stdout is always one JSON document.
+`check` prints its findings on stdout: they are its result. `render` prints
+the files it wrote on stdout and its findings on stderr. With `--json`,
+stdout is one JSON document and stderr is empty.
+
+Exit codes: 0 success; 1 the file has errors, or a screen could not be
+written; 2 bad usage or an unreadable file, with a message on stderr and
+nothing on stdout, even with `--json`.
 
 A finding is `{ line, message, screen? }`: a 1-based line in the file and
 the `^id` of the screen it belongs to, when known. Printed, it reads
