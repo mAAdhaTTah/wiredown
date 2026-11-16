@@ -162,7 +162,7 @@ export interface Theme {
     link: string;
     /** The (required) star and the (invalid) outline and mark. */
     error: string;
-    /** The (hi) outline: what the user is acting on in this step. */
+    /** The (focus) outline: what the user is acting on in this step. */
     highlight: string;
   };
   gap: { root: number; stack: number; row: number; pad: number };

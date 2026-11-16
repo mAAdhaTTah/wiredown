@@ -25,7 +25,15 @@ describe("comments", () => {
 });
 
 describe("highlight", () => {
-  it("outlines any component marked (hi), without moving the layout", () => {
+  it("keeps the former (hi) flag as literal text", () => {
+    const { tree, errors } = parse("button: Save (hi)");
+    expect(errors).toEqual([]);
+    expect(tree.children[0].text).toBe("Save (hi)");
+    expect(tree.children[0].opts).toEqual({});
+    expect(outlines("button: Save (hi)")).toHaveLength(0);
+  });
+
+  it("outlines any component marked (focus), without moving the layout", () => {
     for (const line of [
       "button: Apply",
       "text: Hello",
@@ -34,7 +42,7 @@ describe("highlight", () => {
       "grid\na, b",
     ]) {
       const [head, ...rest] = line.split("\n");
-      const marked = [`${head} (hi)`, ...rest].join("\n");
+      const marked = [`${head} (focus)`, ...rest].join("\n");
       expect(outlines(marked)).toHaveLength(1);
       expect(draw(marked).size).toEqual(draw(line).size);
     }
@@ -44,8 +52,8 @@ describe("highlight", () => {
     expect(outlines("button: *Apply")).toHaveLength(0);
     const fills = (s: string) =>
       draw(s).ops.filter((o) => o.kind === "rect" && o.fill === DEFAULT_THEME.colors.primary);
-    expect(fills("button: Cancel (hi)")).toHaveLength(0);
-    expect(fills("button: *Apply (hi)")).toHaveLength(1);
+    expect(fills("button: Cancel (focus)")).toHaveLength(0);
+    expect(fills("button: *Apply (focus)")).toHaveLength(1);
   });
 
   it("outlines a grid row marked >, which may also be selected", () => {

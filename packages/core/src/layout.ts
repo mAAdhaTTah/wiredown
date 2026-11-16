@@ -72,8 +72,8 @@ function markInvalid(ctx: DrawContext, x: number, y: number, size: Size): Size {
   return { w: size.w + GAP + s, h: size.h };
 }
 
-/** Space between a component and its (hi) outline. */
-const HI_GAP = 4;
+/** Space between a component and its (focus) outline. */
+const FOCUS_GAP = 4;
 
 export function layout(
   tree: SpecNode,
@@ -158,9 +158,9 @@ export function layout(
         node.opts.invalid && slot?.w ? { ...slot, w: slot.w - MARK_GAP - markSize(ctx) } : slot;
       let r = COMPONENTS[node.type](ctx, node, x, y, own);
       if (node.opts.invalid) r = markInvalid(ctx, x, y, r);
-      // (hi): an outline around the component, outside its box, so the layout doesn't move
-      if (node.opts.hi) {
-        ctx.rect(x - HI_GAP, y - HI_GAP, r.w + 2 * HI_GAP, r.h + 2 * HI_GAP, {
+      // (focus): an outline around the component, outside its box, so the layout doesn't move
+      if (node.opts.focus) {
+        ctx.rect(x - FOCUS_GAP, y - FOCUS_GAP, r.w + 2 * FOCUS_GAP, r.h + 2 * FOCUS_GAP, {
           width: 2,
           color: colors.highlight,
           rounded: true,

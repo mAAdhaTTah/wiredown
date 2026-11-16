@@ -15,7 +15,7 @@ export const DEFAULT_THEME: Theme = {
     stripe: "#f1f3f5", // every other row of a (striped) grid
     link: "#1971c2", // [links] in labels and link:
     error: "#e03131", // (required) and (invalid) marks
-    highlight: "#f76707", // the (hi) outline
+    highlight: "#f76707", // the (focus) outline
   },
   gap: { root: 24, stack: 14, row: 12, pad: 16 },
 };

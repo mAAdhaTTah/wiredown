@@ -146,7 +146,7 @@ export const FLAGS = new Set([
   "top",
   "empty",
   "stacked",
-  "hi",
+  "focus",
 ]);
 
 /** Levenshtein distance, for "did you mean". */
