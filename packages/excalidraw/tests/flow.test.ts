@@ -348,3 +348,111 @@ describe("embed links", () => {
     }
   });
 });
+
+describe("structure is found from the plugin's markers, not text content", () => {
+  const passes = (text: string) => {
+    const one = serializeFlow(parseFlow(text));
+    const two = serializeFlow(parseFlow(one));
+    expect(serializeFlow(parseFlow(two))).toBe(one);
+    expect(two).toBe(one);
+    return one;
+  };
+  const tricky = {
+    heading: "hello\n## Heading\nworld",
+    "plugin heading": "hello\n## Embedded Files hint\nworld",
+    "%%": "hello\n%%\nworld",
+    "marker-like line": "hello ^abcdefgh\nworld",
+  };
+
+  for (const [name, txt] of Object.entries(tricky)) {
+    it(`keeps text containing ${name} as text, as a new last entry`, () => {
+      const flow = parseFlow(FIXTURE);
+      flow.elements.push(textEl("Tricky01", txt));
+      const out = passes(serializeFlow(flow));
+      // textEntries() would cut at the heading-like line, so look for the whole span.
+      expect(out).toContain(
+        textEntries(FIXTURE) + `${txt} ^Tricky01\n\n## Embedded Files\n${F1_FILE}: [[`,
+      );
+      expect(parseFlow(out).elements).toEqual(flow.elements);
+      expect([...parseFlow(out).embeds.keys()]).toHaveLength(3);
+      expect(unowned(out.replace(`${txt} ^Tricky01\n\n`, ""))).toBe(unowned(FIXTURE));
+    });
+
+    it(`keeps text containing ${name} as text, in the middle`, () => {
+      const flow = parseFlow(FIXTURE);
+      Object.assign(
+        flow.elements.find((e) => e.id === "Rts422gy")!,
+        {
+          text: txt,
+          originalText: txt,
+          rawText: txt,
+        },
+      );
+      const out = passes(serializeFlow(flow));
+      expect(out.split(`${txt} ^Rts422gy\n\n`)).toHaveLength(2);
+      expect(parseFlow(out).elements).toEqual(flow.elements);
+      // A marker-like line is read as an id the scene lacks, and ignored.
+      expect(parseFlow(out).source.textOrder.filter((id) => id !== "abcdefgh")).toEqual(
+        parseFlow(FIXTURE).source.textOrder,
+      );
+    });
+  }
+
+  it("keeps a person's section after the last text entry", () => {
+    const text = FIXTURE.replace(
+      "## Embedded Files\n",
+      "## Notes\nKeep it.\n\n## Embedded Files\n",
+    );
+    expect(passes(text)).toBe(text);
+    const flow = parseFlow(text);
+    flow.elements.push(textEl("NewText4", "A note"));
+    expect(passes(serializeFlow(flow))).toContain(
+      "no: Apply ^fSDHrM4i\n\nA note ^NewText4\n\n## Notes\nKeep it.\n\n## Embedded Files\n",
+    );
+  });
+
+  it("keeps a person's section after Embedded Files", () => {
+    const text = FIXTURE.replace("\n%%\n## Drawing", "\n## Notes\nKeep it.\n\n%%\n## Drawing");
+    expect(passes(text)).toBe(text);
+    const flow = parseFlow(text);
+    flow.elements.push(image("NewImage", "f00d"));
+    flow.embeds.set("f00d", { path: "screens", blockId: "settings", width: 3, height: 2 });
+    const out = passes(serializeFlow(flow));
+    expect(out).toContain(
+      "|910x403]]\n\nf00d: [[screens#^settings|3x2]]\n\n## Notes\nKeep it.\n\n%%\n",
+    );
+    expect(pluginFailures(out)).toEqual([]);
+  });
+
+  it("reads Embedded Files entries without blank lines between them", () => {
+    const text = FIXTURE.replace(/(## Embedded Files\n[\s\S]*?)(?=%%\n)/, (s) =>
+      s.replaceAll("]]\n\n", "]]\n"),
+    );
+    expect(text).toContain("673]]\n2d87b3a504f630e7baed934e0cdaa0f80773ab77: [[");
+    expect(pluginFiles(text).size).toBe(3);
+    const flow = parseFlow(text);
+    expect([...flow.embeds.keys()]).toEqual([...parseFlow(FIXTURE).embeds.keys()]);
+    expect(serializeFlow(flow)).toBe(text);
+    flow.embeds.get(F1_FILE)!.width = 900;
+    expect(passes(serializeFlow(flow))).toBe(
+      text.replace("simplified-tree|896x673", "simplified-tree|900x673"),
+    );
+  });
+
+  it("keeps a fenced block after the drawing", () => {
+    const note = "\n\nA note after the drawing:\n\n```js\nconsole.log(1);\n```\n";
+    for (const base of [FIXTURE, compressed(FIXTURE)]) {
+      const text = base + note;
+      expect(passes(text)).toBe(text);
+      const flow = parseFlow(text);
+      flow.elements[0].x = 5;
+      const out = passes(serializeFlow(flow));
+      expect(out.endsWith("```\n%%" + note)).toBe(true);
+      expect(parseFlow(out).elements).toEqual(flow.elements);
+    }
+  });
+
+  it("names CRLF line endings as the cause", () => {
+    expect(() => parseFlow(FIXTURE.replaceAll("\n", "\r\n"))).toThrow(/CRLF/);
+  });
+});

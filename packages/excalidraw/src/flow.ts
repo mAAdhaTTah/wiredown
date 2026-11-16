@@ -47,8 +47,10 @@ const FILES = 1;
 
 interface FileEntry {
   fileId: string;
-  /** The whole entry, without its trailing blank line. */
+  /** The whole entry, as read, without the newlines after it. */
   raw: string;
+  /** The newlines after it. */
+  sep: string;
   /** The text inside `[[ ]]`, when the entry is a link. */
   link?: string;
 }
@@ -74,17 +76,21 @@ const WARNING =
   "==⚠  Switch to EXCALIDRAW VIEW in the MORE OPTIONS menu of this document. ⚠== You can decompress Drawing data with the command palette: 'Decompress current Excalidraw file'. For more info check in plugin settings under 'Saving'";
 const TEXT_HEADING = "## Text Elements\n";
 const FILES_HEADING = "## Embedded Files\n";
+/** The plugin's end of a text element entry: ` ^` and an 8-character id. */
+const TEXT_MARKER = /\s\^(.{8})\n+/g;
 
 /** Parses an Obsidian Excalidraw drawing. Throws if it is not one. */
 export function parseFlow(text: string): Flow {
+  if (text.includes("\r\n"))
+    throw new Error("Excalidraw drawing: CRLF line endings are not supported");
   const d = /\n(##? Drawing\n```(json|compressed-json)\n)/.exec(text);
   if (!d) throw new Error('not an Excalidraw drawing: no "## Drawing" json block');
   const before = text.slice(0, d.index + 1);
   const bodyStart = d.index + d[0].length;
-  const fence = text.lastIndexOf("```");
-  if (fence < bodyStart)
-    throw new Error('not an Excalidraw drawing: "## Drawing" block is not closed');
-  const closeStart = text[fence - 1] === "\n" ? fence - 1 : fence;
+  // Neither JSON.stringify nor base64 can produce a line that is just ```.
+  const fence = /^```$/m.exec(text.slice(bodyStart));
+  if (!fence) throw new Error('not an Excalidraw drawing: "## Drawing" block is not closed');
+  const closeStart = Math.max(bodyStart, bodyStart + fence.index - 1);
   const body = text.slice(bodyStart, closeStart);
   const compressed = d[2] === "compressed-json";
 
@@ -109,7 +115,7 @@ export function parseFlow(text: string): Flow {
   if (!ex) throw new Error('not an Excalidraw drawing: no "# Excalidraw Data" section');
   const { parts, sections } = splitSections(before.slice(ex.index));
 
-  const textOrder = [...(sections[TEXT] ?? "").matchAll(/\s\^(.{8})\n+/g)].map((m) => m[1]);
+  const textOrder = [...(sections[TEXT] ?? "").matchAll(TEXT_MARKER)].map((m) => m[1]);
   const fileEntries = parseFileEntries(sections[FILES] ?? "");
   const embeds = new Map<string, EmbedLink>();
   for (const e of fileEntries) if (e.link !== undefined) embeds.set(e.fileId, parseEmbed(e.link));
@@ -159,18 +165,18 @@ export function serializeFlow(flow: Flow): string {
   for (const e of fileEntries) {
     if (!used.has(e.fileId) || written.has(e.fileId)) continue;
     const embed = flow.embeds.get(e.fileId);
-    if (e.link === undefined) entries.push(e.raw);
-    else if (!embed) continue;
-    else if (sameEmbed(embed, parseEmbed(e.link))) entries.push(e.raw);
-    else entries.push(e.raw.replace(`[[${e.link}]]`, () => `[[${formatEmbed(embed)}]]`));
+    if (e.link === undefined || (embed && sameEmbed(embed, parseEmbed(e.link)))) {
+      entries.push(e.raw + e.sep);
+    } else if (!embed) continue;
+    else entries.push(e.raw.replace(`[[${e.link}]]`, () => `[[${formatEmbed(embed)}]]`) + e.sep);
     written.add(e.fileId);
   }
   for (const fileId of used) {
     const embed = flow.embeds.get(fileId);
     if (written.has(fileId) || !embed) continue;
-    entries.push(`${fileId}: [[${formatEmbed(embed)}]]`);
+    entries.push(`${fileId}: [[${formatEmbed(embed)}]]\n\n`);
   }
-  const filesBody = entries.map((e) => `${e}\n\n`).join("");
+  const filesBody = entries.join("");
 
   let all = parts;
   if (textBody && !all.includes(TEXT)) all = insertBeforeEnd(all, TEXT);
@@ -237,33 +243,50 @@ export function parseEmbed(link: string): EmbedLink {
   return out;
 }
 
-// Splits the data part into verbatim text and the sections we own. An owned
-// section runs from its heading to the next `## ` heading or `%%` line.
+// Splits the data part (up to `## Drawing`) into verbatim text and the
+// sections we own. Structure is found from the plugin's own markers, never
+// from text content:
+// - `## Text Elements` spans up to `## Element Links`, `## Embedded Files` or
+//   the `%%` before `## Drawing`. Within that span, lines that look like
+//   headings are text; the section ends after its last ` ^id` marker, and
+//   anything after that marker is kept verbatim.
+// - `## Embedded Files` runs to the next `## ` heading or that `%%`.
 function splitSections(data: string): { parts: Part[]; sections: (string | undefined)[] } {
+  const close = data.endsWith("\n%%\n") ? data.length - 3 : data.length;
   const parts: Part[] = [];
   const sections: (string | undefined)[] = [];
   let pos = 0;
-  for (const m of data.matchAll(/^## (Text Elements|Embedded Files)\n/gm)) {
-    const kind = m[1] === "Text Elements" ? TEXT : FILES;
-    if (m.index < pos || sections[kind] !== undefined) continue;
-    const start = m.index + m[0].length;
-    const end = /^(## |%%$)/m.exec(data.slice(start));
-    const stop = end ? start + end.index : data.length;
-    parts.push(data.slice(pos, m.index), kind);
+  const own = (kind: typeof TEXT | typeof FILES, heading: number, start: number, stop: number) => {
+    parts.push(data.slice(pos, heading), kind);
     sections[kind] = data.slice(start, stop);
     pos = stop;
+  };
+  const t = /^## Text Elements\n/m.exec(data.slice(0, close));
+  if (t) {
+    const start = t.index + t[0].length;
+    const next = /^## (Element Links|Embedded Files)\n/m.exec(data.slice(start, close));
+    const span = data.slice(start, next ? start + next.index : close);
+    const last = [...span.matchAll(TEXT_MARKER)].at(-1);
+    own(TEXT, t.index, start, start + (last ? last.index + last[0].length : 0));
+  }
+  const f = /^## Embedded Files\n/m.exec(data.slice(pos, close));
+  if (f) {
+    const start = pos + f.index + f[0].length;
+    const next = /^## /m.exec(data.slice(start, close));
+    own(FILES, pos + f.index, start, next ? start + next.index : close);
   }
   parts.push(data.slice(pos));
   return { parts: parts.filter((p) => p !== ""), sections };
 }
 
-// Entries are separated by blank lines: `fileId: [[link]]`, or a URL or
-// LaTeX entry, which is kept as written.
+// The plugin's grammar: an entry starts with `fileId:` at the start of a
+// line (`[[link]]`, a URL or LaTeX) and may be followed by blank lines or none.
 function parseFileEntries(body: string): FileEntry[] {
   const entries: FileEntry[] = [];
-  for (const raw of body.split(/\n\n+/)) {
-    const m = /^([\w\d]*):\s*(?:!?\[\[([^\]]*)]])?/.exec(raw.trim());
-    if (m) entries.push({ fileId: m[1], raw: raw.trim(), link: m[2] });
+  for (const m of body.matchAll(/^([\w\d]+):.*(?:\n(?![\w\d]+:)(?=[^\n]).*)*(\n*)/gm)) {
+    const raw = m[0].slice(0, m[0].length - m[2].length);
+    const link = /^[\w\d]+:\s*!?\[\[([^\]]*)]]/.exec(raw)?.[1];
+    entries.push({ fileId: m[1], raw, sep: m[2], link });
   }
   return entries;
 }
@@ -271,9 +294,8 @@ function parseFileEntries(body: string): FileEntry[] {
 // A new owned section goes before the `%%` that closes the data part.
 function insertBeforeEnd(parts: Part[], kind: Part): Part[] {
   const last = parts.at(-1);
-  const end = typeof last === "string" ? /^%%$/m.exec(last) : null;
-  if (typeof last !== "string" || !end) return [...parts, kind];
-  return [...parts.slice(0, -1), last.slice(0, end.index), kind, last.slice(end.index)];
+  if (typeof last !== "string" || !/(^|\n)%%\n$/.test(last)) return [...parts, kind];
+  return [...parts.slice(0, -1), last.slice(0, -3), kind, "%%\n"].filter((p) => p !== "");
 }
 
 function textOf(e: ExcalidrawElementJson): string {
