@@ -22,10 +22,11 @@ pnpm install
 pnpm format          # Apply formatting
 pnpm format:check
 pnpm lint
-pnpm typecheck
 pnpm build
+pnpm typecheck
 pnpm test
 ```
 
 Build and typecheck recurse through workspace package scripts. The root
-Vitest config discovers package projects in `packages/*`.
+Vitest config discovers package projects in `packages/*`. Packages import
+each other through their built `dist/`, so build before typecheck and test.
