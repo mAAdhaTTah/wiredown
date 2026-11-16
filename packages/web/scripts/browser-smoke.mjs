@@ -245,6 +245,17 @@ try {
             notice.includes("image file attack1:"),
         );
         assert(!notice.includes("image file attack2:"), "inline SVG stays an image");
+        const inlineImages = await page
+          .locator(".wiredown-flow svg image")
+          .evaluateAll((images) => images.map((image) => image.getAttribute("href") ?? ""));
+        assert(
+          inlineImages.some(
+            (url) =>
+              url.startsWith("data:image/svg+xml,") &&
+              decodeURIComponent(url).includes("https://attacker.invalid/inner.png"),
+          ),
+          "nested external reference remains inside an SVG image",
+        );
         assert.equal(await page.locator(".wiredown-flow svg").count(), 1);
       }
       if (kind === "flow") {
