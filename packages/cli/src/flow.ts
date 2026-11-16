@@ -1,6 +1,6 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import { checkScreens, layoutScreen, nearest } from "@wiredown/core";
+import { checkScreens, layoutScreen } from "@wiredown/core";
 import {
   addScreen,
   embedSize,
@@ -10,8 +10,8 @@ import {
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
-import { json, UsageError } from "./output.js";
-import type { Result } from "./output.js";
+import { formatFindings, json, unknownScreen, UsageError } from "./output.js";
+import type { Finding, Result } from "./output.js";
 
 export interface FlowOptions {
   screens?: string;
@@ -31,7 +31,7 @@ async function exists(path: string) {
 /** Adds only missing top-level styling keys, preserving the original bytes. */
 export function styleScreens(source: string): string {
   const nl = source.includes("\r\n") ? "\r\n" : "\n";
-  const front = /^---\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)(?=\r?\n|$)/.exec(source);
+  const front = /^---\r?\n(?:[\s\S]*?\r?\n)?(?:---|\.\.\.)(?=\r?\n|$)/.exec(source);
   const additions = [
     ["excalidraw-font", "Helvetica"],
     ["excalidraw-css", '".wiredown-block svg{display:block}"'],
@@ -53,6 +53,8 @@ export async function editFlow(
   ids: string[],
   options: FlowOptions = {},
 ): Promise<Result> {
+  let findings: Finding[] = [];
+  let findingFile = file;
   try {
     if (command === "new" && (await exists(file))) throw new Error(`flow already exists: ${file}`);
     const flow = command === "new" ? newFlow() : parseFlow(await readFile(file, "utf8"));
@@ -80,21 +82,24 @@ export async function editFlow(
       for (const id of ids) {
         const screen = checked.screens.find((s) => s.id === id);
         if (!screen) {
-          const guess = nearest(id, known);
-          throw new Error(
-            `no screen "^${id}" (it has ${known.join(", ")})${guess ? `; did you mean "^${guess}"?` : ""}`,
-          );
+          findings = [unknownScreen(id, known)];
+        } else {
+          findings = checked.errors.filter((e) => !e.screen || e.screen === id);
         }
-        const errors = checked.errors.filter((e) => !e.screen || e.screen === id);
-        if (errors.length) throw new Error(errors.map((e) => `^${id}: ${e.message}`).join("\n"));
+        if (findings.length) {
+          findingFile = screensPath;
+          throw new Error(findings[0].message);
+        }
+        if (!screen) throw new Error("screen not found");
+
         const rendered = screenElements(layoutScreen(screen.tree));
         const size = embedSize(rendered.width, rendered.height);
         const title = options.title ?? screen.heading ?? id;
         const frame = addScreen(flow, {
           screenId: id,
           title,
-          embed: { path: basename(screensPath, ".md"), ...size.link },
-          size: size.image,
+          path: basename(screensPath, ".md"),
+          size: { width: rendered.width, height: rendered.height },
           place: options.rightOf
             ? { rightOf: options.rightOf }
             : options.below
@@ -121,6 +126,7 @@ export async function editFlow(
         : frames.map((f) => `${f.frame}  ${f.screen}  ${f.width}x${f.height}\n`).join(""),
     };
   } catch (error) {
+    if (!findings.length) findings = [{ message: (error as Error).message }];
     return {
       exitCode: 1,
       stdout: options.json
@@ -128,10 +134,10 @@ export async function editFlow(
             flow: file,
             frames: [],
             screensFileUpdated: false,
-            errors: [{ message: (error as Error).message }],
+            errors: findings,
           })
         : "",
-      stderr: options.json ? "" : `wiredown: ${(error as Error).message}\n`,
+      stderr: options.json ? "" : formatFindings(findingFile, findings, []),
     };
   }
 }

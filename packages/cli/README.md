@@ -106,7 +106,8 @@ rightmost frame. Titles default to the screen heading, then its id.
 Screens are discovered in the parent of the flow directory, then the flow
 directory itself. Missing embed styling frontmatter is added; existing values
 are preserved. Invalid screens and unknown frames leave the drawing untouched.
-Human output is one `F3  team-members  528x328` line per frame. JSON is
+Human output is one `F3  team-members  548x333` line per frame. The size is
+the embed image size in the drawing. JSON is
 `{ flow, frames: [{ frame, screen, title, x, y, width, height }],
 screensFileUpdated }`. Operational errors exit 1 (JSON adds an `errors`
 array); usage errors exit 2.

@@ -18,7 +18,7 @@ export function embedSize(screenWidth: number, screenHeight: number) {
 export interface AddScreenOptions {
   screenId: string;
   title: string;
-  embed: { path: string; width: number; height: number };
+  path: string;
   size: { width: number; height: number };
   place?: { rightOf: string } | { below: string };
 }
@@ -83,6 +83,7 @@ function element(
 }
 /** Appends one frame; existing elements are never modified. Returns its F-number. */
 export function addScreen(flow: Flow, options: AddScreenOptions): string {
+  const size = embedSize(options.size.width, options.size.height);
   const frames = flowFrames(flow);
   const refId =
     options.place && ("rightOf" in options.place ? options.place.rightOf : options.place.below);
@@ -100,8 +101,20 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
       `unknown frame "${refId}" (frames: ${frames.map((f) => f.frame).join(", ") || "none"})`,
     );
   const below = options.place && "below" in options.place;
-  const x = ref ? Number(ref.x) + (below ? 0 : Number(ref.width) + GAP) : 0;
-  const y = ref ? Number(ref.y) + (below ? Number(ref.height) + GAP : 0) : 0;
+  const live = flow.elements.filter((e) => !e.isDeleted);
+  const bounds =
+    !ref && live.length
+      ? {
+          right: Math.max(...live.map((e) => Number(e.x) + Number(e.width))),
+          top: Math.min(...live.map((e) => Number(e.y))),
+        }
+      : undefined;
+  const x = ref
+    ? Number(ref.x) + (below ? 0 : Number(ref.width) + GAP)
+    : bounds
+      ? bounds.right + GAP
+      : 0;
+  const y = ref ? Number(ref.y) + (below ? Number(ref.height) + GAP : 0) : (bounds?.top ?? 0);
   const numbers = flow.elements.flatMap((e) => {
     const a = /^F(\d+)$/.exec(identity(e)?.frame ?? "");
     const b = e.type === "text" ? /^F(\d+) ·/.exec(String(e.rawText ?? e.text)) : null;
@@ -139,7 +152,7 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
     n.toString(16).padStart(2, "0"),
   ).join("");
   const image = {
-    ...element("image", x, y, options.size.width, options.size.height, keys[1], {
+    ...element("image", x, y, size.image.width, size.image.height, keys[1], {
       ...data,
       role: "screen",
     }),
@@ -149,6 +162,6 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
     crop: null,
   };
   flow.elements.push(label, image);
-  flow.embeds.set(fileId, { ...options.embed, blockId: options.screenId });
+  flow.embeds.set(fileId, { path: options.path, ...size.link, blockId: options.screenId });
   return frame;
 }

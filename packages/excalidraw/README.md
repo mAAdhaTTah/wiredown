@@ -107,9 +107,9 @@ installed. The pinned exporter logs a font-set warning and a glyph-subsetting
 warning in Node; it still embeds the full Latin font subset, as verified by
 the export tests. Layout uses core's metrics, without DOM text measurement.
 
-`addScreen(flow, { screenId, title, embed, size, place? })` appends a label
-and image and returns its F-number. `embedSize(width, height)` converts a
-screen export size to `{ link, image }` dimensions. `flowFrames(flow)`
+`addScreen(flow, { screenId, title, path, size, place? })` appends a label
+and image and returns its F-number; `size` is the rendered screen size.
+`embedSize(width, height)` converts a screen export size to `{ link, image }` dimensions. `flowFrames(flow)`
 finds live images with Wiredown customData. Legacy labels reserve numbers,
 but legacy images are not placement targets. Deleted elements reserve their
 numbers too. Existing elements are never changed.

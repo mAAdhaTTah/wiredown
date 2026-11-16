@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { nearest } from "@wiredown/core";
 import type { ScreenDiagnostic } from "@wiredown/core";
 
 /** What a command produced; the bin writes it out, tests inspect it. */
@@ -40,3 +41,11 @@ export function formatFindings(file: string, errors: Finding[], warnings: Findin
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 export const json = (value: unknown) => JSON.stringify(value, null, 2) + "\n";
+
+/** Match render's unknown-screen wording across commands. */
+export function unknownScreen(id: string, known: string[]): Finding {
+  const guess = nearest(id, known);
+  const list = known.length ? ` (it has ${known.map((k) => `^${k}`).join(", ")})` : "";
+  const hint = guess ? `; did you mean "^${guess}"?` : "";
+  return { message: `no screen "^${id}"${list}${hint}`, screen: id };
+}
