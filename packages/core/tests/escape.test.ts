@@ -76,4 +76,15 @@ describe("the escape hint", () => {
       'row doesn\'t take "plain" (it takes: w, fill, top, disabled, invalid, focus)',
     );
   });
+
+  it.each(["f\\(x) = y", "end \\(fill)", "end (fill)", "a (b) (fill)", "x \\(w=1)", "f(x) = y"])(
+    "round-trips the text %j through serialize",
+    (text) => {
+      const tree = parse("text: placeholder").tree;
+      tree.children[0].text = text;
+      const again = parse(serialize(tree)).tree.children[0];
+      expect(again.text).toBe(text);
+      expect(again.opts).toEqual({});
+    },
+  );
 });

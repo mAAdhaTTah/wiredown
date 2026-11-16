@@ -278,8 +278,10 @@ export function resolve(source: string, options: ResolveOptions = {}): ParseResu
 function escape(text: string): string {
   const out = text.replace(/#/g, "\\#");
   const tail = /\(([^()]*)\)\s*$/.exec(out);
-  if (!tail || parseOptions(tail[0]).rest) return out;
-  return out.slice(0, tail.index) + "\\" + out.slice(tail.index);
+  const cut = tail && !parseOptions(tail[0]).rest ? tail.index : out.length;
+  // a literal backslash before a bracket is doubled, or it would read as an escape
+  const head = out.slice(0, cut).replace(/\\\(/g, "\\\\(");
+  return cut < out.length ? head + "\\" + out.slice(cut) : head;
 }
 
 function line(node: SpecNode): string {
