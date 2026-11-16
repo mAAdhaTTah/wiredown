@@ -896,11 +896,11 @@ export function removeFromFlow(
 ): { removed: Removed[]; unbound: Unbound[] } {
   const live = flow.elements.filter((e) => !e.isDeleted);
   const byId = new Map(live.map((e) => [e.id, e]));
-  /** `ids` with the text bound to them. */
+  /** `ids` with our text bound to them; a person's text is detached, not removed. */
   const withText = (ids: string[]) => [
     ...new Set([
       ...ids,
-      ...live.filter((e) => ids.includes(String(e.containerId))).map((e) => e.id),
+      ...live.filter((e) => identity(e) && ids.includes(String(e.containerId))).map((e) => e.id),
     ]),
   ];
   const nodeOf = (e: ExcalidrawElementJson) =>
@@ -1064,6 +1064,10 @@ export function removeFromFlow(
       if (id === undefined || !gone.has(id)) continue;
       e[end] = null;
       unbound.push({ element: e.id, from: names.get(id) ?? id });
+      changed = true;
+    }
+    if (gone.has(String(e.containerId))) {
+      e.containerId = null;
       changed = true;
     }
     const bound = e.boundElements as { id: string }[] | null | undefined;

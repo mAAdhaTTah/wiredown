@@ -401,9 +401,8 @@ drawing` (or of `F2's note`, `F2's highlight`, `arrow F1 -> F2`, …);
   its frame now embeds;
 - a note whose frame or decision is gone: `note "<first words…>" is on a
 node that no longer exists; remove it with "wiredown flow remove <flow>
-<id>"`, and the same hint, with the element id or overlay address, on
-  overlays whose frame or component is gone and arrows of ours whose node is
-  gone;
+<id>"`, and the same hint, with the element id, on overlays whose frame or
+  component is gone and arrows of ours whose node is gone;
 - a note whose top edge lies inside its frame: `note "<first words…>"
 overlaps F1; run "wiredown flow refresh" or move it`;
 - a dangling arrow, ours or hand-drawn: bound to an element that is missing,

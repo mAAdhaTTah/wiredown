@@ -550,8 +550,7 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
       });
     const plan = placeOverlay(flow, o, s as typeof s & { screen: ScreenState }, refreshedImage(s));
     if (typeof plan === "string") {
-      const address = `${s.frame}#${o.target}${o.role === "mark" ? `:${o.label}` : ""}`;
-      out.push({ ...at, message: `${overlayName(o)}: ${plan}; ${removeIt(address)}` });
+      out.push({ ...at, message: `${overlayName(o)}: ${plan}; ${removeIt(o.element.id)}` });
     } else if (!plan.every(placed))
       out.push({ ...at, message: `stale overlay: ${overlayName(o)} is not on #${o.target}` });
   }
