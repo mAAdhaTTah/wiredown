@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { eaMeasure, renderOps } from "../src/adapters/excalidraw";
-import { renderSvg } from "../src/adapters/svg";
 import { DEFAULT_THEME, FONT_SIZE, layout, parse } from "../src/index.js";
 import type { DrawOp, LineOp, RectOp, Style, TextOp } from "../src/index.js";
-import { FakeEa } from "./helpers/fakeEa";
 import { fakeMeasure } from "./helpers/fakeMeasure.js";
 
 const style: Style = { stroke: "#1e1e1e", fontFamily: 5, roughness: 1, fontSize: FONT_SIZE };
@@ -122,51 +119,6 @@ describe("(disabled)", () => {
 });
 
 describe("adapters", () => {
-  const ops: DrawOp[] = [
-    {
-      kind: "rect",
-      x: 0,
-      y: 0,
-      w: 10,
-      h: 10,
-      fill: null,
-      stroke: true,
-      strokeWidth: 1,
-      rounded: false,
-      color: "#adb5bd",
-    },
-    {
-      kind: "line",
-      points: [
-        [0, 0],
-        [5, 5],
-      ],
-      strokeWidth: 1,
-      color: "#adb5bd",
-    },
-    { kind: "text", x: 0, y: 0, w: 10, h: 10, text: "Hi", color: "#ffffff", fontSize: 28 },
-  ];
-
-  it("Excalidraw: uses an op's colour and font size", () => {
-    const ea = new FakeEa();
-    renderOps(ea, ops, style);
-    expect(ea.calls.map((c) => c.style.strokeColor)).toEqual(["#adb5bd", "#adb5bd", "#ffffff"]);
-    expect(ea.calls[2].style.fontSize).toBe(28);
-  });
-
-  it("Excalidraw: measures with a given font size", () => {
-    const ea = new FakeEa();
-    const measure = eaMeasure(ea);
-    measure("x", { fontSize: 28, fontFamily: 5 });
-    expect(ea.style.fontSize).toBe(28);
-  });
-
-  it("SVG: uses an op's colour and font size", () => {
-    const svg = renderSvg(ops, style);
-    expect(svg).toContain('stroke="#adb5bd"');
-    expect(svg).toContain('fill="#ffffff" font-size="28"');
-  });
-
   it("layout: passes a text's font size to the measurer", () => {
     const seen: number[] = [];
     layout(

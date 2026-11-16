@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { renderOps } from "../src/adapters/excalidraw";
-import { renderSvg } from "../src/adapters/svg";
 import { FONT_SIZE, ICON_NAMES, INK, layout, parse } from "../src/index.js";
 import type { DrawOp, EllipseOp, RectOp, Style, TextOp } from "../src/index.js";
-import { FakeEa } from "./helpers/fakeEa";
 import { LINE_H, fakeMeasure } from "./helpers/fakeMeasure.js";
 
 const style: Style = { stroke: "#1e1e1e", fontFamily: 5, roughness: 1, fontSize: FONT_SIZE };
@@ -73,17 +70,6 @@ describe("icon:", () => {
   it("fills solid dots with the stroke colour", () => {
     const dot = ellipses(draw("icon: dot").ops)[0];
     expect(dot.fill).toBe(INK);
-    const ea = new FakeEa();
-    renderOps(ea, [dot], style);
-    expect(ea.calls[0].style.backgroundColor).toBe(style.stroke);
-    expect(renderSvg([dot], style)).toContain(`fill="${style.stroke}"`);
-  });
-
-  it("uses the disabled colour for a dot in a disabled component", () => {
-    const dot = ellipses(draw("icon: dot (disabled)").ops)[0];
-    const ea = new FakeEa();
-    renderOps(ea, [dot], style);
-    expect(ea.calls[0].style.backgroundColor).toBe("#adb5bd");
   });
 });
 

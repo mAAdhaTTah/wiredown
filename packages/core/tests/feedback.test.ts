@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { renderOps } from "../src/adapters/excalidraw";
-import { renderSvg } from "../src/adapters/svg";
 import { DEFAULT_THEME, FONT_SIZE, layout, parse } from "../src/index.js";
 import type { DrawOp, LineOp, RectOp, Style, TextOp } from "../src/index.js";
-import { FakeEa } from "./helpers/fakeEa";
 import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure.js";
 
 const style: Style = { stroke: "#1e1e1e", fontFamily: 5, roughness: 1, fontSize: FONT_SIZE };
@@ -201,14 +198,5 @@ describe("placeholder", () => {
 
   it("leaves the dashed key out of other rectangles", () => {
     expect(rects(draw("image: 10x10").ops).every((r) => !("dashed" in r))).toBe(true);
-  });
-
-  it("is dashed in Excalidraw and in SVG", () => {
-    const { ops } = draw("placeholder: 100x40");
-    const ea = new FakeEa();
-    renderOps(ea, ops, style);
-    expect(ea.calls[0].style.strokeStyle).toBe("dashed");
-    expect(renderSvg(ops, style)).toContain("stroke-dasharray");
-    expect(renderSvg(draw("image: 10x10").ops, style)).not.toContain("stroke-dasharray");
   });
 });

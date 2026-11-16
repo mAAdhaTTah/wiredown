@@ -9,7 +9,8 @@ import type { MeasureText } from "./types.js";
 /** Fonts that share the table's advances; the first one installed is used. */
 export const FONT_STACK = "Arimo, 'Liberation Sans', Arial, Helvetica, sans-serif";
 /** Turns off kerning and ligatures, which the table doesn't model. */
-export const FONT_CSS = "font-kerning:none;font-variant-ligatures:none;letter-spacing:0;word-spacing:0";
+export const FONT_CSS =
+  "font-kerning:none;font-variant-ligatures:none;letter-spacing:0;word-spacing:0";
 export const LINE_HEIGHT = 1.25;
 /** Arimo's ascent and descent, in em; they place the baseline within a line. */
 export const ASCENT = 1854 / UNITS_PER_EM;

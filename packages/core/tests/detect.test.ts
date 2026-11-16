@@ -20,9 +20,7 @@ describe("fenced blocks", () => {
   });
 
   it("removes indentation shared by every line", () => {
-    expect(fencedOnly("  ```wiredown\n    row:\n      button: A\n  ```")).toBe(
-      "row:\n  button: A",
-    );
+    expect(fencedOnly("  ```wiredown\n    row:\n      button: A\n  ```")).toBe("row:\n  button: A");
   });
 
   it("reads to the end when the block is not closed", () => {
@@ -40,9 +38,7 @@ describe("fenced blocks", () => {
   });
 
   it("accepts Windows line endings", () => {
-    expect(fencedOnly("```wiredown\r\nbutton: A\r\nbutton: B\r\n```")).toBe(
-      "button: A\nbutton: B",
-    );
+    expect(fencedOnly("```wiredown\r\nbutton: A\r\nbutton: B\r\n```")).toBe("button: A\nbutton: B");
   });
 });
 
