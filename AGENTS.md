@@ -3,7 +3,7 @@
 - Use pnpm; Node and pnpm versions are pinned in `mise.toml`.
 - Use strict TypeScript and ESM. Extend `tsconfig.base.json` in packages.
 - Build packages with plain `tsc` to `dist/`.
-- Use Vitest. Tests live in `packages/<name>/tests`, next to package source.
+- Use Vitest. Tests live in `packages/<name>/tests`.
 - Keep code clear and succinct. Avoid overengineering and do not build for
   use cases the design does not call for.
 - `@wiredown/core` has no DOM and no Excalidraw dependency.
