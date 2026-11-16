@@ -1,7 +1,9 @@
 import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { checkScreens, layoutScreen } from "@wiredown/core";
+import { checkScreens, layoutScreen, nearest } from "@wiredown/core";
 import {
+  addHighlight,
+  addMark,
   addDecision,
   addNote,
   addScreen,
@@ -13,12 +15,11 @@ import {
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
-import type { ExcalidrawElementJson, Flow } from "@wiredown/excalidraw";
-import { screensToEmbed } from "./embeds";
-import { CommandError, fileOp, formatFindings, json, unknownScreen, UsageError } from "./output";
-import type { Finding, Result } from "./output";
-import { NewerFlowError, parseEditableFlow } from "./read-flow";
-import { safeWrite } from "./safe-write";
+import { frameEmbed, screensToEmbed } from "./embeds.js";
+import { formatFindings, json, unknownScreen, UsageError } from "./output.js";
+import type { Finding, Result } from "./output.js";
+import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
+import { safeWrite } from "./safe-write.js";
 
 export interface FlowOptions {
   screens?: string;
@@ -73,29 +74,20 @@ export async function editFlow(
     let screensPath: string | undefined;
     let source = "";
     if (ids.length) {
-      const embed = await screensToEmbed(file, options.screens!);
-      screensPath = embed.path;
-      source = await fileOp(
-        `cannot read the screens file ${screensPath}`,
-        readFile(screensPath, "utf8"),
-      );
-      const checked = checkScreens(source);
-      const known = checked.screens.flatMap((s) => (s.id ? [s.id] : []));
+      const embed = await screensToEmbed(file, options.screens);
+      const loaded = await loadScreens(embed.path);
+      screensPath = loaded.path;
+      source = loaded.source;
       for (const id of ids) {
-        const screen = checked.screens.find((s) => s.id === id);
-        if (!screen) {
-          findings = [unknownScreen(id, known)];
-        } else {
-          findings = checked.errors.filter((e) => !e.screen || e.screen === id);
-        }
+        const { screen, errors } = loaded.screen(id);
+        findings = errors;
         if (findings.length) {
           findingFile = screensPath;
           throw new CommandError(findings[0].message);
         }
-        if (!screen) throw new Error("screen not found");
-
-        const rendered = screenElements(layoutScreen(screen.tree));
-        const title = options.title ?? screen.heading ?? id;
+        const rendered = screenElements(layoutScreen(screen!.tree));
+        const size = embedSize(rendered.width, rendered.height);
+        const title = options.title ?? screen!.heading ?? id;
         const frame = addScreen(flow, {
           screenId: id,
           title,
@@ -176,18 +168,94 @@ export async function editFlow(
     };
   }
 }
-/** An element's position and size in the drawing. */
-const box = (e: ExcalidrawElementJson) => ({
-  x: Number(e.x),
-  y: Number(e.y),
-  width: Number(e.width),
-  height: Number(e.height),
-});
-const elementById = (flow: Flow, id: string) => flow.elements.find((e) => e.id === id)!;
-type Arrow = ReturnType<typeof arrowOf>;
-/** What the output reports for an arrow: its element id, ends, label and box. */
-function arrowOf(flow: Flow, id: string, from: string, to: string, label: string | null) {
-  return { id, from, to, label, ...box(elementById(flow, id)) };
+
+/** Load a screens file once, retaining only errors relevant to each selection. */
+export async function loadScreens(path: string) {
+  const source = await readFile(path, "utf8");
+  const checked = checkScreens(source);
+  return {
+    path,
+    source,
+    screen(id: string) {
+      const screen = checked.screens.find((s) => s.id === id);
+      const errors = screen
+        ? checked.errors.filter((e) => !e.screen || e.screen === id)
+        : [
+            unknownScreen(
+              id,
+              checked.screens.flatMap((s) => (s.id ? [s.id] : [])),
+            ),
+          ];
+      return { screen, errors };
+    },
+  };
+}
+
+export async function editOverlay(
+  command: "highlight" | "mark",
+  file: string,
+  args: string[],
+  options: FlowOptions = {},
+): Promise<Result> {
+  let findings: Finding[] = [];
+  let findingFile = file;
+  try {
+    const original = await readFile(file, "utf8");
+    const flow = parseEditableFlow(original);
+    const [frame, targetArg, label] = args;
+    const target = targetArg.replace(/^#/, "");
+    const { path, blockId: screen } = await frameEmbed(file, flow, frame);
+    const loaded = await loadScreens(path);
+    findingFile = loaded.path;
+    const { screen: found, errors } = loaded.screen(screen);
+    findings = errors;
+    if (findings.length) throw new Error(findings[0].message);
+    const rendered = screenElements(layoutScreen(found!.tree));
+    const box = rendered.boxes[target];
+    if (!box) {
+      const ids = Object.keys(rendered.boxes);
+      const guess = nearest(target, ids);
+      throw new Error(
+        `no component "#${target}" on ^${screen} (ids: ${ids.map((id) => "#" + id).join(", ") || "none"})${guess ? `; did you mean "#${guess}"?` : ""}`,
+      );
+    }
+    findingFile = file;
+    const overlay = { target, box, screen: rendered };
+    const id =
+      command === "highlight"
+        ? addHighlight(flow, frame, overlay)
+        : addMark(flow, frame, { ...overlay, label });
+    const e = flow.elements.find((e) => e.id === id)!;
+    const value =
+      command === "highlight"
+        ? { id, frame, screen, target, x: e.x, y: e.y, width: e.width, height: e.height }
+        : { id, frame, screen, target, label, x: e.x, y: e.y };
+    await safeWrite(file, original, serializeFlow(flow));
+    return {
+      exitCode: 0,
+      stderr: "",
+      stdout: options.json
+        ? json({ flow: file, [command]: value })
+        : `${frame}  ${command}${command === "mark" ? " " + label : ""}  #${target}\n`,
+    };
+  } catch (error) {
+    if (!findings.length) findings = [{ message: (error as Error).message }];
+    return {
+      exitCode: 1,
+      stdout: options.json ? json({ flow: file, [command]: null, errors: findings }) : "",
+      stderr: options.json
+        ? ""
+        : error instanceof NewerFlowError
+          ? `${file}: ${error.message}\n`
+          : formatFindings(findingFile, findings, []),
+    };
+  }
+}
+interface Arrow {
+  id: string;
+  from: string;
+  to: string;
+  label: string | null;
 }
 const arrowLine = (a: Arrow) =>
   `${a.from} -> ${a.to}${a.label === null ? "" : `  ${JSON.stringify(a.label)}`}\n`;
@@ -252,7 +320,9 @@ const place = (options: FlowOptions) =>
       : undefined;
 
 /** Positionals each command takes after the file: [required, optional]. */
-const ARITY = {
+const ARITY: Record<string, [number, number, string]> = {
+  highlight: [2, 0, "a file, a frame and a component id"],
+  mark: [3, 0, "a file, a frame, a component id and a label"],
   new: [0, Infinity, "a file"],
   "add-screen": [1, 0, "a file and one screen id"],
   connect: [2, 1, "a file, two nodes and an optional label"],
@@ -272,7 +342,7 @@ export function flowCommand(
   const arity = ARITY[command];
   if (!file || rest.length < arity[0] || rest.length > arity[0] + arity[1])
     throw new UsageError(`flow ${command} needs ${arity[2]}`);
-  if ((command === "note" || command === "decision") && !rest.at(-1)?.trim())
+  if ((command === "note" || command === "decision" || command === "mark") && !rest.at(-1)?.trim())
     throw new UsageError(`flow ${command} needs non-empty text`);
   if ((command === "new" || command === "add-screen") && rest.length && !values.screens)
     throw new UsageError(`flow ${command} needs --screens <screens.md> to embed screens from`);
@@ -282,9 +352,9 @@ export function flowCommand(
   if (!placed && (values["right-of"] || values.below))
     throw new UsageError("placement options require add-screen or decision");
   const screens = command === "new" || command === "add-screen";
-  if (!screens && (values.title || values.screens))
-    throw new UsageError("--title and --screens require new or add-screen");
-  if (command === "new" && values.title) throw new UsageError("--title requires add-screen");
+  if (command !== "add-screen" && values.title) throw new UsageError("--title requires add-screen");
+  // other commands follow each frame's embed to its screens file
+  if (!screens && values.screens) throw new UsageError("--screens requires new or add-screen");
   const options = {
     screens: values.screens as string | undefined,
     title: values.title as string | undefined,
@@ -292,6 +362,8 @@ export function flowCommand(
     below: values.below as string | undefined,
     json: values.json === true,
   };
+  if (command === "highlight" || command === "mark")
+    return editOverlay(command, file, rest, options);
   if (command === "connect" || command === "note" || command === "decision")
     return editNodes(command, file, rest, options);
   return editFlow(command, file, rest, options);

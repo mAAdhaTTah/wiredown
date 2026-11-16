@@ -76,6 +76,26 @@ example:
   wiredown flow connect flows/invite.excalidraw.md D1 F2 'Yes'`,
   ],
   [
+    "highlight <flow.excalidraw.md> <frame> <#id> [--json]",
+    `Outlines a component of the frame's screen in the focus colour.
+
+options:
+  --json             print one JSON document instead
+
+example:
+  wiredown flow highlight flows/invite.excalidraw.md F1 '#invite'`,
+  ],
+  [
+    "mark <flow.excalidraw.md> <frame> <#id> <label> [--json]",
+    `Places a numbered badge just outside a component's top-left corner.
+
+options:
+  --json             print one JSON document instead
+
+example:
+  wiredown flow mark flows/invite.excalidraw.md F1 '#members' 3`,
+  ],
+  [
     "note <flow.excalidraw.md> <node> <text> [--json]",
     `Adds a text note under the node, below its earlier notes.
 
@@ -95,6 +115,8 @@ const COMMANDS: Record<string, Command> = {
 
 Nodes are frames (F1, F2, ...) and decisions (D1, D2, ...). new connects
 its screens in a row; placement is relative to a node, never coordinates.
+--screens picks the screens file new and add-screen embed from; every other
+command follows each frame's embed to its screens file.
 
 Run "wiredown flow <command> --help" for its options and an example.
 `,
