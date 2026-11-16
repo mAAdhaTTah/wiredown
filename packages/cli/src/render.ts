@@ -165,7 +165,15 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
     const { message } = error;
     return {
       exitCode: 1,
-      stdout: options.json ? json({ file, flow: null, errors: [{ message }], warnings: [] }) : "",
+      stdout: options.json
+        ? json({
+            file,
+            format: options.format ?? "svg",
+            flow: null,
+            errors: [{ message }],
+            warnings: [],
+          })
+        : "",
       stderr: options.json
         ? ""
         : error instanceof NewerFlowError
