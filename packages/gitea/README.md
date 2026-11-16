@@ -19,6 +19,9 @@ The reproducible script prints current counts, which may vary with font
 subsetting. It also checks that a deliberate raw-file HTTP 500 preserves the
 original content and shows a notice (the expected HTTP console error is
 allowed only for that page).
+The flow's note is in Virgil: it is drawn in Excalifont with the fallback
+notice and no Virgil request, and in Virgil when the loader tag lists it in
+`data-fonts` and the site serves its folder.
 
 ## Files
 
