@@ -22,3 +22,6 @@ export type { Box, LayoutResult, LayoutEnv } from "./layout.js";
 export { DARK_COLORS, DARK_INK, DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme.js";
 export { ICON_NAMES, isIcon } from "./icons.js";
 export type * from "./types.js";
+export { EXCALIFONT } from "./metrics-excalifont.js";
+export { layoutScreen } from "./screen.js";
+export type { LayoutScreenOptions } from "./screen.js";
