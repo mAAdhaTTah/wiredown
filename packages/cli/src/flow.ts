@@ -568,7 +568,7 @@ export async function removeFlowItems(
 ): Promise<Result> {
   try {
     const original = await readFile(file, "utf8");
-    const flow = parseFlow(original);
+    const flow = parseEditableFlow(original);
     const { removed, unbound } = removeFromFlow(flow, targets);
     await safeWrite(file, original, serializeFlow(flow));
     return {
@@ -584,7 +584,11 @@ export async function removeFlowItems(
     return {
       exitCode: 1,
       stdout: options.json ? json({ flow: file, removed: [], unbound: [], errors: findings }) : "",
-      stderr: options.json ? "" : formatFindings(file, findings, []),
+      stderr: options.json
+        ? ""
+        : error instanceof NewerFlowError
+          ? `${file}: ${error.message}\n`
+          : formatFindings(file, findings, []),
     };
   }
 }
