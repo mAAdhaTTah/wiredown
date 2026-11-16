@@ -80,7 +80,9 @@ function check(tree: SpecNode, errors: ParseError[], variant: boolean): void {
 // ---------- grid rows ----------
 const MARKS = /^[>*\s]*/;
 const split = (row: string, pipe: boolean) =>
-  (pipe ? row.replace(/^\|/, "").replace(/\|$/, "").split("|") : row.split(",")).map((c) => c.trim());
+  (pipe ? row.replace(/^\|/, "").replace(/\|$/, "").split("|") : row.split(",")).map((c) =>
+    c.trim(),
+  );
 /** A row's key: its first cell that is not a checkbox. */
 function rowKey(row: string, pipe: boolean): string {
   const cells = split(row.replace(MARKS, ""), pipe);
@@ -122,7 +124,9 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
       return;
     }
     const base = split(rows[at].replace(MARKS, ""), pipe);
-    const merged = base.map((cell, ci) => (ci >= cells.length || cells[ci] === "=" ? cell : cells[ci]));
+    const merged = base.map((cell, ci) =>
+      ci >= cells.length || cells[ci] === "=" ? cell : cells[ci],
+    );
     rows[at] = marks + merged.concat(cells.slice(base.length)).join(sep);
   });
   grid.text = rows[0] ?? "";
@@ -152,7 +156,11 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
     const guess = nearest(baseId, known);
     return fail(
       `extends: no screen with the id "${baseId}"` +
-        (guess ? `; did you mean "${guess}"?` : known.length ? `; known ids: ${known.join(", ")}` : ""),
+        (guess
+          ? `; did you mean "${guess}"?`
+          : known.length
+            ? `; known ids: ${known.join(", ")}`
+            : ""),
     );
   }
   const base = resolveAt(baseSource, o, [...chain, baseId]);
@@ -182,7 +190,10 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
         errors.push({ line: at, message: `"extends:" must be the first line, and only once` });
         break;
       case "remove":
-        for (const id of op.text.split(",").map((t) => t.trim().replace(/^\^/, "")).filter(Boolean)) {
+        for (const id of op.text
+          .split(",")
+          .map((t) => t.trim().replace(/^\^/, ""))
+          .filter(Boolean)) {
           const hit = target(id, at, "remove");
           if (hit) hit.parent.children.splice(hit.parent.children.indexOf(hit.node), 1);
         }
@@ -199,7 +210,10 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
         const hit = target(op.text.replace(/^\^/, ""), at, "rows");
         if (!hit) break;
         if (hit.node.type !== "grid") {
-          errors.push({ line: at, message: `rows: "${op.text}" is a ${hit.node.type}, not a grid` });
+          errors.push({
+            line: at,
+            message: `rows: "${op.text}" is a ${hit.node.type}, not a grid`,
+          });
         } else patchRows(hit.node, op, errors);
         break;
       }
@@ -248,7 +262,12 @@ export function serialize(tree: SpecNode, indent = ""): string {
     out.push(indent + line(node));
     const body = node.type === "field" ? (node.children[0]?.body ?? []) : node.body;
     for (const b of body) out.push(indent + (node.type === "tree" ? b : b.trim()));
-    if (node.type !== "field") out.push(...serialize(node, indent + "  ").split("\n").filter(Boolean));
+    if (node.type !== "field")
+      out.push(
+        ...serialize(node, indent + "  ")
+          .split("\n")
+          .filter(Boolean),
+      );
   }
   return out.join("\n");
 }

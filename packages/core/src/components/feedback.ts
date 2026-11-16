@@ -7,7 +7,8 @@ export const alert: Component = (ctx, node, x, y, slot) => {
   const PAD_X = 12,
     PAD_Y = 10;
   // wraps only when the host gave a width to wrap to (ctx.maxW)
-  const room = ctx.maxW === undefined ? undefined : Math.max(node.opts.w || 0, slot?.w || 0) || ctx.maxW;
+  const room =
+    ctx.maxW === undefined ? undefined : Math.max(node.opts.w || 0, slot?.w || 0) || ctx.maxW;
   const labels = (contentLines(node).length ? contentLines(node) : ["Alert"]).flatMap((l) =>
     room === undefined ? [measureLabel(ctx, l)] : wrapLabel(ctx, l, room - 2 * PAD_X),
   );

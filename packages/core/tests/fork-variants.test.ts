@@ -93,7 +93,9 @@ describe("extends", () => {
   });
 
   it("extends a variant", () => {
-    const r = run("extends: applied\nremove: selection", { applied: "extends: base\nremove: notice" });
+    const r = run("extends: applied\nremove: selection", {
+      applied: "extends: base\nremove: notice",
+    });
     expect(r.errors).toEqual([]);
     expect(types(win(r))).toEqual(["row", "grid"]);
   });
@@ -119,7 +121,12 @@ describe("rows", () => {
   it("removes a row and appends a new one", () => {
     const r = run("extends: base\nrows: boards\n  remove 5d6h9s\n  [x] | AcKcQc | Fresh | — | —");
     expect(r.errors).toEqual([]);
-    expect(rows(r).map((row) => row.split(" | ")[1])).toEqual(["Board", "2c3c4c", "4h7h9h", "AcKcQc"]);
+    expect(rows(r).map((row) => row.split(" | ")[1])).toEqual([
+      "Board",
+      "2c3c4c",
+      "4h7h9h",
+      "AcKcQc",
+    ]);
   });
 
   it("never treats the header as a row to change", () => {
@@ -132,7 +139,10 @@ describe("variant errors", () => {
   it("names the ids there are when one is wrong", () => {
     const r = run("extends: base\nremove: notise");
     expect(r.errors).toEqual([
-      { line: 2, message: 'remove: "base" has no component with (id=notise); did you mean "notice"?' },
+      {
+        line: 2,
+        message: 'remove: "base" has no component with (id=notise); did you mean "notice"?',
+      },
     ]);
   });
 
@@ -153,7 +163,10 @@ describe("variant errors", () => {
   it("reports a row that isn't there, with the rows that are", () => {
     const r = run("extends: base\nrows: boards\n  remove 9s9h9d");
     expect(r.errors).toEqual([
-      { line: 3, message: 'no row "9s9h9d" in the grid "boards"; its rows are: 2c3c4c, 4h7h9h, 5d6h9s' },
+      {
+        line: 3,
+        message: 'no row "9s9h9d" in the grid "boards"; its rows are: 2c3c4c, 4h7h9h, 5d6h9s',
+      },
     ]);
   });
 

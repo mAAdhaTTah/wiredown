@@ -15,8 +15,6 @@ export {
 export type { FontMetrics } from "./metrics.js";
 export { layout } from "./layout.js";
 export type { LayoutEnv } from "./layout.js";
-export { SNIPPETS } from "./snippets.js";
-export type { Snippet } from "./snippets.js";
 export { DARK_COLORS, DARK_INK, DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme.js";
 export { ICON_NAMES, isIcon } from "./icons.js";
 export type * from "./types.js";

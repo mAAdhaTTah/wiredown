@@ -1,6 +1,20 @@
-import { EXAMPLE } from "../../src/constants";
-
 const lines = (...l: string[]) => l.join("\n");
+
+/** The plugin's example spec (src/constants.ts upstream, which stays out of core). */
+export const EXAMPLE = lines(
+  "tabs: Overview | *Users | Settings",
+  "  row:",
+  "    text: Role",
+  "    dropdown: *All roles | Developer | Project manager",
+  "    checkbox: [x] Show inactive",
+  "  grid",
+  "  Name, Role, Active",
+  "  Anna, Developer, [x]",
+  "  *Erik, Project manager, [ ]",
+  "  row:",
+  "    button: Cancel",
+  "    button: *Save",
+);
 
 export const NEW_USER = lines(
   "box: New user",

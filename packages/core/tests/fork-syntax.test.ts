@@ -4,7 +4,8 @@ import type { RectOp } from "../src/index.js";
 import { fakeMeasure } from "./helpers/fakeMeasure.js";
 
 const style = { fontSize: FONT_SIZE, fontFamily: 5 };
-const draw = (source: string) => layout(parse(source).tree, { x: 0, y: 0 }, { measure: fakeMeasure, style });
+const draw = (source: string) =>
+  layout(parse(source).tree, { x: 0, y: 0 }, { measure: fakeMeasure, style });
 const outlines = (source: string) =>
   draw(source).ops.filter(
     (o): o is RectOp => o.kind === "rect" && o.color === DEFAULT_THEME.colors.highlight,
@@ -25,7 +26,13 @@ describe("comments", () => {
 
 describe("highlight", () => {
   it("outlines any component marked (hi), without moving the layout", () => {
-    for (const line of ["button: Apply", "text: Hello", "alert: Careful", "dropdown: A | B", "grid\na, b"]) {
+    for (const line of [
+      "button: Apply",
+      "text: Hello",
+      "alert: Careful",
+      "dropdown: A | B",
+      "grid\na, b",
+    ]) {
       const [head, ...rest] = line.split("\n");
       const marked = [`${head} (hi)`, ...rest].join("\n");
       expect(outlines(marked)).toHaveLength(1);
@@ -35,7 +42,8 @@ describe("highlight", () => {
 
   it("is separate from a primary button's star", () => {
     expect(outlines("button: *Apply")).toHaveLength(0);
-    const fills = (s: string) => draw(s).ops.filter((o) => o.kind === "rect" && o.fill === DEFAULT_THEME.colors.primary);
+    const fills = (s: string) =>
+      draw(s).ops.filter((o) => o.kind === "rect" && o.fill === DEFAULT_THEME.colors.primary);
     expect(fills("button: Cancel (hi)")).toHaveLength(0);
     expect(fills("button: *Apply (hi)")).toHaveLength(1);
   });
@@ -43,14 +51,18 @@ describe("highlight", () => {
   it("outlines a grid row marked >, which may also be selected", () => {
     expect(outlines("grid\na, b\n> 1, 2\n3, 4")).toHaveLength(1);
     const ops = draw("grid\na, b\n>* 1, 2").ops;
-    expect(ops.some((o) => o.kind === "rect" && o.fill === DEFAULT_THEME.colors.selected)).toBe(true);
+    expect(ops.some((o) => o.kind === "rect" && o.fill === DEFAULT_THEME.colors.selected)).toBe(
+      true,
+    );
   });
 });
 
 describe("errors for likely typos", () => {
   it("suggests the component a misspelt keyword was meant to be", () => {
     const { errors } = parse("box: A\n  button: Go\n  buton: Stop");
-    expect(errors).toEqual([{ line: 3, message: 'unknown component "buton"; did you mean "button"?' }]);
+    expect(errors).toEqual([
+      { line: 3, message: 'unknown component "buton"; did you mean "button"?' },
+    ]);
   });
 
   it("still takes other text with a colon as a continuation line", () => {
@@ -77,6 +89,8 @@ describe("errors for likely typos", () => {
   });
 
   it("reports an option no component reads", () => {
-    expect(parse("button: Go (width=120)").errors).toEqual([{ line: 1, message: 'unknown option "width"' }]);
+    expect(parse("button: Go (width=120)").errors).toEqual([
+      { line: 1, message: 'unknown option "width"' },
+    ]);
   });
 });
