@@ -103,9 +103,13 @@ const rendered = await renderScreenSvg(parse("button: Save #save").tree);
 
 The Node entry uses a private happy-dom document and lazily installs a
 `FontFace` stub only if the host has none. No global window or document is
-installed. The pinned exporter cannot subset the font in Node, so it embeds
-the whole font; the Node entry drops the message Excalidraw logs about that
-while it exports. Layout uses core's metrics, without DOM text measurement.
+installed. The pinned exporter logs a font-set warning and a glyph-subsetting
+warning in Node; it still embeds the full Latin font subset, as verified by
+the export tests. Layout uses core's metrics, without DOM text measurement.
 
-The Node entry needs Node 22.12 or later. It is an ES module; CommonJS can
-`require()` it.
+`addScreen(flow, { screenId, title, embed, size, place? })` appends a label
+and image and returns its F-number. `embedSize(width, height)` converts a
+screen export size to `{ link, image }` dimensions. `flowFrames(flow)`
+finds live images with Wiredown customData. Legacy labels reserve numbers,
+but legacy images are not placement targets. Deleted elements reserve their
+numbers too. Existing elements are never changed.

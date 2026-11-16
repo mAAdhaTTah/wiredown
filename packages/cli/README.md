@@ -87,28 +87,26 @@ so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
 
 ## API
 
-The root export runs the commands without a terminal. Each resolves to a
-`Result`, `{ exitCode, stdout, stderr }`, and never writes to the terminal
-or exits; `bin/wiredown.js` prints the result. Build the package
-(`pnpm build`) before running the bin.
+`run(argv)` and the commands `check(files, options)` and
+`render(file, options)` return `{ exitCode, stdout, stderr }` without
+writing to the terminal or exiting; the `bin/wiredown.js` entry prints the
+result. Build the package (`pnpm build`) before running the bin.
 
-- **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
-  the script, as `bin/wiredown.js` does. Bad usage and unreadable files
-  give exit code 2; any other error rejects.
-- **Check** (`check`): `check(files, options?)` runs the `check` command
-  on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
-  entry of the JSON document's `files`.
-- **Render** (`render`): `render(file, options?)` runs the `render`
-  command. `RenderOptions` are all optional: `screens` (ids; all screens
-  with an id when empty), `out` (default `.`), `theme` (`"light"` or
-  `"dark"`), `fonts` (default true) and `json`. `RenderedScreen` is one
-  entry of the JSON document's `screens`.
-- **Output** (`output`): `UsageError`, which `check` and `render` throw
-  for an unreadable file and `run` turns into exit code 2. `Finding` is a
-  finding as above; `Result` is what every command returns.
+## flow
 
-```ts
-import { render } from "@wiredown/cli";
+`wiredown flow new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>]
+[--json]` creates an empty drawing or a row of frames; an existing file is
+an error.
 
-const { exitCode, stdout } = await render("screens.md", { out: "out", json: true });
-```
+`wiredown flow add-screen <flow.excalidraw.md> <screen-id> [--right-of F2 |
+--below F2] [--title <text>] [--screens <screens.md>] [--json]` appends a frame
+relative to the current image position. Default placement is right of the
+rightmost frame. Titles default to the screen heading, then its id.
+
+Screens are discovered in the parent of the flow directory, then the flow
+directory itself. Missing embed styling frontmatter is added; existing values
+are preserved. Invalid screens and unknown frames leave the drawing untouched.
+Human output is one `F3  team-members  528x328` line per frame. JSON is
+`{ flow, frames: [{ frame, screen, title, x, y, width, height }],
+screensFileUpdated }`. Operational errors exit 1 (JSON adds an `errors`
+array); usage errors exit 2.

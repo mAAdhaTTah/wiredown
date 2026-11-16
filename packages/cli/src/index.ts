@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionsConfig } from "node:util";
-import { check } from "./check";
-import { UsageError } from "./output";
-import type { Result } from "./output";
-import { render } from "./render";
+import { flowCommand } from "./flow.js";
+import { check } from "./check.js";
+import { UsageError } from "./output.js";
+import type { Result } from "./output.js";
+import { render } from "./render.js";
 
 export { check, render, UsageError };
 export type { CheckOptions, CheckedFile } from "./check";
@@ -22,6 +23,18 @@ interface Command {
 
 // Each command parses its own options; add new commands (flow, lint) here.
 const COMMANDS: Record<string, Command> = {
+  flow: {
+    summary: "create and edit flow drawings",
+    help: "usage: wiredown flow new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>] [--json]\n       wiredown flow add-screen <flow.excalidraw.md> <screen-id> [--right-of F2 | --below F2] [--title <text>] [--screens <screens.md>] [--json]\n",
+    options: {
+      screens: { type: "string" },
+      "right-of": { type: "string" },
+      below: { type: "string" },
+      title: { type: "string" },
+      json: { type: "boolean" },
+    },
+    run: flowCommand,
+  },
   check: {
     summary: "check screens files for errors and warnings",
     help: `usage: wiredown check <file.md>... [--json]

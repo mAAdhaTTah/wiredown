@@ -1,0 +1,154 @@
+import { EXCALIFONT, fontMeasurer } from "@wiredown/core";
+import { generateNKeysBetween } from "fractional-indexing";
+import type { ExcalidrawElementJson } from "./elements.js";
+import type { Flow } from "./flow.js";
+
+// Confirmed gen-flow.mjs / Excalidraw plugin DEFAULT_MD_EMBED_CSS:
+// host has 10px horizontal padding; footer has 5px height.
+// The link height is a maximum, with 40px headroom as in the prototype.
+const MD_HOST_PAD = 10,
+  MD_FOOTER = 5,
+  MAX_HEIGHT_HEADROOM = 40;
+const GAP = 340;
+export function embedSize(screenWidth: number, screenHeight: number) {
+  const width = screenWidth + 2 * MD_HOST_PAD,
+    height = screenHeight + MD_FOOTER;
+  return { link: { width, height: height + MAX_HEIGHT_HEADROOM }, image: { width, height } };
+}
+export interface AddScreenOptions {
+  screenId: string;
+  title: string;
+  embed: { path: string; width: number; height: number };
+  size: { width: number; height: number };
+  place?: { rightOf: string } | { below: string };
+}
+interface Identity {
+  frame: string;
+  role: string;
+  screen: string;
+}
+function identity(e: ExcalidrawElementJson): Identity | undefined {
+  return (e.customData as { wiredown?: Identity } | undefined)?.wiredown;
+}
+export function flowFrames(flow: Flow) {
+  return flow.elements
+    .filter((e) => e.type === "image" && !e.isDeleted && identity(e)?.role === "screen")
+    .map((e) => ({ frame: identity(e)!.frame, element: e }));
+}
+const alphabet = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function random(n: number) {
+  return crypto.getRandomValues(new Uint32Array(1))[0] % n;
+}
+function id() {
+  return Array.from({ length: 8 }, () => alphabet[random(62)]).join("");
+}
+function element(
+  type: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  index: string,
+  data: Identity,
+): ExcalidrawElementJson {
+  return {
+    id: id(),
+    type,
+    x,
+    y,
+    width,
+    height,
+    angle: 0,
+    strokeColor: "#1e1e1e",
+    backgroundColor: "transparent",
+    fillStyle: "solid",
+    strokeWidth: 1,
+    strokeStyle: "solid",
+    roughness: 1,
+    opacity: 100,
+    groupIds: [],
+    frameId: null,
+    index,
+    roundness: null,
+    seed: random(2147483646) + 1,
+    version: 1,
+    versionNonce: random(2147483646) + 1,
+    isDeleted: false,
+    boundElements: null,
+    updated: Date.now(),
+    link: null,
+    locked: false,
+    customData: { wiredown: data },
+  };
+}
+/** Appends one frame; existing elements are never modified. Returns its F-number. */
+export function addScreen(flow: Flow, options: AddScreenOptions): string {
+  const frames = flowFrames(flow);
+  const refId =
+    options.place && ("rightOf" in options.place ? options.place.rightOf : options.place.below);
+  const ref = refId
+    ? frames.find((f) => f.frame === refId)?.element
+    : frames.reduce<ExcalidrawElementJson | undefined>(
+        (a, f) =>
+          !a || Number(f.element.x) + Number(f.element.width) > Number(a.x) + Number(a.width)
+            ? f.element
+            : a,
+        undefined,
+      );
+  if (refId && !ref)
+    throw new Error(
+      `unknown frame "${refId}" (frames: ${frames.map((f) => f.frame).join(", ") || "none"})`,
+    );
+  const below = options.place && "below" in options.place;
+  const x = ref ? Number(ref.x) + (below ? 0 : Number(ref.width) + GAP) : 0;
+  const y = ref ? Number(ref.y) + (below ? Number(ref.height) + GAP : 0) : 0;
+  const numbers = flow.elements.flatMap((e) => {
+    const a = /^F(\d+)$/.exec(identity(e)?.frame ?? "");
+    const b = e.type === "text" ? /^F(\d+) ·/.exec(String(e.rawText ?? e.text)) : null;
+    return [Number(a?.[1] ?? 0), Number(b?.[1] ?? 0)];
+  });
+  const frame = `F${Math.max(0, ...numbers) + 1}`;
+  const last =
+    flow.elements
+      .map((e) => e.index)
+      .filter((v): v is string => typeof v === "string")
+      .sort()
+      .at(-1) ?? null;
+  const keys = generateNKeysBetween(last, null, 2);
+  const data = { frame, screen: options.screenId };
+  const text = `${frame} · ${options.title}`;
+  const measured = fontMeasurer(EXCALIFONT).measure(text, {
+    fontSize: 24,
+    fontFamily: 5,
+  });
+  const label = {
+    ...element("text", x, y - 48, measured.w, measured.h, keys[0], { ...data, role: "label" }),
+    text,
+    rawText: text,
+    originalText: text,
+    fontSize: 24,
+    fontFamily: 5,
+    textAlign: "left",
+    verticalAlign: "top",
+    containerId: null,
+    autoResize: true,
+    lineHeight: 1.25,
+  };
+  // Plugin file ids are 40 hex characters; random bytes avoid Node-only hashing.
+  const fileId = Array.from(crypto.getRandomValues(new Uint8Array(20)), (n) =>
+    n.toString(16).padStart(2, "0"),
+  ).join("");
+  const image = {
+    ...element("image", x, y, options.size.width, options.size.height, keys[1], {
+      ...data,
+      role: "screen",
+    }),
+    fileId,
+    status: "saved",
+    scale: [1, 1],
+    crop: null,
+  };
+  flow.elements.push(label, image);
+  flow.embeds.set(fileId, { ...options.embed, blockId: options.screenId });
+  return frame;
+}
