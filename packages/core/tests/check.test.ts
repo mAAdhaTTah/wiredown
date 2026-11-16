@@ -65,6 +65,60 @@ describe("check", () => {
     ]);
   });
 
+  it("warns about brackets drawn as text that hold an option", () => {
+    expect(
+      check("button: Save (striped, primry)\nfield: Name | input: x (fill, a, b)").warnings,
+    ).toEqual([
+      {
+        line: 1,
+        message:
+          '"(striped, primry)" is drawn as text because "primry" is not an option; write \\( to keep the brackets as text',
+      },
+      {
+        line: 2,
+        message:
+          '"(fill, a, b)" is drawn as text because "a", "b" are not options; write \\( to keep the brackets as text',
+      },
+    ]);
+  });
+
+  it("stays silent about brackets of prose, escaped brackets and continuation lines", () => {
+    for (const source of [
+      "button: Save (draft)",
+      "text: Due date (optional)",
+      "text: 3 item(s) selected",
+      "button: Save \\(striped, primry)",
+      "text: a\n  b (striped, primry)",
+    ]) {
+      expect(check(source).warnings).toEqual([]);
+    }
+  });
+
+  it("warns about a retired option drawn as text", () => {
+    expect(check("button: Old (hi)").warnings).toEqual([
+      { line: 1, message: '"(hi)" is drawn as text; the highlight option is now (focus)' },
+    ]);
+  });
+
+  it("warns about a grid row longer than its header", () => {
+    const source = [
+      "grid: [ ] | Name | Role",
+      "  |---|---|---|",
+      "  // a comment",
+      "  [ ] | Anna | Admin |",
+      "  *[x] | Erik | Member | x",
+      "  > [ ] | Maja",
+      "text: done",
+      "grid",
+      "  A, B",
+      "  1, 2, 3",
+    ].join("\n");
+    expect(check(source).warnings).toEqual([
+      { line: 5, message: "row has 4 cells but the header has 3" },
+      { line: 10, message: "row has 3 cells but the header has 2" },
+    ]);
+  });
+
   it("skips comment lines", () => {
     expect(check("// {warnin} ⋯\ntext: x").warnings).toEqual([]);
   });

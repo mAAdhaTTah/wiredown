@@ -151,6 +151,20 @@ describe("options per component", () => {
     ]);
   });
 
+  it("points a retired option to what replaced it", () => {
+    const flow =
+      "number an element on the flow instead with: wiredown flow mark <flow> <frame> '#id' <label>";
+    expect(parse("button: M (mark=2)").errors).toEqual([
+      { line: 1, message: `"mark" is not an option; ${flow}` },
+    ]);
+    expect(parse("button: M (mark)").errors).toEqual([
+      { line: 1, message: `"mark" is not an option; ${flow}` },
+    ]);
+    expect(parse("button: M (hi=1)").errors).toEqual([
+      { line: 1, message: '"hi" is not an option; the highlight option is now (focus)' },
+    ]);
+  });
+
   it("still leaves brackets of other words as text", () => {
     for (const source of [
       "button: Save (draft)",

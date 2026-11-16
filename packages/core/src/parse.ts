@@ -1,4 +1,4 @@
-import { CATALOG, COMMON_FLAGS, catalogEntry, optionsOf } from "./catalog.js";
+import { CATALOG, COMMON_FLAGS, RETIRED_OPTIONS, catalogEntry, optionsOf } from "./catalog.js";
 import { ICON_NAMES, isIcon } from "./icons.js";
 import type { NodeType, ParseError, ParseResult, SpecNode } from "./types.js";
 
@@ -77,10 +77,28 @@ export function nearest(word: string, known: Iterable<string>): string | null {
 }
 
 /** Brackets at the end of a line, unless escaped as "\(". */
-const TRAILING = /(?<!\\)\(([^()]*)\)\s*$/;
+export const TRAILING = /(?<!\\)\(([^()]*)\)\s*$/;
 
 /** Option names some component reads; anything else in "(k=v)" is a likely typo. */
 const OPTION_KEYS = new Set(CATALOG.flatMap((e) => e.numbers));
+
+/**
+ * Whether trailing brackets with these entries stay text: they have no k=v
+ * pair and an entry that is neither a flag nor one letter off one.
+ */
+export function staysText(entries: string[]): boolean {
+  return (
+    !entries.some((e) => e.includes("=")) &&
+    !entries.every((e) => FLAGS.has(e.toLowerCase()) || nearest(e, FLAGS))
+  );
+}
+
+/** The error for an option no component takes, with a hint if it was retired. */
+function unknownOption(name: string, guess: string | null): string {
+  const retired = RETIRED_OPTIONS[name.toLowerCase()];
+  if (retired) return `"${name}" is not an option; ${retired}`;
+  return `unknown option "${name}"${guess ? `; did you mean "${guess}"?` : ""}`;
+}
 
 /**
  * Reads "(k=v, flag, ...)" at the end of a line. Brackets with a k=v pair
@@ -120,11 +138,8 @@ export function parseOptions(
   const m = s.match(TRAILING);
   if (!m || m.index === undefined) return finish(s.trim());
   const entries = m[1].split(",").map((t) => t.trim());
-  if (!m[1].includes("=") && !entries.every((e) => FLAGS.has(e.toLowerCase()))) {
-    // "(disbled)": every entry is a flag or one letter off, so it was meant as options
-    const meant = entries.every((e) => FLAGS.has(e.toLowerCase()) || nearest(e, FLAGS));
-    if (!meant) return finish(s.trim());
-  }
+  // "(disbled)": every entry is a flag or one letter off, so it was meant as options
+  if (staysText(entries)) return finish(s.trim());
   entries.forEach((entry) => {
     if (FLAGS.has(entry.toLowerCase())) {
       opts[entry.toLowerCase()] = 1;
@@ -136,8 +151,7 @@ export function parseOptions(
       else skipped.push(`"${entry}": an id is a letter followed by letters, digits, - or _`);
     } else if (k && v && !isNaN(Number(v))) opts[k.toLowerCase()] = Number(v);
     else if (!entry.includes("=")) {
-      const flag = nearest(entry, takes) ?? nearest(entry, FLAGS);
-      skipped.push(`unknown option "${entry}"${flag ? `; did you mean "${flag}"?` : ""}`);
+      skipped.push(unknownOption(entry, nearest(entry, takes) ?? nearest(entry, FLAGS)));
     } else skipped.push(`option "${entry}" needs a number, as in "${k}=200"`);
   });
   return finish(s.slice(0, m.index).trim());
@@ -240,8 +254,10 @@ export function parse(source: string): ParseResult {
               const list = takes.length ? `it takes: ${takes.join(", ")}` : "it takes no options";
               message = `${keyword} doesn't take "${k}" (${list})${hint}`;
             } else {
-              const guess = nearest(k, takes) ?? nearest(k, [...FLAGS, ...OPTION_KEYS]);
-              message = `unknown option "${k}"${guess ? `; did you mean "${guess}"?` : ""}`;
+              message = unknownOption(
+                k,
+                nearest(k, takes) ?? nearest(k, [...FLAGS, ...OPTION_KEYS]),
+              );
             }
             errors.push({ line: i + 1, message });
           }
@@ -256,10 +272,11 @@ export function parse(source: string): ParseResult {
           const { rest, opts, id } = parsed;
           optionErrors(keyword, type, parsed, extra, content);
           if (type === "icon" && !isIcon(rest)) {
-            errors.push({
-              line: i + 1,
-              message: `unknown icon "${rest}"; known icons: ${ICON_NAMES.join(", ")}`,
-            });
+            const guess = nearest(rest, ICON_NAMES);
+            const hint = guess
+              ? `did you mean "${guess}"?`
+              : `known icons: ${ICON_NAMES.join(", ")}`;
+            errors.push({ line: i + 1, message: `unknown icon "${rest}"; ${hint}` });
           }
           const node = { type, text: rest, body: [], children: [], line: i + 1 };
           return { ...node, opts: { ...DEFAULT_OPTS[type], ...opts }, ...(id ? { id } : {}) };

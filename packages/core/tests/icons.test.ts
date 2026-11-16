@@ -63,6 +63,12 @@ describe("icon:", () => {
     expect(rects(draw("icon: unicorn").ops)).toHaveLength(1);
   });
 
+  it("suggests a known icon for a near miss", () => {
+    expect(parse("icon: trsh").errors).toEqual([
+      { line: 1, message: 'unknown icon "trsh"; did you mean "trash"?' },
+    ]);
+  });
+
   it("can't contain other components", () => {
     expect(parse("icon: home\n  button: A").errors).toHaveLength(1);
   });
