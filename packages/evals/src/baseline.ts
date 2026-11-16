@@ -9,7 +9,8 @@ import { REPO } from "./paths.ts";
  * The "old" arm's parser: @wiredown/core as first imported from the
  * Sketchdown fork prototype (branch stack/02-core-import), before any change
  * from the syntax proposal: `(id=…)`, implicit replacement in variants,
- * `(hi)`, content-sized grids, no per-component option checks.
+ * `(hi)`, content-sized grids, no per-component option checks. The tag
+ * `eval-baseline` points at the same commit.
  */
 export const BASELINE_SHA = "c36f5df0a342909c55d06fe2b1b0b2280c33ca91";
 
@@ -45,7 +46,7 @@ function build(dir: string): void {
   if (found.status !== 0) {
     throw new Error(
       `the baseline commit ${BASELINE_SHA} is not in this clone (a shallow clone?); ` +
-        `fetch it with "git fetch --unshallow" or "git fetch origin ${BASELINE_SHA}"`,
+        `fetch it with "git fetch origin tag eval-baseline" (the tag points at it)`,
     );
   }
   const tmp = `${dir}.tmp-${process.pid}`;

@@ -51,9 +51,12 @@ other reply is a failed attempt. The output is checked with the arm's
 parser; on errors the findings go back to the model, formatted as
 `wiredown check` prints them (`screens.md:12: ^id: error: …`, errors only),
 with its previous file, up to the cap of fix rounds. The baseline has no
-`checkScreens`, so the old arm finds blocks and `^ids` the same way and
-resolves each block with a lookup across the file
-([`src/arms.ts`](src/arms.ts)).
+`checkScreens`, so the old arm runs the current `checkScreens` with the
+baseline's `resolve` as its block checker
+([`src/arms.ts`](src/arms.ts)): scanning, `^ids` and every file-level
+finding (no id, invalid or duplicate id, unclosed fence) are the same code
+in both arms, and a parity test holds them equal. Only the block parser
+differs.
 
 Recorded per task, arm and run (`results.json`):
 
@@ -62,16 +65,22 @@ Recorded per task, arm and run (`results.json`):
 - non-blank lines of the final output, and the diff size against the input
   (added + removed non-blank lines; task 3, and task 2 where it is the
   appended block);
-- whether the output did what was asked (all five ids for task 1; a block
-  with the new id that extends the base for task 2; a changed file that
-  keeps its screens for task 3);
+- `structureOk`, a structural check only: task 1 has all five ids; task 2
+  has a block with the new id whose first line extends the base; task 3
+  changed the file and kept every screen id;
 - wall time, tokens and cost as `claude -p --output-format json` reports
   them; every prompt and reply.
 
 The vitest-evals reporter shows four 0–1 scores per test: `CleanFirstAttempt`,
-`CleanWithinCap`, `FixEfficiency` (1 / (1 + fix rounds)) and `Complete`.
+`CleanWithinCap`, `FixEfficiency` (1 / (1 + fix rounds)) and `StructureOk`.
 They are measures, not pass/fail (`judgeThreshold: null`); a test fails only
 when the pipeline itself breaks.
+
+**The eval does not judge whether the requested change was made
+correctly.** A clean check and `structureOk` say the file parses and has the
+right screens; a task-3 reply that only edits a heading passes both. Whether
+the variant shows the paused state, or the revision addresses the comment,
+is for the human rating sheet (below). There is no automated content judge.
 
 ## Running it
 
@@ -116,8 +125,9 @@ task is a failed attempt that counts against the cap.
 The old arm's parser is built on first use: `git archive c36f5df` of
 `packages/core` and `tsconfig.base.json` into
 `node_modules/.cache/wiredown-evals/`, compiled with the repo's `tsc`. No
-network is needed, but the commit must be in the clone: in a shallow clone,
-`git fetch --unshallow` (or fetch that commit). The unit tests that need the
+network is needed, but the commit must be in the clone. The tag
+`eval-baseline` points at it; in a shallow clone, or one without the stack's
+branches, run `git fetch origin tag eval-baseline`. The unit tests that need the
 baseline skip when the commit is missing, as in CI's depth-1 checkout.
 
 ### Cost and time
@@ -189,7 +199,8 @@ one.
 - One model family (Claude through `claude -p`), one prompt wording, no
   tools: the model can't run `check` or render itself, unlike an agent
   using the skill.
-- `check` clean is not the same as a good screen; the readability rating
-  and the `Complete` check only partly cover that.
-- The baseline is a commit, not a tag: if `c36f5df` is ever dropped from
-  the repository's history, pin it with a tag or vendor its `dist/`.
+- `check` clean is not the same as a good screen, and `structureOk` is
+  structural only; only the human rating looks at the content.
+- The baseline is pinned by its SHA; the tag `eval-baseline` points at the
+  same commit so it survives a squash merge of the stack. In a clone
+  without it, run `git fetch origin tag eval-baseline`.

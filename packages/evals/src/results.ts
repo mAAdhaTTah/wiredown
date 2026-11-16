@@ -21,7 +21,8 @@ export interface SummaryRow {
   reachedClean: number;
   /** Mean fix rounds of the runs that reached clean. */
   fixRounds: number | null;
-  complete: number;
+  /** Share of runs whose output passed the structural check. */
+  structureOk: number;
   lines: number | null;
   diffSize: number | null;
   wallS: number;
@@ -42,7 +43,7 @@ function row(task: SummaryRow["task"], arm: ArmName, runs: TaskRun[]): SummaryRo
     firstAttemptErrors: mean(present(runs.map((r) => r.firstAttemptErrors))),
     reachedClean: mean(runs.map((r) => (r.fixRounds !== null ? 1 : 0))) ?? 0,
     fixRounds: mean(present(runs.map((r) => r.fixRounds))),
-    complete: mean(runs.map((r) => (r.complete ? 1 : 0))) ?? 0,
+    structureOk: mean(runs.map((r) => (r.structureOk ? 1 : 0))) ?? 0,
     lines: mean(present(runs.map((r) => r.lines))),
     diffSize: mean(present(runs.map((r) => r.diffSize))),
     wallS: (mean(runs.map((r) => r.wallMs)) ?? 0) / 1000,
@@ -72,12 +73,12 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 export function summaryTable(rows: SummaryRow[]): string {
   const head =
     "| Task | Arm | Runs | Clean 1st | 1st-attempt errors | Reached clean | Fix rounds | " +
-    "Complete | Lines | Diff size | Wall s | Cost $ |";
+    "Structure OK | Lines | Diff size | Wall s | Cost $ |";
   const lines = [head, "|" + " --- |".repeat(12)];
   for (const r of rows) {
     lines.push(
       `| ${r.task} | ${r.arm} | ${r.runs} | ${pct(r.firstClean)} | ${num(r.firstAttemptErrors)} | ` +
-        `${pct(r.reachedClean)} | ${num(r.fixRounds)} | ${pct(r.complete)} | ${num(r.lines)} | ` +
+        `${pct(r.reachedClean)} | ${num(r.fixRounds)} | ${pct(r.structureOk)} | ${num(r.lines)} | ` +
         `${num(r.diffSize)} | ${num(r.wallS)} | ${num(r.costUsd, 4)} |`,
     );
   }
@@ -106,9 +107,11 @@ function summaryMarkdown(results: Results): string {
     "",
     "Columns: share of runs clean on the first attempt; mean `check` errors on",
     "well-formed first attempts; share that reached a clean check within the",
-    "cap; mean fix rounds of those; share that did what was asked (task",
-    "compliance); mean non-blank lines of the output; mean added + removed",
-    "non-blank lines against the input; mean wall time per run; total cost.",
+    "cap; mean fix rounds of those; share whose output passed the structural",
+    "check (required ids kept, a variant of the base; not whether the change",
+    "was made correctly, which only the rating sheet judges); mean non-blank",
+    "lines of the output; mean added + removed non-blank lines against the",
+    "input; mean wall time per run; total cost.",
     "",
     summaryTable(results.summary),
   ].join("\n");

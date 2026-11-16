@@ -14,14 +14,18 @@ export interface Task {
   prompt(material: Material, arm: Arm): string;
   /** The screens file to check: the reply's file, or the input with the reply appended. */
   assemble(input: string | null, output: string): string;
-  /** Whether the output does what was asked, beyond a clean check. */
-  complete(material: Material, input: string | null, output: string, report: Report): Completion;
+  /**
+   * A structural check only: the output has the screens the task needs (or is
+   * a variant of the base). Whether the change itself was made correctly is
+   * not judged here; that is what the human rating sheet is for.
+   */
+  structure(material: Material, input: string | null, output: string, report: Report): Structure;
   /** Said with check findings, so the model can place line numbers. */
   lineNote?(input: string | null): string;
 }
 
-export interface Completion {
-  complete: boolean;
+export interface Structure {
+  ok: boolean;
   reason?: string;
 }
 
@@ -84,14 +88,14 @@ export const TASKS: Task[] = [
         "write it as a variant of that screen.",
       ),
     assemble: (_input, output) => output,
-    complete: (m, _input, _output, report) => {
+    structure: (m, _input, _output, report) => {
       const missing = m.screens.map((s) => s.id).filter((id) => !report.ids.includes(id));
       return missing.length
         ? {
-            complete: false,
+            ok: false,
             reason: `missing screens: ${missing.map((id) => `^${id}`).join(", ")}`,
           }
-        : { complete: true };
+        : { ok: true };
     },
   },
   {
@@ -113,20 +117,20 @@ export const TASKS: Task[] = [
         "be appended to the end of screens.md.",
       ),
     assemble: (input, output) => join(input ?? "", output),
-    complete: (m, input, output) => {
+    structure: (m, input, output) => {
       const file = join(input ?? "", output);
       let screens;
       try {
         screens = parseScreens(file);
       } catch {
-        return { complete: false, reason: "the file's fences are broken" };
+        return { ok: false, reason: "the file's fences are broken" };
       }
       const screen = screens.find((s) => s.id === m.variant.id);
-      if (!screen) return { complete: false, reason: `no screen ^${m.variant.id}` };
+      if (!screen) return { ok: false, reason: `no screen ^${m.variant.id}` };
       const first = screen.source.split("\n").find((l) => l.trim() && !l.trim().startsWith("//"));
       return new RegExp(`^\\s*extends\\s*:\\s*\\^?${m.variant.base}\\s*$`).test(first ?? "")
-        ? { complete: true }
-        : { complete: false, reason: `^${m.variant.id} does not extend ^${m.variant.base}` };
+        ? { ok: true }
+        : { ok: false, reason: `^${m.variant.id} does not extend ^${m.variant.base}` };
     },
     lineNote: (input) =>
       `Line numbers count lines of screens.md with your screen appended from line ` +
@@ -148,15 +152,15 @@ export const TASKS: Task[] = [
         "Revise screens.md to address it. Reply with the complete revised file.",
       ),
     assemble: (_input, output) => output,
-    complete: (_m, input, output) => {
+    structure: (_m, input, output) => {
       const before = ids(input ?? "");
       const after = ids(output);
       const lost = before.filter((id) => id !== undefined && !after.includes(id));
-      if (lost.length) return { complete: false, reason: `lost screens: ^${lost.join(", ^")}` };
+      if (lost.length) return { ok: false, reason: `lost screens: ^${lost.join(", ^")}` };
       if (output.trim() === (input ?? "").trim()) {
-        return { complete: false, reason: "the file is unchanged" };
+        return { ok: false, reason: "the file is unchanged" };
       }
-      return { complete: true };
+      return { ok: true };
     },
   },
 ];

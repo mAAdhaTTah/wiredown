@@ -47,7 +47,7 @@ describe("runTask", () => {
       firstAttemptErrors: 0,
       firstClean: true,
       fixRounds: 0,
-      complete: true,
+      structureOk: true,
       lines: 7,
       inputTokens: 100,
       outputTokens: 10,
@@ -111,7 +111,7 @@ describe("runTask", () => {
       cap: 0,
       run: 1,
     });
-    expect(r).toMatchObject({ fixRounds: 0, diffSize: 2, complete: true });
+    expect(r).toMatchObject({ fixRounds: 0, diffSize: 2, structureOk: true });
     const same = await runTask({
       task: task("review"),
       arm,
@@ -120,7 +120,7 @@ describe("runTask", () => {
       cap: 0,
       run: 1,
     });
-    expect(same).toMatchObject({ complete: false, completeReason: "the file is unchanged" });
+    expect(same).toMatchObject({ structureOk: false, structureReason: "the file is unchanged" });
   });
 
   it("reports missing screens in task 1", async () => {
@@ -133,8 +133,8 @@ describe("runTask", () => {
       cap: 0,
       run: 1,
     });
-    expect(r).toMatchObject({ firstClean: true, complete: false, diffSize: null, input: null });
-    expect(r.completeReason).toBe(
+    expect(r).toMatchObject({ firstClean: true, structureOk: false, diffSize: null, input: null });
+    expect(r.structureReason).toBe(
       "missing screens: ^exports-list, ^export-new, ^export-detail, ^export-failed",
     );
   });

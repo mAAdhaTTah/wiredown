@@ -94,8 +94,8 @@ type CaseOutput = {
   attempts: number;
   lines: number | null;
   diffSize: number | null;
-  complete: boolean;
-  completeReason: string | null;
+  structureOk: boolean;
+  structureReason: string | null;
   wallMs: number;
 };
 
@@ -121,8 +121,8 @@ const harness = createHarness<CaseInput, CaseOutput>({
         attempts: result.attempts.length,
         lines: result.lines,
         diffSize: result.diffSize,
-        complete: result.complete,
-        completeReason: result.completeReason ?? null,
+        structureOk: result.structureOk,
+        structureReason: result.structureReason ?? null,
         wallMs: result.wallMs,
       },
       events: result.attempts.flatMap((a) => [
@@ -167,10 +167,12 @@ const judges = [
   createJudge<Ctx>("FixEfficiency", ({ output }) => ({
     score: output.fixRounds === null ? 0 : 1 / (1 + output.fixRounds),
   })),
-  createJudge<Ctx>("Complete", ({ output }) => ({
-    score: output.complete ? 1 : 0,
+  // structural only (ids kept, a variant of the base): it does not judge
+  // whether the requested change was made; the rating sheet is for that
+  createJudge<Ctx>("StructureOk", ({ output }) => ({
+    score: output.structureOk ? 1 : 0,
     metadata: {
-      rationale: output.completeReason ?? "did what was asked",
+      rationale: output.structureReason ?? "structure as required",
       lines: output.lines,
       diffSize: output.diffSize,
       wallMs: output.wallMs,

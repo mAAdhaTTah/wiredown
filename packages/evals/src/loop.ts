@@ -44,8 +44,9 @@ export interface TaskRun {
   lines: number | null;
   /** Added plus removed non-blank lines of the checked file against the input. */
   diffSize: number | null;
-  complete: boolean;
-  completeReason?: string;
+  /** The task's structural check (ids kept, a variant of the base); not a content judgement. */
+  structureOk: boolean;
+  structureReason?: string;
   wallMs: number;
   inputTokens: number;
   outputTokens: number;
@@ -137,10 +138,10 @@ export async function runTask({ task, arm, material, runner, cap, run }: LoopOpt
     prompt = fixPrompt(original, output, attempt.findings, task.lineNote?.(input));
   }
   const file = output === null ? null : task.assemble(input, output);
-  const completion =
+  const structure =
     output === null || file === null
-      ? { complete: false, reason: "no well-formed reply" }
-      : task.complete(material, input, output, arm.check(file));
+      ? { ok: false, reason: "no well-formed reply" }
+      : task.structure(material, input, output, arm.check(file));
   const costs = attempts.map((a) => a.costUsd).filter((c) => c !== undefined);
   const result: TaskRun = {
     task: task.id,
@@ -154,8 +155,8 @@ export async function runTask({ task, arm, material, runner, cap, run }: LoopOpt
     output,
     lines: output === null ? null : lineCount(output),
     diffSize: input === null || file === null ? null : diffSize(input, file),
-    complete: completion.complete,
-    ...(completion.reason ? { completeReason: completion.reason } : {}),
+    structureOk: structure.ok,
+    ...(structure.reason ? { structureReason: structure.reason } : {}),
     wallMs: Date.now() - started,
     inputTokens: attempts.reduce((n, a) => n + (a.inputTokens ?? 0), 0),
     outputTokens: attempts.reduce((n, a) => n + (a.outputTokens ?? 0), 0),
