@@ -136,13 +136,17 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
     const at = find(key, line);
     if (at === null) return;
     // a patch that leaves out the row's checkbox starts at the key column
+    let implied = "";
     if (at > 0 && parseCheck(split(rows[at].replace(MARKS, ""), pipe)[0])) {
-      if (cells[0] !== "=" && !parseCheck(cells[0])) cells = ["=", ...cells];
+      if (cells[0] !== "=" && !parseCheck(cells[0])) {
+        cells = ["=", ...cells];
+        implied = " with its checkbox";
+      }
     }
     if (cells.length > columns) {
       errors.push({
         line,
-        message: `rows: "${key}" has ${cells.length} cells, but the grid "${grid.id}" has ${columns} columns`,
+        message: `rows: "${key}" has ${cells.length} cells${implied}, but the grid "${grid.id}" has ${columns} columns`,
       });
       return;
     }

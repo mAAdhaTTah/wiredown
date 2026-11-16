@@ -237,7 +237,10 @@ describe("rows", () => {
     // "Anna" in the checkbox column was the old reading of this patch
     const base = "grid #g\n[ ] | Name | Role\n[ ] | Anna | Member";
     expect(run("extends: base\nrows: g\n  Anna | = | Admin", { base }).errors).toEqual([
-      { line: 3, message: 'rows: "Anna" has 4 cells, but the grid "g" has 3 columns' },
+      {
+        line: 3,
+        message: 'rows: "Anna" has 4 cells with its checkbox, but the grid "g" has 3 columns',
+      },
     ]);
   });
 
