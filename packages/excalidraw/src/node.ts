@@ -43,23 +43,46 @@ async function initialize() {
 
 let runtime: ReturnType<typeof initialize> | undefined;
 
+// Excalidraw tries to subset the font, which fails in Node (it needs
+// __dirname), logs a stack trace and embeds the whole font instead. The
+// output is right, so that one message is dropped while exports are running.
+const NOISE = "Skipped glyph subsetting";
+let exporting = 0;
+let consoleError = console.error;
+async function quietly<T>(run: () => Promise<T>): Promise<T> {
+  if (exporting++ === 0) {
+    consoleError = console.error;
+    console.error = (...args) => {
+      if (args[0] !== NOISE) consoleError(...args);
+    };
+  }
+  try {
+    return await run();
+  } finally {
+    if (--exporting === 0) console.error = consoleError;
+  }
+}
+
 /** Export the adapter's light-theme elements through Excalidraw in Node. */
 export async function renderSvg(
   elements: ExcalidrawElementJson[],
   options: SvgOptions = {},
 ): Promise<string> {
   const { document, exportScene } = await (runtime ??= initialize());
-  const svg = await exportScene({
-    type: "svg",
-    data: sceneOf(elements),
-    config: {
-      theme: options.theme ?? "light",
-      padding: 0,
-      canvasBackgroundColor: false,
-      ...(options.fonts === false ? { skipInliningFonts: true } : {}),
-      environment: { document },
-    },
-  });
+  const svg = await quietly<{ outerHTML: string }>(() =>
+    exportScene({
+      type: "svg",
+      data: sceneOf(elements),
+      config: {
+        theme: options.theme ?? "light",
+        padding: 0,
+        canvasBackgroundColor: false,
+        ...(options.fonts === false ? { skipInliningFonts: true } : {}),
+        // Excalidraw embeds the font itself; there is nothing to load in Node
+        environment: { document, loadFonts: async () => {} },
+      },
+    }),
+  );
   return svg.outerHTML;
 }
 
