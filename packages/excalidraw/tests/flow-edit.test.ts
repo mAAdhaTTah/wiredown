@@ -9,6 +9,7 @@ import {
   parseFlow,
   serializeFlow,
 } from "../src/index.js";
+import type { ExcalidrawElementJson } from "../src/index.js";
 import { pluginFailures } from "./plugin-checks.js";
 const options = {
   screenId: "home",
@@ -23,7 +24,7 @@ test("geometry, metadata, deletion and numbering", () => {
   expect([image.x, image.y, image.width, image.height]).toEqual([0, 0, 120, 205]);
   expect(flow.elements[0]).toMatchObject({
     text: "F1 · Home",
-    customData: { wiredown: { frame: "F1", role: "label", screen: "home" } },
+    customData: { wiredown: { v: 1, frame: "F1", role: "label", screen: "home" } },
   });
   image.x = 500;
   image.y = 100;
@@ -103,9 +104,34 @@ test("identities, distinct embeds, and appended indices", () => {
     for (const [offset, role] of ["label", "screen"].entries()) {
       const e = flow.elements[i * 2 + offset];
       expect(e.id).toHaveLength(8);
-      expect(e.customData).toEqual({ wiredown: { frame, role, screen: "home" } });
+      const group = role === "screen" ? { group: (e.groupIds as string[])[0] } : {};
+      expect(e.customData).toEqual({ wiredown: { v: 1, frame, role, screen: "home", ...group } });
       if (i === 1) expect(String(e.index) > last).toBe(true);
     }
   }
   expect(pluginFailures(serializeFlow(flow))).toEqual([]);
+});
+
+test("a frame's image and label share a group; the image records it", () => {
+  const flow = newFlow();
+  addScreen(flow, options);
+  const [label, image] = flow.elements;
+  const group = (image.customData as { wiredown: { group: string } }).wiredown.group;
+  expect(group).toMatch(/^.{8}$/);
+  expect(label.groupIds).toEqual([group]);
+  expect(image.groupIds).toEqual([group]);
+  addScreen(flow, options);
+  expect(flow.elements[3].groupIds).not.toEqual([group]);
+});
+
+test("a copied frame name is refused; data from a newer wiredown is ignored", () => {
+  const flow = newFlow();
+  addScreen(flow, options);
+  const copy: ExcalidrawElementJson = { ...flow.elements[1], id: "copy0001" };
+  flow.elements.push(copy);
+  expect(() => addScreen(flow, { ...options, place: { rightOf: "F1" } })).toThrow(
+    `F1 is claimed by elements ${flow.elements[1].id} and copy0001; delete the copy`,
+  );
+  copy.customData = { wiredown: { v: 2, role: "screen", frame: "F1", screen: "home" } };
+  expect(flowFrames(flow).map((f) => f.element.id)).toEqual([flow.elements[1].id]);
 });

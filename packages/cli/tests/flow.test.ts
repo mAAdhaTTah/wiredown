@@ -66,10 +66,10 @@ test("discovery, explicit path, errors, and empty drawings", async () => {
       ])
     ).exitCode,
   ).toBe(1);
-  const missing = await run(["flow", "new", join(dir, "nested/deep/a.excalidraw.md"), "team"]);
-  expect(missing.exitCode).toBe(1);
-  expect(missing.stderr).toContain("nested/screens.md");
-  expect(missing.stderr).toContain("deep/screens.md");
+  // discovery walks up from the flow, as readers resolve the embed
+  const deep = join(dir, "nested/deep/a.excalidraw.md");
+  expect((await run(["flow", "new", deep, "team"])).exitCode).toBe(0);
+  expect([...parseFlow(await readFile(deep, "utf8")).embeds.values()][0].path).toBe("screens");
   expect((await run(["flow", "new", join(dir, "empty.excalidraw.md")])).exitCode).toBe(0);
 });
 
@@ -189,10 +189,7 @@ test.each(["parent", "own", "both", "explicit", "neither"])(
     if (kind === "neither") {
       expect(result.exitCode).toBe(1);
       expect(JSON.parse(result.stdout).errors[0].message).toBe(
-        "no screens file; tried " +
-          join(dir, "screens.md") +
-          " and " +
-          join(dir, "flows/screens.md"),
+        "no screens.md was found from " + join(dir, "flows") + " upward",
       );
       await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
     } else {
@@ -299,4 +296,56 @@ test("title falls back to id without a heading", async () => {
   expect(result.exitCode).toBe(0);
   expect(JSON.parse(result.stdout).frames[0]).toMatchObject({ title: "plain", screen: "plain" });
   expect(parseFlow(await readFile(file, "utf8")).elements[0].text).toBe("F1 · plain");
+});
+
+const embedPaths = async (file: string) =>
+  [...parseFlow(await readFile(file, "utf8")).embeds.values()].map((e) => e.path);
+
+test("the embed names the screens file it was made from", async () => {
+  const dir = await fixture({});
+  for (const spec of ["spec-a", "spec-b"]) {
+    await mkdir(join(dir, spec, "flows"), { recursive: true });
+    await writeFile(join(dir, spec, "screens.md"), BASE);
+  }
+  await writeFile(join(dir, "spec-a/ui.md"), BASE);
+  // no vault: the bare name, which resolves from the flow to the file used
+  const ui = join(dir, "spec-a/flows/ui.excalidraw.md");
+  const made = await run(["flow", "new", ui, "team", "--screens", join(dir, "spec-a/ui.md")]);
+  expect(made.exitCode).toBe(0);
+  expect(await embedPaths(ui)).toEqual(["ui"]);
+  for (const spec of ["spec-a", "spec-b"]) {
+    const file = join(dir, spec, "flows/a.excalidraw.md");
+    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    expect(await embedPaths(file)).toEqual(["screens"]);
+  }
+  // a vault: the path from its root, so same-named files can't be confused
+  await mkdir(join(dir, ".obsidian"));
+  for (const spec of ["spec-a", "spec-b"]) {
+    const file = join(dir, spec, "flows/v.excalidraw.md");
+    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    expect(await embedPaths(file)).toEqual([`${spec}/screens`]);
+  }
+  expect((await run(["flow", "add-screen", ui, "team", "--json"])).exitCode).toBe(0);
+  expect(await embedPaths(ui)).toEqual(["ui", "spec-a/screens"]);
+});
+
+test("an embed that would lead a reader to another file is refused", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  await mkdir(join(dir, "flows"));
+  await mkdir(join(dir, "other"));
+  await writeFile(join(dir, "other/screens.md"), BASE);
+  const file = join(dir, "flows/a.excalidraw.md");
+  const result = await run([
+    "flow",
+    "new",
+    file,
+    "team",
+    "--screens",
+    join(dir, "other/screens.md"),
+  ]);
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain(
+    `the embed [[screens]] would lead from ${join(dir, "flows")} to ${join(dir, "screens.md")}, not ${join(dir, "other/screens.md")}`,
+  );
+  await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
 });

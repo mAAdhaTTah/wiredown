@@ -1,6 +1,6 @@
 import { safeWrite } from "./safe-write.js";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import {
   addScreen,
@@ -11,6 +11,7 @@ import {
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
+import { screensToEmbed } from "./embeds.js";
 import { formatFindings, json, unknownScreen, UsageError } from "./output.js";
 import type { Finding, Result } from "./output.js";
 
@@ -65,19 +66,8 @@ export async function editFlow(
     let screensPath: string | undefined;
     let source = "";
     if (ids.length) {
-      const candidates = [
-        join(dirname(dirname(file)), "screens.md"),
-        join(dirname(file), "screens.md"),
-      ];
-      screensPath = options.screens;
-      if (!screensPath) {
-        for (const candidate of candidates)
-          if (await exists(candidate)) {
-            screensPath = candidate;
-            break;
-          }
-      }
-      if (!screensPath) throw new Error(`no screens file; tried ${candidates.join(" and ")}`);
+      const embed = await screensToEmbed(file, options.screens);
+      screensPath = embed.path;
       source = await readFile(screensPath, "utf8");
       const checked = checkScreens(source);
       const known = checked.screens.flatMap((s) => (s.id ? [s.id] : []));
@@ -100,7 +90,7 @@ export async function editFlow(
         const frame = addScreen(flow, {
           screenId: id,
           title,
-          path: basename(screensPath, ".md"),
+          path: embed.embedPath,
           size: { width: rendered.width, height: rendered.height },
           place: options.rightOf
             ? { rightOf: options.rightOf }

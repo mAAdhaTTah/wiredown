@@ -112,4 +112,16 @@ and image and returns its F-number; `size` is the rendered screen size.
 `embedSize(width, height)` converts a screen export size to `{ link, image }` dimensions. `flowFrames(flow)`
 finds live images with Wiredown customData. Legacy labels reserve numbers,
 but legacy images are not placement targets. Deleted elements reserve their
-numbers too. Existing elements are never changed.
+numbers too. Existing elements are never changed. A frame's label and image
+share a new Excalidraw group, recorded as `group` in the image's
+`customData.wiredown`. Every `customData.wiredown` carries `v`
+(`DATA_VERSION`, now 1); data without `v` is version 1, and data with a
+higher `v` is ignored.
+
+An embed's path names its screens file. `embedPathFor(screensUrl,
+vaultRootUrl?)` is the path to write: from the vault root inside an
+Obsidian vault, else the bare name. `resolveEmbedPath(flowUrl, embedPath,
+exists, vaultRootUrl?)` is the one rule readers use to find the file: it
+tries `embedCandidates(...)` in order and returns the first URL that
+`exists` (a file check in Node, a fetch in the browser). Locations are URLs,
+`file:` ones in Node.

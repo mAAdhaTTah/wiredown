@@ -22,18 +22,42 @@ export interface AddScreenOptions {
   size: { width: number; height: number };
   place?: { rightOf: string } | { below: string };
 }
+/** The version of `customData.wiredown` this code writes; objects without `v` are version 1. */
+export const DATA_VERSION = 1;
+/**
+ * `customData.wiredown`. A frame's image also records `group`, the Excalidraw
+ * group that holds the frame's parts.
+ */
 interface Identity {
+  v?: number;
   frame: string;
   role: string;
   screen: string;
+  group?: string;
 }
+/** An element's wiredown data; undefined for a hand-drawn element or one from a newer wiredown. */
 function identity(e: ExcalidrawElementJson): Identity | undefined {
-  return (e.customData as { wiredown?: Identity } | undefined)?.wiredown;
+  const data = (e.customData as { wiredown?: Identity } | undefined)?.wiredown;
+  return data && (data.v ?? 1) <= DATA_VERSION ? data : undefined;
 }
 export function flowFrames(flow: Flow) {
   return flow.elements
     .filter((e) => e.type === "image" && !e.isDeleted && identity(e)?.role === "screen")
     .map((e) => ({ frame: identity(e)!.frame, element: e }));
+}
+/** The live frame named `name`; two frames claiming one name are an error, not a guess. */
+function findFrame(flow: Flow, name: string) {
+  const frames = flowFrames(flow);
+  const found = frames.filter((f) => f.frame === name);
+  if (found.length > 1)
+    throw new Error(
+      `${name} is claimed by elements ${found.map((f) => f.element.id).join(" and ")}; delete the copy`,
+    );
+  if (!found.length)
+    throw new Error(
+      `unknown frame "${name}" (frames: ${frames.map((f) => f.frame).join(", ") || "none"})`,
+    );
+  return found[0].element;
 }
 const alphabet = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 function random(n: number) {
@@ -50,6 +74,7 @@ function element(
   height: number,
   index: string,
   data: Identity,
+  groupIds: string[] = [],
 ): ExcalidrawElementJson {
   return {
     id: id(),
@@ -66,7 +91,7 @@ function element(
     strokeStyle: "solid",
     roughness: 1,
     opacity: 100,
-    groupIds: [],
+    groupIds,
     frameId: null,
     index,
     roundness: null,
@@ -78,7 +103,7 @@ function element(
     updated: Date.now(),
     link: null,
     locked: false,
-    customData: { wiredown: data },
+    customData: { wiredown: { v: DATA_VERSION, ...data } },
   };
 }
 /** Appends one frame; existing elements are never modified. Returns its F-number. */
@@ -88,7 +113,7 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
   const refId =
     options.place && ("rightOf" in options.place ? options.place.rightOf : options.place.below);
   const ref = refId
-    ? frames.find((f) => f.frame === refId)?.element
+    ? findFrame(flow, refId)
     : frames.reduce<ExcalidrawElementJson | undefined>(
         (a, f) =>
           !a || Number(f.element.x) + Number(f.element.width) > Number(a.x) + Number(a.width)
@@ -96,10 +121,6 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
             : a,
         undefined,
       );
-  if (refId && !ref)
-    throw new Error(
-      `unknown frame "${refId}" (frames: ${frames.map((f) => f.frame).join(", ") || "none"})`,
-    );
   const below = options.place && "below" in options.place;
   const live = flow.elements.filter((e) => !e.isDeleted);
   const bounds =
@@ -129,13 +150,19 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
       .at(-1) ?? null;
   const keys = generateNKeysBetween(last, null, 2);
   const data = { frame, screen: options.screenId };
+  // One Excalidraw group holds a frame's parts (image, label, and later its
+  // notes and overlays): clicking any part selects the whole frame, so it
+  // moves together; double-clicking enters the group to select one element.
+  const group = id();
   const text = `${frame} · ${options.title}`;
   const measured = fontMeasurer(EXCALIFONT).measure(text, {
     fontSize: 24,
     fontFamily: 5,
   });
   const label = {
-    ...element("text", x, y - 48, measured.w, measured.h, keys[0], { ...data, role: "label" }),
+    ...element("text", x, y - 48, measured.w, measured.h, keys[0], { ...data, role: "label" }, [
+      group,
+    ]),
     text,
     rawText: text,
     originalText: text,
@@ -152,10 +179,20 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
     n.toString(16).padStart(2, "0"),
   ).join("");
   const image = {
-    ...element("image", x, y, size.image.width, size.image.height, keys[1], {
-      ...data,
-      role: "screen",
-    }),
+    ...element(
+      "image",
+      x,
+      y,
+      size.image.width,
+      size.image.height,
+      keys[1],
+      {
+        ...data,
+        role: "screen",
+        group,
+      },
+      [group],
+    ),
     fileId,
     status: "saved",
     scale: [1, 1],

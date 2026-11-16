@@ -103,10 +103,25 @@ an error.
 relative to the current image position. Default placement is right of the
 rightmost frame. Titles default to the screen heading, then its id.
 
-Screens are discovered in the parent of the flow directory, then the flow
-directory itself. Missing embed styling frontmatter is added; existing values
+Each frame embeds its screen as `[[<path>#^<id>|WxH]]`, and that path says
+which screens file the frame uses. Inside an Obsidian vault (a directory
+holding `.obsidian/`, at or above the flow) the path is the screens file's
+path from the vault root without `.md`, such as `specs/invites/screens`;
+outside one it is the bare name, such as `screens`. Readers resolve the path
+from the flow file: a path with a `/` from the vault root (outside a vault,
+from the flow's directory and each one above it, nearest first); a bare name
+as `<name>.md` in the parent of the flow's directory, then the flow's
+directory, then each directory further up. One flow can embed screens from
+several files.
+
+Without `--screens`, the screens file is `screens.md`, found by that same
+rule. A screens file the written path would not lead back to (because a
+nearer file has its name, or it is not in or above the flow's directory) is
+an error. Missing embed styling frontmatter is added; existing values
 are preserved. Invalid screens and unknown frames leave the drawing untouched.
-Human output is one `F3  team-members  548x333` line per frame. The size is
+A frame's image and its `F3 · Title` label share an Excalidraw group, so
+they move together: clicking either selects both; double-click to select
+one. Human output is one `F3  team-members  548x333` line per frame. The size is
 the embed image size in the drawing. JSON is
 `{ flow, frames: [{ frame, screen, title, x, y, width, height }],
 screensFileUpdated }`. Operational errors exit 1 (JSON adds an `errors`
