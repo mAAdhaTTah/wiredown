@@ -7,3 +7,4 @@ export type { EmbedLink, Flow, FlowSource } from "./flow.js";
 export { addScreen, DATA_VERSION, embedSize, flowFrames } from "./flow-edit.js";
 export type { AddScreenOptions } from "./flow-edit.js";
 export { embedCandidates, embedNotFound, embedPathFor, resolveEmbedPath } from "./screens-path.js";
+export type { EmbedRoot } from "./screens-path.js";

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
@@ -66,10 +66,13 @@ test("discovery, explicit path, errors, and empty drawings", async () => {
       ])
     ).exitCode,
   ).toBe(1);
-  // discovery walks up from the flow, as readers resolve the embed
+  // with no vault or repository, discovery stops at the parent of the flow's folder
   const deep = join(dir, "nested/deep/a.excalidraw.md");
-  expect((await run(["flow", "new", deep, "team"])).exitCode).toBe(0);
-  expect([...parseFlow(await readFile(deep, "utf8")).embeds.values()][0].path).toBe("screens");
+  const missing = await run(["flow", "new", deep, "team"]);
+  expect(missing.exitCode).toBe(1);
+  expect(missing.stderr).toContain(
+    `no screens.md was found from ${join(dir, "nested/deep")} upward`,
+  );
   expect((await run(["flow", "new", join(dir, "empty.excalidraw.md")])).exitCode).toBe(0);
 });
 
@@ -349,3 +352,34 @@ test("an embed that would lead a reader to another file is refused", async () =>
   );
   await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
 });
+
+test.each(["vault", "git", "neither"])(
+  "the documented layout works and nothing above the root is used: %s",
+  async (kind) => {
+    const dir = await fixture({ "screens.md": BASE });
+    const repo = join(dir, "repo");
+    await mkdir(join(repo, "spec/flows"), { recursive: true });
+    if (kind === "vault") await mkdir(join(repo, ".obsidian"));
+    if (kind === "git") await writeFile(join(repo, ".git"), "gitdir: elsewhere\n");
+    const root = kind === "neither" ? join(repo, "spec") : repo;
+    const file = join(repo, "spec/flows/a.excalidraw.md");
+    // dir/screens.md is above the root: never found
+    const above = await run(["flow", "new", file, "team"]);
+    expect(above.exitCode).toBe(1);
+    expect(above.stderr).toContain(
+      `no screens.md was found from ${join(repo, "spec/flows")} upward`,
+    );
+    const outside = await run(["flow", "new", file, "team", "--screens", join(dir, "screens.md")]);
+    expect(outside.exitCode).toBe(1);
+    expect(outside.stderr).toContain(
+      `the screens file ${join(dir, "screens.md")} points outside ${root}`,
+    );
+    // a symlink inside the root that leaves it is outside too
+    await symlink(join(dir, "screens.md"), join(repo, "spec/screens.md"));
+    expect((await run(["flow", "new", file, "team"])).stderr).toContain(`points outside ${root}`);
+    await rm(join(repo, "spec/screens.md"));
+    await writeFile(join(repo, "spec/screens.md"), BASE);
+    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    expect(await embedPaths(file)).toEqual([kind === "vault" ? "spec/screens" : "screens"]);
+  },
+);

@@ -118,10 +118,14 @@ share a new Excalidraw group, recorded as `group` in the image's
 (`DATA_VERSION`, now 1); data without `v` is version 1, and data with a
 higher `v` is ignored.
 
-An embed's path names its screens file. `embedPathFor(screensUrl,
-vaultRootUrl?)` is the path to write: from the vault root inside an
-Obsidian vault, else the bare name. `resolveEmbedPath(flowUrl, embedPath,
-exists, vaultRootUrl?)` is the one rule readers use to find the file: it
-tries `embedCandidates(...)` in order and returns the first URL that
-`exists` (a file check in Node, a fetch in the browser). Locations are URLs,
+An embed's path names its screens file, searched for only within a root
+`{ url, vault }`: the vault root, else the repository root, else the parent
+of the flow's directory (on a forge, the repository's raw-content root).
+`embedPathFor(screensUrl, root)` is the path to write: from the vault root
+inside a vault, else the bare name; undefined for a file outside the root.
+`resolveEmbedPath(flowUrl, embedPath, exists, root)` is the one rule readers
+use to find the file: it tries `embedCandidates(...)` in order and returns
+`{ url }` for the first that `exists` (a file check in Node, a fetch in the
+browser), `{ outside: true }` for a path that is absolute, has a `..`
+segment or normalises outside the root, or undefined. Locations are URLs,
 `file:` ones in Node.
