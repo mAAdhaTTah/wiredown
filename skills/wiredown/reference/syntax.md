@@ -8,9 +8,61 @@ content; a blank line ends continuation. Options go last, comma-separated.
 Common flags: `disabled`, `invalid`, `focus`.
 Use #name for ids (lowercase letter, then lowercase letters, digits or hyphens).
 The alternative (id=name) also works. Directives take neither ids nor options.
-Grids fill their container by default; (fit) opts out.
-A leading * means primary or selected; | separates items or grid cells.
-Inline {icon}, [link] and -grey text- work in supported labels.
+Only tabs, box, row, columns, window, dialog, browser, phone, form, section may contain indented components.
+Others report e.g. "text" can't contain other components (followed by the
+allowed container list). Lines starting with // are comments.
+A leading * makes buttons primary, tabs selected and nav items active.
+Inline {icon}, [link] and -grey text- draw icons, links and grey text in
+supported labels (for example alert and button).
+Tree lines use + for closed branches, - for open branches and * for selection;
+indentation gives their depth. Nav and menu use a lone - item as a divider;
+menu lines are label | shortcut.
+
+Grids fill their container by default; (fit) opts out. The first row is the
+header. Cells split on |, or commas when no row uses |. [x] and [ ] cells
+draw checked and unchecked boxes. Prefix a row with * for selection, > for
+an action outline, or >* for both (put a space before the first cell).
+Numeric data cells align right. Rows shorter than the header are accepted.
+For variant rows: patches, the first non-checkbox cell identifies the row;
+= preserves a cell and remove <row-key> removes a row.
+
+A field wraps one non-container component: field: Label | component: content.
+Put its #id and options after the inner content; the id names the whole
+field. Inner options stay on the component; floating, required and fill
+also apply to the field, and disabled greys its label too.
+
+Save this complete example in screens.md (including its fence and block id):
+
+```wiredown
+window: Settings
+  tabs: *Profile | Security
+    // Two labelled controls
+    form: Contact
+      field: Name | input: Ada #name (required)
+      field: Country | dropdown: *Sweden | Norway #country
+    grid #people
+    [ ] | Name | Count
+    * [x] | Ada | 12
+    > [ ] | Bea | 3
+    >* [ ] | Cy
+    alert: {info} Saved. [Undo] -Pending-
+    buttons: Cancel | *Save
+    nav: *Home | - | Settings
+    menu: Copy | Ctrl+C
+    -
+    Paste | Ctrl+V
+    tree: - {folder} Project
+      + {folder} docs
+      * Readme
+    text: Visible (xyzzy)
+    grid: Name, Count
+    Ada, 12
+```
+
+^grammar
+
+A parenthesised word that is not a known option stays visible text. A distant
+misspelling such as (xyzzy) is NOT reported by check; inspect the PNG.
 
 ## button
 
@@ -674,5 +726,32 @@ Start with extends: screen-id. Use replace: id with exactly one indented
 component (it inherits the id), remove: id (comma-separated ids allowed),
 after: id or before: id with indented additions, and rows: grid-id with
 indented rows. In rows, = keeps a cell and remove <row-key> removes a row.
-The first non-checkbox cell is the row key. Directive examples above use a
-base screen with a component or grid named #target.
+Here is a base screen and a variant using every verb:
+
+```wiredown
+window: Members
+  text: Original #title
+  text: Temporary #temporary
+  grid #target
+  Name | Status
+  Anna | Invited
+  Erik | Active
+```
+
+^base
+
+```wiredown
+extends: base
+replace: title
+  text: Updated
+remove: temporary
+before: target
+  text: Before table
+after: target
+  text: After table
+rows: target
+  Anna | Active
+  remove Erik
+```
+
+^updated
