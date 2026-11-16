@@ -203,10 +203,8 @@ export interface PngOptions {
   /** A CSS colour painted under the drawing; transparent when omitted. */
   background?: string;
   /**
-   * SVG image data URLs to draw inline, as `renderFlowSvg` returns them for
-   * its screens. Other SVG images are drawn as separate documents, which
-   * resvg gives no access to files, but it may mis-size them and draws no
-   * text in them.
+   * The trusted screen image data URLs, as `renderFlowSvg` returns them;
+   * they are drawn inline. Any other SVG image is refused (see below).
    */
   inline?: ReadonlySet<string>;
 }
