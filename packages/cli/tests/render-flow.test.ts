@@ -122,14 +122,15 @@ it("returns a write finding and valid JSON for an output under a file", async ()
 
 it("resolves embeds of a flow given relative to the current directory", async () => {
   const dir = await fixture({ "screens.md": BASE });
-  const script = `import { notFound, resolveEmbed } from ${JSON.stringify(new URL("../dist/embeds.js", import.meta.url).href)};
-    console.log(await resolveEmbed("f.excalidraw.md", "screens"));
-    console.log(notFound("f.excalidraw.md", "ui"));`;
+  const script = `import { embedRoot, resolveEmbed } from ${JSON.stringify(new URL("../dist/embeds.js", import.meta.url).href)};
+    const root = await embedRoot("f.excalidraw.md");
+    console.log((await resolveEmbed("f.excalidraw.md", "screens", root)).path);
+    console.log((await resolveEmbed("f.excalidraw.md", "ui", root)).why);`;
   const output = execFileSync(process.execPath, ["--input-type=module", "-e", script], {
     cwd: dir,
     encoding: "utf8",
   });
-  expect(output).toBe(`${join(dir, "screens.md")}\nno ui.md was found from . upward\n`);
+  expect(output).toBe(`${join(dir, "screens.md")}\nbut no ui.md was found from . upward\n`);
 });
 
 it("reports a missing hand-made embed by block id without an element id", async () => {
