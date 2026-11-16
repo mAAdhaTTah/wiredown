@@ -14,7 +14,7 @@ file) and a flow with both embedded screens, a highlight, a mark and a note,
 in light and dark themes. Excalifont `@font-face` was inlined. The five
 successful pages had no console errors, page errors, failed requests or
 requests to another origin. The architect's initial run requested only the
-loader on the plain page (1 asset request), and 21 assets on drawing pages.
+loader on the plain page (1 asset request), and about 20 assets on drawing pages.
 The reproducible script prints current counts, which may vary with font
 subsetting. It also checks that a deliberate raw-file HTTP 500 preserves the
 original content and shows a notice (the expected HTTP console error is

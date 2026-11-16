@@ -122,7 +122,7 @@ try {
     browser = await chromium.launch(executablePath ? { executablePath } : {});
   } catch (error) {
     throw new Error(
-      `${error.message}\nRun: pnpm --filter @wiredown/web exec playwright-core install chromium-headless-shell (or pass --browser /path/to/chromium)`,
+      `${error.message.split("\n")[0]}\nRun: pnpm --filter @wiredown/web exec playwright-core install chromium-headless-shell (or pass --browser /path/to/chromium)`,
     );
   }
   console.log(`Chromium ${browser.version()}`);
@@ -181,6 +181,13 @@ try {
           );
         }
         assert.match(await page.locator(".wiredown-block svg").first().innerHTML(), /@font-face/);
+        const base = page.locator(".wiredown-block svg").first();
+        for (const text of ["3 of 5 seats used", "Invite member"])
+          assert((await base.textContent()).includes(text), `first screen missing ${text}`);
+        for (const svg of await page.locator(".wiredown-block svg").all()) {
+          const box = await svg.boundingBox();
+          assert(box && box.width > 200 && box.height > 100, "a screen has no size");
+        }
       }
       if (kind === "flow") {
         assert.equal(await page.locator(".wiredown-flow svg").count(), 1);
@@ -188,6 +195,11 @@ try {
         for (const text of ["F1", "F2", note])
           assert((await svg.textContent()).includes(text), `flow missing ${text}`);
         assert.equal(await svg.locator("image").count(), 2, "both screens embedded");
+        // the mark's label, and enough strokes for the arrow, the highlight and the badge
+        assert((await svg.locator("text").allTextContents()).includes("3"), "flow missing mark");
+        assert((await svg.locator("path").count()) >= 4, "flow missing its drawn shapes");
+        const box = await svg.boundingBox();
+        assert(box && box.width > 400 && box.height > 100, "the flow has no size");
       }
       if (kind === "failure") {
         assert(
