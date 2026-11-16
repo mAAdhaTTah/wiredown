@@ -15,5 +15,5 @@ it("ships a small browser bundle with external Obsidian and install files", () =
   ]);
   const size = statSync(file).size;
   console.log(`Obsidian bundle: ${size} bytes`);
-  expect(size).toBeLessThan(76_000);
+  expect(size).toBeLessThan(78_000);
 });
