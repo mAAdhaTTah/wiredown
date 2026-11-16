@@ -17,54 +17,24 @@ const scene = sceneOf(elements);
 
 ## API
 
-The root export renders nothing; SVG export is in the Node entry,
-`@wiredown/excalidraw/node`, below.
+Flows are Obsidian Excalidraw drawings (`flows/<name>.excalidraw.md`).
+`parseFlow` reads one into `{ elements, appState, files, embeds }`;
+`serializeFlow` writes it back, regenerating `## Text Elements`,
+`## Embedded Files` and the drawing JSON from the scene and keeping
+everything else (frontmatter, other sections, unknown fields, a compressed
+drawing's form) as read. `newFlow` is an empty drawing.
 
-- **Elements** (`elements`): `screenElements(layout, options?)` takes core's
-  `LayoutResult` (from `layoutScreen` or `layout`) and returns
-  `ScreenElements`:
-  - `elements`: `ExcalidrawElementJson[]`. The first is an invisible
-    frame rectangle that fixes the export's size; then one element per
-    draw op: a rectangle, an ellipse, a line (ops with fewer than two
-    points are skipped) or text in Excalifont at the line height layout
-    measured with. Colours are for the light theme; Excalidraw applies
-    dark mode at export.
-  - `width` and `height`: the exported image's size, padding included,
-    rounded up to whole px.
-  - `boxes`: layout's `Box` for each `#id`, moved into the image's
-    coordinates (0,0 is its top-left), so flow overlays can be placed by
-    scaling them.
+```ts
+import { formatEmbed, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 
-  A screen that draws nothing gives no elements, size 0 and no boxes.
-  `ElementOptions` are all optional: `idPrefix` (default `wf`; element ids
-  are `<prefix>-<n>`, so several screens can share a scene), `padding`
-  around the drawing (default 8) and Excalidraw `roughness` (0 architect,
-  1 artist, 2 cartoonist; default 1). Ids and seeds come from each
-  element's position in the list, so the same screen always gives the
-  same elements. `EXCALIFONT_FAMILY` is Excalidraw's font family number for
-  Excalifont (5).
+const flow = parseFlow(text);
+flow.embeds.set(fileId, { path: "screens", blockId: "home", width, height });
+const next = serializeFlow(flow); // "screens#^home|WxH" via formatEmbed
+```
 
-- **Scene** (`scene`): `sceneOf(elements)` wraps elements in the
-  `ExcalidrawScene` object Excalidraw's exporters take, with a white
-  background and no files.
-- **Types**: `ElementOptions`, `ScreenElements`, `ExcalidrawElementJson`
-  (an element as a plain object with at least `id` and `type`) and
-  `ExcalidrawScene`.
-
-## Node API
-
-`@wiredown/excalidraw/node` exports through Excalidraw in Node. Its heavy
-dependencies load on first render.
-
-- **SVG** (`node`): `renderSvg(elements, options?)` exports the adapter's
-  light-theme elements and resolves to the SVG markup.
-  `renderScreenSvg(tree, options?)` lays a parsed screen out with core's
-  `layoutScreen`, builds its elements with the default `ElementOptions` and
-  exports them, resolving to `{ svg, width, height, boxes }`: the SVG and
-  `screenElements`' size and boxes.
-- **Types** (`node`): `SvgOptions`, which both take: `theme` (`"light"` or
-  `"dark"`; default light) and `fonts` (inline Excalifont so the SVG is
-  portable; default true).
+Node SVG export is available separately; heavy dependencies load on first
+render. Both functions accept `{ theme?: "light" | "dark", fonts?: boolean }`,
+defaulting to light with embedded Excalifont.
 
 ```ts
 import { renderScreenSvg, renderSvg } from "@wiredown/excalidraw/node";

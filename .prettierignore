@@ -11,3 +11,6 @@ packages/core/tests/fixtures/prototype/
 
 # Generated font metric tables.
 packages/core/src/metrics-*.ts
+
+# Flow drawing written by the prototype, kept verbatim as a test fixture.
+packages/excalidraw/tests/fixtures/
