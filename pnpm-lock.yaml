@@ -218,6 +218,9 @@ importers:
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
+      lz-string:
+        specifier: ^1.5.0
+        version: 1.5.0
 
   packages/core:
     devDependencies:

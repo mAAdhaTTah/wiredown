@@ -9,8 +9,15 @@ export interface Result {
   stderr: string;
 }
 
-/** A finding; `line` is absent when it has no place in the file. */
-export type Finding = Omit<ScreenDiagnostic, "line"> & { line?: number };
+/**
+ * A finding; `line` is absent when it has no place in the file. Flow findings
+ * name a `frame` and the `element` they are about instead.
+ */
+export type Finding = Omit<ScreenDiagnostic, "line"> & {
+  line?: number;
+  frame?: string;
+  element?: string;
+};
 
 /** A failure before the command could produce a result: exit 2, nothing on stdout. */
 export class UsageError extends Error {}
@@ -24,16 +31,17 @@ export async function readSource(file: string): Promise<string> {
   }
 }
 
-/** `path:line: ^id: error: message`, in line order. */
+/** `path:line: ^id: error: message` (a flow's: `path: F2: error: message`), in line order. */
 export function formatFindings(file: string, errors: Finding[], warnings: Finding[]): string {
   const all = [
     ...errors.map((f) => ({ ...f, level: "error" })),
     ...warnings.map((f) => ({ ...f, level: "warning" })),
   ].sort((a, b) => (a.line ?? Infinity) - (b.line ?? Infinity));
   return all
-    .map(({ line, screen, level, message }) => {
+    .map(({ line, screen, frame, level, message }) => {
       const where = line === undefined ? file : `${file}:${line}`;
-      return `${where}: ${screen !== undefined ? `^${screen}: ` : ""}${level}: ${message}\n`;
+      const what = frame !== undefined ? `${frame}: ` : screen !== undefined ? `^${screen}: ` : "";
+      return `${where}: ${what}${level}: ${message}\n`;
     })
     .join("");
 }

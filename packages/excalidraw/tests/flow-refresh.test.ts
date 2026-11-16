@@ -1,11 +1,14 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import {
+  addDecision,
   addHighlight,
   addMark,
   addNote,
   addScreen,
   connect,
   flowFrames,
+  flowNodes,
   lintFlow,
   newFlow,
   overlayBox,
@@ -13,7 +16,8 @@ import {
   refreshFlow,
   serializeFlow,
 } from "../src/index.js";
-import type { ExcalidrawElementJson, Flow, ScreenState } from "../src/index.js";
+import type { ExcalidrawElementJson, Flow, ScreenRef, ScreenState } from "../src/index.js";
+import { identity } from "../src/flow-edit.js";
 import { bindingFailures, pluginFailures } from "./plugin-checks.js";
 
 const box = { x: 20, y: 30, w: 40, h: 50 };
@@ -25,10 +29,11 @@ const grown: ScreenState = {
   height: 260,
   boxes: { invite: { x: 30, y: 90, w: 60, h: 50 } },
 };
+/** Screens by `path#^id`, or by block id for any path. */
 const lookup =
   (screens: Record<string, ScreenState>) =>
-  (id: string): ScreenState | undefined =>
-    screens[id];
+  ({ path, blockId }: ScreenRef): ScreenState | string =>
+    screens[`${path}#^${blockId}`] ?? screens[blockId] ?? `but ${path}.md has no ^${blockId}`;
 
 /** F1 (home) -> F2 (other), a highlight and a mark on F1, a note, and a person's text. */
 function build() {
@@ -232,7 +237,7 @@ test("a frame whose screen is missing is an error; refresh skips it", () => {
     {
       frame: "F2",
       element: image(flow, "F2").id,
-      message: "embeds ^other, which is not in the screens file or has errors",
+      message: "embeds [[screens#^other]], but screens.md has no ^other",
     },
   ]);
   expect(refreshFlow(flow, screens)).toEqual([]);
@@ -288,4 +293,125 @@ test("an image without an embedded-files entry", () => {
     { element: "pasted", message: "image pasted has no ## Embedded Files entry for abc" },
   ]);
   expect(refreshFlow(flow, lookup({ home: grown, other: grown }))[0].frame).toBe("F1");
+});
+
+test("a hand-made screen embed is linted for its screen, and left alone by refresh", () => {
+  const text = readFileSync(
+    new URL("./fixtures/review-and-apply.excalidraw.md", import.meta.url),
+    "utf8",
+  );
+  const flow = parseFlow(text);
+  const size = { width: 100, height: 100, boxes: {} };
+  const known = { "simplified-tree": size, "review-view": size };
+  expect(lintFlow(flow, lookup(known)).map((f) => f.message)).toEqual([
+    "an image embeds [[screens#^review-applied]], but screens.md has no ^review-applied",
+  ]);
+  expect(refreshFlow(flow, lookup(known))).toEqual([]);
+  expect(serializeFlow(flow)).toBe(text);
+});
+
+test("lint reports each live text id the plugin cannot track without renaming it", () => {
+  const flow = newFlow();
+  flow.elements.push(
+    { id: "short", type: "text", x: 0, y: 0 },
+    { id: "too-long-id", type: "text", x: 0, y: 0 },
+    { id: "deleted", type: "text", x: 0, y: 0, isDeleted: true },
+  );
+  const findings = lintFlow(flow, () => "none");
+  expect(findings).toEqual(
+    ["short", "too-long-id"].map((id) => ({
+      element: id,
+      message: `text element "${id}" has an id that is not 8 characters; the Excalidraw plugin cannot track it, and flow commands cannot save this drawing until it is renamed`,
+    })),
+  );
+  expect(flow.elements.map((e) => e.id)).toEqual(["short", "too-long-id", "deleted"]);
+});
+
+test("each embed is looked up by its path and block id", () => {
+  const flow = newFlow();
+  addScreen(flow, { screenId: "home", title: "Home", path: "a/screens", size: home });
+  addScreen(flow, { screenId: "home", title: "Home", path: "b/screens", size: grown });
+  addScreen(flow, { screenId: "home", title: "Home", path: "c/screens", size: home });
+  const screens = lookup({ "a/screens#^home": home, "b/screens#^home": grown });
+  expect(lintFlow(flow, screens)).toEqual([
+    {
+      frame: "F3",
+      element: image(flow, "F3").id,
+      message: "embeds [[c/screens#^home]], but c/screens.md has no ^home",
+    },
+  ]);
+  expect(refreshFlow(flow, screens)).toEqual([]);
+});
+
+test("overlays follow their frame's image by id; copies and other screens are reported", () => {
+  const { flow, hi, mark } = build();
+  const screens = lookup({ home, other });
+  const f1 = image(flow, "F1");
+  // a frame renamed by hand keeps its overlays (only its arrow's record is off)
+  (f1.customData as { wiredown: { frame: string } }).wiredown.frame = "F7";
+  expect(lintFlow(flow, screens).map((f) => f.message)).toEqual([
+    "arrow F1 -> F2: F1 no longer exists",
+  ]);
+  (f1.customData as { wiredown: { frame: string } }).wiredown.frame = "F1";
+  // a pasted copy of F1 claims its name; its overlays still belong to the original
+  const copy: ExcalidrawElementJson = { ...structuredClone(f1), id: "copy0001", x: 900 };
+  flow.elements.push(copy);
+  expect(lintFlow(flow, screens)).toEqual([
+    {
+      frame: "F1",
+      element: "copy0001",
+      message: `F1 is claimed by elements ${f1.id} and copy0001; delete the copy`,
+    },
+  ]);
+  expect(refreshFlow(flow, screens)).toEqual([]);
+  copy.isDeleted = true;
+  // an overlay drawn for another screen than its frame embeds
+  (byId(flow, hi).customData as { wiredown: { screen: string } }).wiredown.screen = "other";
+  expect(lintFlow(flow, screens)).toEqual([
+    {
+      frame: "F1",
+      element: hi,
+      message: "highlight #invite was drawn on ^other, but F1 embeds ^home",
+    },
+  ]);
+  // an overlay whose anchor is gone is on no frame, whatever its name says
+  (byId(flow, mark).customData as { wiredown: { anchor: string } }).wiredown.anchor = "gone";
+  expect(lintFlow(flow, screens).at(-1)).toEqual({
+    frame: "F1",
+    element: mark,
+    message: "mark 3 #invite is on a frame that no longer exists",
+  });
+  expect(refreshFlow(flow, screens)).toContainEqual({
+    frame: "F1",
+    kind: "mark",
+    element: mark,
+    target: "invite",
+    label: "3",
+    unresolved: "F1 no longer exists",
+  });
+});
+
+test("data from a newer wiredown is ignored, with one finding", () => {
+  const { flow } = build();
+  for (const e of flow.elements.filter((e) => e.customData))
+    (e.customData as { wiredown: { v: number } }).wiredown.v = 3;
+  expect(lintFlow(flow, lookup({ home, other }))).toEqual([
+    { message: "this drawing was written by a newer wiredown (data version 3)" },
+  ]);
+  expect(flowFrames(flow)).toEqual([]);
+});
+
+test("a note whose frame or decision is gone is reported", () => {
+  const { flow } = build();
+  const screens = lookup({ home, other });
+  addDecision(flow, { text: "Ok?" });
+  const why = addNote(flow, "D1", "Why");
+  const note = flow.elements.find((e) => identity(e)?.role === "note")!;
+  image(flow, "F1").isDeleted = true;
+  flowNodes(flow).find((n) => n.node === "D1")!.element.isDeleted = true;
+  const notes = lintFlow(flow, screens).filter((f) => f.message.startsWith("note "));
+  expect(notes).toEqual([
+    { frame: "F1", element: note.id, message: 'note "A note" is on a node that no longer exists' },
+    { frame: "D1", element: why, message: 'note "Why" is on a node that no longer exists' },
+  ]);
 });

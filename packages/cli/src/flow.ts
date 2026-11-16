@@ -11,15 +11,19 @@ import {
   embedSize,
   flowFrames,
   flowNodes,
+  lintFlow,
   newFlow,
+  parseFlow,
+  refreshFlow,
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
-import { frameEmbed, screensToEmbed } from "./embeds";
-import { formatFindings, json, unknownScreen, UsageError } from "./output";
-import type { Finding, Result } from "./output";
-import { NewerFlowError, parseEditableFlow } from "./read-flow";
-import { safeWrite } from "./safe-write";
+import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds.js";
+import type { Flow, FlowChange, ScreenRef, ScreenState } from "@wiredown/excalidraw";
+import { formatFindings, json, plural, readSource, unknownScreen, UsageError } from "./output.js";
+import type { Finding, Result } from "./output.js";
+import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
+import { safeWrite } from "./safe-write.js";
 
 export interface FlowOptions {
   screens?: string;
@@ -180,6 +184,164 @@ export async function loadScreens(path: string) {
   };
 }
 
+/**
+ * The screens lookup lint and refresh take: each embed's path resolved from
+ * the flow, each screens file read once, each screen laid out once.
+ * `errors` collects, per screens file, why screens asked for are unavailable;
+ * `unresolved` holds each embed path that names no file, and why.
+ */
+async function screenLookup(file: string, flow: Flow) {
+  const root = await embedRoot(file);
+  const files = new Map<string, Awaited<ReturnType<typeof loadScreens>>>();
+  const unresolved = new Map<string, string>();
+  for (const embed of flow.embeds.values()) {
+    if (!embed.blockId || files.has(embed.path) || unresolved.has(embed.path)) continue;
+    const found = await resolveEmbed(file, embed.path, root);
+    if ("path" in found) files.set(embed.path, await loadScreens(found.path));
+    else unresolved.set(embed.path, found.why);
+  }
+  const cache = new Map<string, ScreenState | string>();
+  const errors = new Map<string, Finding[]>();
+  const state = ({ path, blockId }: ScreenRef): ScreenState | string => {
+    const loaded = files.get(path);
+    if (!loaded) return unresolved.get(path) ?? "but it was not resolved";
+    const { screen, errors: found } = loaded.screen(blockId);
+    if (found.length) {
+      errors.set(loaded.path, [...(errors.get(loaded.path) ?? []), ...found]);
+      return screen
+        ? `but ^${blockId} in ${loaded.path} has errors`
+        : `but ${loaded.path} has no ^${blockId}`;
+    }
+    const { width, height, boxes } = screenElements(layoutScreen(screen!.tree));
+    return { width, height, boxes };
+  };
+  const lookup = (embed: ScreenRef) => {
+    const key = `${embed.path}#^${embed.blockId}`;
+    if (!cache.has(key)) cache.set(key, state(embed));
+    return cache.get(key)!;
+  };
+  return { lookup, errors, unresolved };
+}
+
+/** One flow's lint result, as `flow lint` and `lint` report it. */
+export interface LintedFlow {
+  file: string;
+  findings: Finding[];
+}
+export async function lintFlowFile(file: string): Promise<LintedFlow> {
+  const source = await readSource(file);
+  try {
+    const flow = parseFlow(source);
+    const { lookup } = await screenLookup(file, flow);
+    return { file, findings: lintFlow(flow, lookup) };
+  } catch (error) {
+    return { file, findings: [{ message: (error as Error).message }] };
+  }
+}
+/** Findings and a summary line per flow. */
+export function formatLinted(results: LintedFlow[]): string {
+  return results
+    .map(
+      (r) =>
+        formatFindings(r.file, r.findings, []) +
+        `${r.file}: ${plural(r.findings.length, "error")}\n`,
+    )
+    .join("");
+}
+/** Lint each flow against its screens; exit 1 if any has findings. Never writes. */
+export async function lintFlows(files: string[], options: FlowOptions = {}): Promise<Result> {
+  const results: LintedFlow[] = [];
+  for (const file of files) results.push(await lintFlowFile(file));
+  const exitCode = results.some((r) => r.findings.length) ? 1 : 0;
+  return {
+    exitCode,
+    stdout: options.json ? json({ files: results }) : formatLinted(results),
+    stderr: "",
+  };
+}
+
+const sizeText = (s: { width?: number; height?: number }) => `${s.width ?? "?"}x${s.height ?? "?"}`;
+function changeLine(c: FlowChange): string {
+  if (c.kind === "embed") {
+    const { link, image } = c;
+    const same = link.from.width === link.to.width && link.from.height === link.to.height;
+    return same
+      ? `${c.frame}  image ${sizeText(image.from)} -> ${sizeText(image.to)}\n`
+      : `${c.frame}  embed ${sizeText(link.from)} -> ${sizeText(link.to)}\n`;
+  }
+  const what = c.kind === "mark" ? `mark ${c.label} #${c.target}` : `highlight #${c.target}`;
+  return `${c.frame}  ${what} ${c.unresolved ? `unresolved: ${c.unresolved}` : "moved"}\n`;
+}
+
+/**
+ * Bring a flow up to date with its screens. Writes only if something
+ * changed. A missing or invalid screen, or an embed whose screens file is
+ * not found, is reported (exit 1); the other frames are still refreshed.
+ */
+export async function refreshFlowFile(file: string, options: FlowOptions = {}): Promise<Result> {
+  try {
+    const original = await readFile(file, "utf8");
+    const flow = parseFlow(original);
+    const { lookup, errors, unresolved: lost } = await screenLookup(file, flow);
+    const all = refreshFlow(flow, lookup);
+    const changes = all.filter((c) => !("unresolved" in c && c.unresolved));
+    const unresolved = all.filter((c) => "unresolved" in c && c.unresolved);
+    if (changes.length || flow.compressed) await safeWrite(file, original, serializeFlow(flow));
+    // each frame whose embed names no file, then each screens file's errors;
+    // an error outside any screen affects every screen: report it once
+    const reports: { file: string; findings: Finding[] }[] = [
+      {
+        file,
+        findings: flowFrames(flow).flatMap(({ frame, element }) => {
+          const embed = flow.embeds.get(String(element.fileId));
+          const why = embed && lost.get(embed.path);
+          return why
+            ? [{ frame, message: `embeds [[${embed.path}#^${embed.blockId}]], ${why}` }]
+            : [];
+        }),
+      },
+      ...[...errors].map(([path, found]) => {
+        const seen = new Set<string>();
+        const findings = found.filter((f) => {
+          const key = JSON.stringify(f);
+          return !seen.has(key) && !!seen.add(key);
+        });
+        return { file: path, findings };
+      }),
+    ];
+    const found = reports.flatMap((r) => r.findings.map((f) => ({ file: r.file, ...f })));
+    const exitCode = found.length ? 1 : 0;
+    if (options.json)
+      return {
+        exitCode,
+        stdout: json({
+          flow: file,
+          ...(flow.compressed ? { decompressed: true } : {}),
+          changes,
+          unresolved,
+          ...(found.length ? { errors: found } : {}),
+        }),
+        stderr: "",
+      };
+    return {
+      exitCode,
+      stdout:
+        (flow.compressed ? "rewrote compressed-json drawing as JSON\n" : "") +
+        (all.length ? all.map(changeLine).join("") : flow.compressed ? "" : "up to date\n"),
+      stderr: reports.map((r) => formatFindings(r.file, r.findings, [])).join(""),
+    };
+  } catch (error) {
+    const findings: Finding[] = [{ message: (error as Error).message }];
+    return {
+      exitCode: 1,
+      stdout: options.json
+        ? json({ flow: file, changes: [], unresolved: [], errors: findings })
+        : "",
+      stderr: options.json ? "" : formatFindings(file, findings, []),
+    };
+  }
+}
+
 export async function editOverlay(
   command: "highlight" | "mark",
   file: string,
@@ -307,6 +469,8 @@ const place = (options: FlowOptions) =>
 
 /** Positionals each command takes after the file: [required, optional]. */
 const ARITY: Record<string, [number, number, string]> = {
+  refresh: [0, 0, "one file"],
+  lint: [0, Infinity, "at least one file"],
   highlight: [2, 0, "a file, a frame and a component id"],
   mark: [3, 0, "a file, a frame, a component id and a label"],
   new: [0, Infinity, "a file"],
@@ -343,6 +507,8 @@ export function flowCommand(
     below: values.below as string | undefined,
     json: values.json === true,
   };
+  if (command === "refresh") return refreshFlowFile(file, options);
+  if (command === "lint") return lintFlows([file, ...rest], options);
   if (command === "highlight" || command === "mark")
     return editOverlay(command, file, rest, options);
   if (command === "connect" || command === "note" || command === "decision")

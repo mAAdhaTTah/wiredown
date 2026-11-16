@@ -1,16 +1,19 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionsConfig } from "node:util";
-import { check } from "./check";
-import { flowCommand } from "./flow";
-import { UsageError } from "./output";
-import type { Result } from "./output";
-import { render } from "./render";
+import { check } from "./check.js";
+import { lint } from "./lint.js";
+import { render } from "./render.js";
+import { UsageError } from "./output.js";
+import type { Result } from "./output.js";
+import { render } from "./render.js";
 
-export { check, render, UsageError };
-export type { CheckOptions, CheckedFile } from "./check";
-export type { RenderOptions, RenderedScreen } from "./render";
-export type { Finding, Result } from "./output";
+export { check, lint, render, UsageError };
+export type { CheckOptions, CheckedFile } from "./check.js";
+export type { LintedFlow } from "./flow.js";
+export type { LintOptions } from "./lint.js";
+export type { RenderOptions, RenderedScreen } from "./render.js";
+export type { Finding, Result } from "./output.js";
 
 type Values = Record<string, string | boolean | string[] | undefined>;
 
@@ -107,9 +110,32 @@ options:
 example:
   wiredown flow note flows/invite.excalidraw.md F2 'Maja accepts the invitation.'`,
   ],
+  [
+    "refresh <flow.excalidraw.md> [--json]",
+    `Brings the drawing up to date after its screens change: embed sizes,
+overlays, notes and our straight arrows. Writes only if something changed.
+
+options:
+  --json             print one JSON document instead
+
+example:
+  wiredown flow refresh flows/invite.excalidraw.md`,
+  ],
+  [
+    "lint <flow.excalidraw.md>... [--json]",
+    `Reports what refresh would fix, and what a person must: missing screens,
+stale sizes and overlays, dangling arrows. Never writes; exits 1 on any
+finding.
+
+options:
+  --json             print one JSON document instead
+
+example:
+  wiredown flow lint flows/*.excalidraw.md`,
+  ],
 ];
 
-// Each command parses its own options; add new commands (flow, lint) here.
+// Each command parses its own options.
 const COMMANDS: Record<string, Command> = {
   flow: {
     summary: "create and edit flow drawings",
@@ -117,6 +143,8 @@ const COMMANDS: Record<string, Command> = {
 
 Nodes are frames (F1, F2, ...) and decisions (D1, D2, ...). new connects
 its screens in a row; placement is relative to a node, never coordinates.
+refresh updates embed sizes and overlays after screens change; lint reports
+missing screens, stale sizes and overlays, and dangling arrows.
 --screens picks the screens file new and add-screen embed from; every other
 command follows each frame's embed to its screens file.
 
@@ -152,6 +180,24 @@ options:
     run(values, files) {
       if (!files.length) throw new UsageError("check needs at least one file");
       return check(files, { json: values.json === true });
+    },
+  },
+  lint: {
+    summary: "check screens and lint flows, for CI",
+    help: `usage: wiredown lint [<path>...] [--json]
+
+Walks each path (default: .), skipping node_modules and dot-directories.
+Runs check on every Markdown file with a wiredown block and flow lint on
+every *.excalidraw.md, in one report. Exits 1 on any screen error or flow
+finding; warnings don't fail.
+
+options:
+  --json      print one JSON document instead
+  -h, --help  show this help
+`,
+    options: { json: { type: "boolean" } },
+    run(values, paths) {
+      return lint(paths, { json: values.json === true });
     },
   },
   render: {
