@@ -1,6 +1,6 @@
 ---
 name: wiredown
-description: Use when writing or revising low-fidelity wireframe screens and user-flow drawings as text with the wiredown CLI.
+description: Use the wiredown CLI to write or revise wireframes/screens for a PRD or spec in screens.md and user-flow drawings in .excalidraw.md files.
 ---
 
 # Wiredown
@@ -15,8 +15,10 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
 ## Workflow
 
 1. Write or modify `screens.md`: one heading per screen, a `wiredown` fenced
-   block, its `^block-id` line immediately below, then prose notes about the
-   screen. Read [syntax](reference/syntax.md) for components and options and
+   block, its `^block-id` line after exactly one blank line, then prose notes
+   about the screen. The id also works directly after the closing fence;
+   more blank lines or intervening prose lose it ("screen has no ^id").
+   Read [syntax](reference/syntax.md) for components and options and
    [examples](reference/examples.md) for complete screens and flow commands.
    Omit frontmatter on new files; flow commands add embed styling.
 2. Check and fix every error and warning until clean:
@@ -36,6 +38,9 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
 4. Build the flow with targeted commands. This sequence uses the screens in
    the examples reference; use returned frame and decision ids in later
    commands. Quote component ids so the shell does not treat them as comments.
+   The first flow command that needs it adds embed-styling frontmatter to
+   `screens.md` (`screensFileUpdated: true`), shifting its line numbers: re-run
+   `check` and commit the changed `screens.md` with the flow.
 
    ```sh
    wiredown flow new flows/members.excalidraw.md team-members --json
@@ -116,6 +121,9 @@ Exit codes are 0 for success, 1 for content or operational failures, and 2
 for usage or unreadable-file errors; exit 2 may print stderr even with JSON.
 
 `check --json` returns `files`, each with `screens`, `errors` and `warnings`.
+`wiredown lint --json` returns `{ screens: [...check per-file objects], flows: [{ file, findings }] }`.
+`flow lint --json` returns `{ files: [{ file, findings }] }`.
+`flow refresh --json` returns `changes` and `unresolved` arrays.
 `render --json` returns `screens` with `id`, output path (`png` or `svg`),
 `width`, `height` and `boxes` keyed by component id. Each box is
 `{ x, y, w, h }` in image coordinates; use ids for overlays, not these numbers.

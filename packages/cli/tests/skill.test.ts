@@ -22,8 +22,8 @@ const shellLines = (text: string) =>
 const argv = (line: string) =>
   [...line.matchAll(/'([^']*)'|([^\s']+)/g)].map((match) => match[1] ?? match[2]).slice(1);
 
-it("keeps the generated catalog reference current (pnpm skill)", () => {
-  expect(read("reference/syntax.md")).toBe(skillSyntax());
+it("keeps the generated catalog reference current (run pnpm build then pnpm skill)", () => {
+  expect(read("reference/syntax.md"), "run `pnpm build` then `pnpm skill`").toBe(skillSyntax());
 });
 it("declares the skill and excludes obsolete syntax and tooling", () => {
   expect(skill).toMatch(/^---\nname: wiredown\ndescription: .+\n---/);
@@ -31,13 +31,15 @@ it("declares the skill and excludes obsolete syntax and tooling", () => {
     /\(hi\)|\(mark=|sketchdown|wireframe-x/i,
   );
 });
-it.each(["examples", "skill"])("checks every %s block without warnings", (name) => {
+it.each(["examples", "skill", "syntax"])("checks every %s block without warnings", (name) => {
   // The skill's variant intentionally uses the base from the reference.
   const base = parseScreens(examples)[0];
   const text =
     name === "examples"
       ? examples
-      : `\`\`\`wiredown\n${base.source}\n\`\`\`\n^${base.id}\n\n${skill}`;
+      : name === "syntax"
+        ? read("reference/syntax.md")
+        : `\`\`\`wiredown\n${base.source}\n\`\`\`\n^${base.id}\n\n${skill}`;
   const result = checkScreens(text);
   expect(result.errors).toEqual([]);
   expect(result.warnings).toEqual([]);
@@ -61,14 +63,16 @@ it("executes the documented flow sequence and checks trimmed JSON results", asyn
   try {
     writeFileSync(join(directory, "screens.md"), examples);
     const pairs = [...examples.matchAll(/```sh\n([^`]+)```\s*```json\n([^`]+)```/g)];
-    expect(pairs).toHaveLength(10);
-    for (const pair of pairs) {
-      const args = argv(pair[1].trim()).map((arg) =>
+    expect(pairs.length).toBeGreaterThan(0);
+    const commands = shellLines(skill).filter((line) => line.startsWith("wiredown flow "));
+    expect(commands).toEqual(pairs.map((pair) => pair[1].trim()));
+    for (const [index, command] of commands.entries()) {
+      const args = argv(command).map((arg) =>
         arg.startsWith("flows/") ? join(directory, arg) : arg,
       );
       const result = await run(args);
       expect(result.exitCode, result.stderr + result.stdout).toBe(0);
-      expect(JSON.parse(result.stdout)).toMatchObject(JSON.parse(pair[2]));
+      expect(JSON.parse(result.stdout)).toMatchObject(JSON.parse(pairs[index][2]));
     }
   } finally {
     rmSync(directory, { recursive: true, force: true });
