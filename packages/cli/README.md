@@ -1,0 +1,84 @@
+# @wiredown/cli
+
+The `wiredown` command: checks and renders the screens in a Markdown file
+headlessly in Node, with JSON output for agents.
+
+```sh
+wiredown check <file.md>... [--json]
+wiredown render <file.md> [--screen <id>]... [--out <dir>] [--theme light|dark] [--no-fonts] [--json]
+wiredown --help | <command> --help | --version
+```
+
+Results go to stdout and diagnostics to stderr. Exit codes: 0 success, 1
+the file has errors, 2 bad usage or an unreadable file (nothing on stdout,
+even with `--json`). With `--json`, stdout is always one JSON document.
+
+A finding is `{ line, message, screen? }`: a 1-based line in the file and
+the `^id` of the screen it belongs to, when known. Printed, it reads
+`path:line: ^id: error: message` (or `warning:`).
+
+## check
+
+Checks every `wiredown` block in each file, resolving variants. Prints one
+line per finding and a summary line per file. Exits 1 if any file has
+errors; warnings don't fail.
+
+```json
+{
+  "files": [
+    {
+      "file": "screens.md",
+      "screens": [{ "id": "team-members", "heading": "Team members", "line": 4 }],
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}
+```
+
+A screen's `id` and `heading` are omitted when it has none; `line` is the
+first line of the block's content.
+
+## render
+
+Renders every screen with an `^id`, or only the `--screen` ids, to
+`<out>/<id>.svg` (`--out` defaults to `.` and is created if missing).
+Variants render resolved. Screens without an id are skipped with a warning.
+A screen with errors is not rendered: its errors are reported as `check`
+reports them, the other screens still render, and the exit code is 1. An
+unknown `--screen` id is an error that lists the ids in the file.
+
+Without `--json`, stdout has one `path  WxH` line per written file and the
+findings go to stderr. With `--json`:
+
+```json
+{
+  "file": "screens.md",
+  "screens": [
+    {
+      "id": "team-members",
+      "svg": "out/team-members.svg",
+      "width": 528,
+      "height": 328,
+      "boxes": { "invite": { "x": 278.8, "y": 60, "w": 147.2, "h": 40 } }
+    }
+  ],
+  "errors": [],
+  "warnings": []
+}
+```
+
+`width` and `height` are the image's size, for sizing flow embeds. `boxes`
+holds the box of each `#id` in the screen, in image coordinates. The
+findings are those of the rendered screens plus any outside a screen; the
+error for an unknown `--screen` id has no `line`.
+
+`--theme dark` lets Excalidraw draw the dark theme; file names don't change,
+so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
+
+## Programmatic use
+
+`run(argv)` and the commands `check(files, options)` and
+`render(file, options)` return `{ exitCode, stdout, stderr }` without
+writing to the terminal or exiting; the `bin/wiredown.js` entry prints the
+result. Build the package (`pnpm build`) before running the bin.
