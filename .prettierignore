@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml
+
+# Existing design documents retain their authored formatting.
+docs/
