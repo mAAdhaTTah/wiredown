@@ -121,6 +121,8 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
     },
     options,
   );
+  for (const { id, reason } of rendered.rejected)
+    errors.push({ message: `image file ${id}: ${reason}` });
   const frames = flowFrames(flow);
   for (const m of rendered.missing) {
     const frame = frames.find((f) => f.element.id === m.element)?.frame;

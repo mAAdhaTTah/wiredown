@@ -134,3 +134,28 @@ it("exports the real drawing with all three screens missing", async () => {
   );
   expect((await renderFlowSvg(drawing, () => undefined)).missing).toHaveLength(3);
 });
+
+it("keeps only inline image data URLs and reports rejected files", async () => {
+  const drawing = newFlow();
+  const allowed = ["png", "jpeg", "gif", "webp", "svg+xml"];
+  for (const type of allowed) {
+    drawing.files[type] = { dataURL: `data:image/${type},content` };
+    drawing.files[type + "64"] = { dataURL: `DATA:IMAGE/${type.toUpperCase()};base64,YQ==` };
+  }
+  const bad = [
+    "https://attacker.invalid/x",
+    "//attacker.invalid/x",
+    "blob:x",
+    "javascript:x",
+    "data:text/html,x",
+    "data:image/png-extra,x",
+    undefined,
+    42,
+  ];
+  bad.forEach((dataURL, i) => {
+    drawing.files[String(i)] = { dataURL };
+  });
+  const result = await renderFlowSvg(drawing, () => undefined, { fonts: false });
+  expect(result.rejected.map((f) => f.id)).toEqual(bad.map((_, i) => String(i)));
+  expect(result.rejected.every((f) => f.reason.length > 0)).toBe(true);
+});
