@@ -54,9 +54,11 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    ```
 
 5. Render the flow and look at its PNG. Check step order, labels and notes.
+   Use `--scale 1`: at the default scale 2 a flow of several screens is
+   thousands of pixels wide.
 
    ```sh
-   wiredown render flows/members.excalidraw.md --format png --out out
+   wiredown render flows/members.excalidraw.md --format png --scale 1 --out out
    ```
 
 6. After changing a screen, refresh its flows, then lint them. Refresh
@@ -83,7 +85,10 @@ Write ids as `#id`; give one to every component a flow or variant will point
 at. Use stable screen block ids. Variants start with `extends:` and describe
 changes with `replace:`, `remove:`, `after:`, `before:` or `rows:`. Never
 implicitly redeclare a component to replace it. A replacement inherits its
-id. This variant uses the base in the examples reference:
+id. A replacement of the target's type with no children of its own keeps
+the target's children (`replace: win` with a bare `window: New title` only
+retitles it); one with children replaces them. This variant uses the base
+in the examples reference:
 
 ```wiredown
 extends: team-members
@@ -100,12 +105,29 @@ after: members
 
 ^team-members-after-remove
 
-In row patches, `=` preserves a cell; keep the row key unchanged. Grids fill
-their container by default; use `(fit)` for content sizing.
+In `rows:` patches, the row key is the first cell that is not a checkbox or
+`=`; keep it unchanged, and it must match exactly one row (no match adds a
+new row as written). `=` keeps a cell. Write the row's checkbox cell or
+leave it out; without it, the patch starts at the key column. Either way it
+may not have more cells than the grid has columns. These are the same patch:
 
-Highlight interactions in the FLOW with `flow highlight` and `flow mark`,
-not with `(focus)` in the screen. Notes about the screen itself go as prose
-under its block; notes about a step go on the flow with `flow note`.
+```text
+rows: members
+  [ ] | Maja Berg | = | = | Active
+```
+
+```text
+rows: members
+  Maja Berg | = | = | Active
+```
+
+Grids fill their container by default; use `(fit)` for content sizing.
+
+Highlight interactions in the FLOW with `flow highlight` and `flow mark`.
+`(focus)` draws the same outline as a flow highlight, so never use it on a
+screen that appears in a flow; keep it for screens viewed on their own.
+Notes about the screen itself go as prose under its block; notes about a
+step go on the flow with `flow note`.
 
 Use `\(` for literal option-like parentheses and `\#` for literal trailing
 id-like text. Heed check's warnings about characters missing from Excalifont;
@@ -126,7 +148,7 @@ Turn off "Compress Excalidraw JSON in Markdown" in the Excalidraw plugin's
 Saving settings; `flow lint` reports compressed drawings and tells you to run
 a flow command such as `flow refresh` to rewrite them as diffable JSON.
 Hand-written text elements need 8-character ids, which elements made in
-Obsidian always have.
+Obsidian always have; flow commands refuse to save a drawing without them.
 Close the drawing in Obsidian before running flow commands; commands refuse
 to overwrite files changed while they run, so retry after a concurrent save.
 
