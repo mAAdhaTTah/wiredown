@@ -15,10 +15,10 @@ export {
   tableMeasure,
   unmeasured,
   fontMeasurer,
-} from "./metrics";
-export type { FontMetrics } from "./metrics";
-export { layout } from "./layout";
-export type { LayoutEnv } from "./layout";
-export { DARK_COLORS, DARK_INK, DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme";
-export { ICON_NAMES, isIcon } from "./icons";
-export type * from "./types";
+} from "./metrics.js";
+export type { FontMetrics } from "./metrics.js";
+export { layout } from "./layout.js";
+export type { Box, LayoutResult, LayoutEnv } from "./layout.js";
+export { DARK_COLORS, DARK_INK, DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme.js";
+export { ICON_NAMES, isIcon } from "./icons.js";
+export type * from "./types.js";

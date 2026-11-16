@@ -2,6 +2,7 @@
 
 exports[`snapshots > draws the New user box form 1`] = `
 {
+  "boxes": {},
   "ops": [
     {
       "h": 21,
@@ -258,6 +259,7 @@ exports[`snapshots > draws the New user box form 1`] = `
 
 exports[`snapshots > draws the prototype's example 1`] = `
 {
+  "boxes": {},
   "ops": [
     {
       "h": 21,
