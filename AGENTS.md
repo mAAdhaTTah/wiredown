@@ -28,6 +28,10 @@ pnpm test
 ```
 
 Build and typecheck recurse through workspace package scripts. The root
-Vitest config discovers package projects in `packages/*`. Type-checking and
-unit tests read workspace packages from source (the `@wiredown/source` export
-condition); build before tests that use built output.
+Vitest config discovers package projects in `packages/*`. Packages import
+each other through their built `dist/`, so build before typecheck and test.
+
+Evals (`packages/evals/evals/*.eval.ts`, `pnpm eval`) call a model through
+`claude -p` and cost money. Run them only by hand when asked; never add them
+to `pnpm test` or CI. Their unit tests (`packages/evals/tests`) are ordinary
+tests and do run in `pnpm test`.
