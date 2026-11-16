@@ -124,8 +124,8 @@ rule. A `--screens` file outside the root is an error (`the screens file
 <file> points outside <root>`), and so is one the written path would not
 lead back to (because a nearer file has its name, or it is not in or above
 the flow's directory): `the embed [[screens]] would lead from <dir> to
-<file>, not <file>`. an error. Missing embed styling frontmatter is added; existing values
-are preserved. Invalid screens and unknown frames leave the drawing untouched.
+<file>, not <file>`. Missing embed styling frontmatter is added; existing
+values are preserved. Invalid screens and unknown frames leave the drawing untouched.
 A frame's image and its `F3 · Title` label share an Excalidraw group, so
 they move together: clicking either selects both; double-click to select
 one. Human output is one `F3  team-members  548x333` line per frame. The size is
