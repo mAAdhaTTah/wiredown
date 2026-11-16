@@ -1,8 +1,10 @@
 import { layoutScreen } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
-import { screenElements } from "./elements";
-import type { ExcalidrawElementJson, ScreenElements } from "./elements";
-import { sceneOf } from "./scene";
+import { screenElements } from "./elements.js";
+import type { ExcalidrawElementJson, ScreenElements } from "./elements.js";
+import { embedSize } from "./flow-edit.js";
+import type { Flow } from "./flow.js";
+import { sceneOf } from "./scene.js";
 
 export interface SvgOptions {
   theme?: "light" | "dark";
@@ -68,11 +70,22 @@ export async function renderSvg(
   elements: ExcalidrawElementJson[],
   options: SvgOptions = {},
 ): Promise<string> {
+  return exportSvg(sceneOf(elements), options);
+}
+
+async function exportSvg(
+  data: {
+    elements: ExcalidrawElementJson[];
+    appState: Record<string, unknown>;
+    files: Record<string, unknown>;
+  },
+  options: SvgOptions,
+): Promise<string> {
   const { document, exportScene } = await (runtime ??= initialize());
   const svg = await quietly<{ outerHTML: string }>(() =>
     exportScene({
       type: "svg",
-      data: sceneOf(elements),
+      data,
       config: {
         theme: options.theme ?? "light",
         padding: 0,
@@ -93,4 +106,60 @@ export async function renderScreenSvg(
 ): Promise<Omit<ScreenElements, "elements"> & { svg: string }> {
   const { elements, ...screen } = screenElements(layoutScreen(tree));
   return { ...screen, svg: await renderSvg(elements, options) };
+}
+
+/** Export a drawing with its block embeds supplied as portable SVG images. */
+export async function renderFlowSvg(
+  flow: Flow,
+  screens: (blockId: string) => ExcalidrawElementJson[] | undefined,
+  options: SvgOptions = {},
+): Promise<{
+  svg: string;
+  width: number;
+  height: number;
+  missing: { element: string; blockId: string }[];
+}> {
+  const files = { ...flow.files };
+  const cache = new Map<string, string | undefined>();
+  const missing: { element: string; blockId: string }[] = [];
+  const elements = [];
+  for (const element of flow.elements) {
+    const fileId = String(element.fileId);
+    const blockId = flow.embeds.get(fileId)?.blockId;
+    if (element.isDeleted || element.type !== "image" || !blockId) {
+      elements.push(element);
+      continue;
+    }
+    if (!cache.has(blockId)) {
+      const screen = screens(blockId);
+      if (!screen) cache.set(blockId, undefined);
+      else {
+        // The outer dark export filters SVG images; avoid double inversion.
+        const svg = await renderSvg(screen, { ...options, theme: "light" });
+        const size = svgSize(svg);
+        const padded = embedSize(size.width, size.height).image;
+        const x = (padded.width - size.width) / 2;
+        const image = `<svg xmlns="http://www.w3.org/2000/svg" width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}">${svg.replace("<svg ", `<svg x="${x}" y="0" `)}</svg>`;
+        cache.set(blockId, "data:image/svg+xml;base64," + Buffer.from(image).toString("base64"));
+      }
+    }
+    const dataURL = cache.get(blockId);
+    if (dataURL) {
+      files[fileId] = { id: fileId, mimeType: "image/svg+xml", dataURL, created: 1 };
+      elements.push({ ...element, status: "saved" });
+    } else {
+      delete files[fileId];
+      missing.push({ element: element.id, blockId });
+      elements.push(element);
+    }
+  }
+  const svg = await exportSvg({ elements, appState: flow.appState, files }, options);
+  return { svg, ...svgSize(svg), missing };
+}
+
+function svgSize(svg: string): { width: number; height: number } {
+  return {
+    width: Number(/<svg[^>]* width="([^"]+)"/.exec(svg)![1]),
+    height: Number(/<svg[^>]* height="([^"]+)"/.exec(svg)![1]),
+  };
 }
