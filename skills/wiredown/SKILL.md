@@ -110,7 +110,14 @@ use supported text or icons instead of glyphs that may render as empty boxes.
 
 Never hand-compute coordinates. Use `--right-of` and `--below` relative to
 existing nodes. A flow is a drawing a person also edits: never regenerate an
-existing flow. Use the commands, which preserve their edits.
+existing flow. Use the commands, which preserve their edits. A frame's parts
+(image, label, notes, overlays) are grouped and move together; a pasted copy
+of a frame claims its F-number, so commands refuse that name and `flow lint`
+reports it until the copy is deleted.
+
+Each frame's embed names its screens file (`[[screens#^id]]`, or a path from
+the Obsidian vault root); flow commands, render and lint follow it, so
+`--screens` exists only on `flow new` and `flow add-screen`.
 
 Turn off "Compress Excalidraw JSON in Markdown" in the Excalidraw plugin's
 Saving settings; `flow lint` reports compressed drawings and tells you to run
