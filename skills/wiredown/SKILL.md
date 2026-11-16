@@ -140,9 +140,12 @@ existing flow. Use the commands, which preserve their edits. A frame's parts
 of a frame claims its F-number, so commands refuse that name and `flow lint`
 reports it until the copy is deleted.
 
-Each frame's embed names its screens file (`[[screens#^id]]`, or a path from
-the Obsidian vault root); flow commands, render and lint follow it, so
-`--screens` exists only on `flow new` and `flow add-screen`.
+Each frame's embed names its screens file by its path from the repository
+root (else the Obsidian vault root): `[[docs/checkout/screens#^cart]]`.
+Flow commands, render and lint follow it, so `--screens` (any `.md` file in
+that root) exists only on `flow new` and `flow add-screen`. A link that only
+ends a path, such as `[[screens#^id]]`, works while one file matches; when
+lint says it matches several, write the path from the root.
 
 Turn off "Compress Excalidraw JSON in Markdown" in the Excalidraw plugin's
 Saving settings; `flow lint` reports compressed drawings and tells you to run
