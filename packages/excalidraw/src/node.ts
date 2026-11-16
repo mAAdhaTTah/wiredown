@@ -77,6 +77,9 @@ export async function renderSvg(
   return exportSvg(sceneOf(elements), options);
 }
 
+/** Space around a whole flow, so labels at its edge aren't cut. A screen pads itself. */
+export const FLOW_MARGIN = 16;
+
 async function exportSvg(
   data: {
     elements: ExcalidrawElementJson[];
@@ -84,6 +87,7 @@ async function exportSvg(
     files: Record<string, unknown>;
   },
   options: SvgOptions,
+  padding = 0,
 ): Promise<string> {
   const { document, exportScene } = await (runtime ??= initialize());
   const svg = await quietly<{ outerHTML: string }>(() =>
@@ -92,7 +96,7 @@ async function exportSvg(
       data,
       config: {
         theme: options.theme ?? "light",
-        padding: 0,
+        padding,
         canvasBackgroundColor: false,
         ...(options.fonts === false ? { skipInliningFonts: true } : {}),
         // Excalidraw embeds the font itself; there is nothing to load in Node
@@ -175,7 +179,7 @@ export async function renderFlowSvg(
       elements.push(element);
     }
   }
-  const svg = await exportSvg({ elements, appState: flow.appState, files }, options);
+  const svg = await exportSvg({ elements, appState: flow.appState, files }, options, FLOW_MARGIN);
   return { svg, ...svgSize(svg), missing, rejected };
 }
 

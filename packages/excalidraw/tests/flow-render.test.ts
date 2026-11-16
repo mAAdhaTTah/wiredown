@@ -9,9 +9,9 @@ import {
   newFlow,
   parseFlow,
   screenElements,
-} from "../src/index";
-import type { ScreenRef } from "../src/index";
-import { renderFlowSvg } from "../src/node";
+} from "../src/index.js";
+import type { ScreenRef } from "../src/index.js";
+import { FLOW_MARGIN, renderFlowSvg } from "../src/node.js";
 
 const source = readFileSync(
   new URL("../../core/tests/fixtures/screens.md", import.meta.url),
@@ -80,8 +80,8 @@ it("aligns the invite highlight with the nested screen", () => {
   const group = /<g stroke-linecap="round"[^>]*>/.exec(light.svg)![0];
   const position = /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(group)!;
   expect(position).not.toBeNull();
-  expect(Number(position[1])).toBeCloseTo(Number(image.x) + 12 + box.x - 4);
-  expect(Number(position[2])).toBeCloseTo(Number(image.y) + 2 + box.y - 4);
+  expect(Number(position[1])).toBeCloseTo(FLOW_MARGIN + Number(image.x) + 10 + box.x - 4);
+  expect(Number(position[2])).toBeCloseTo(FLOW_MARGIN + Number(image.y) + box.y - 4);
 });
 it("filters dark images while preserving light nested bytes", async () => {
   const dark = await renderFlowSvg(flow, lookup, { theme: "dark" });
