@@ -86,4 +86,14 @@ describe("screens documents", () => {
       result.errors.some((e) => e.screen === "variant" && e.message.includes('in "base", line 1')),
     ).toBe(true);
   });
+
+  it("reads a file that opens with a rule, not frontmatter", () => {
+    const screens = parseScreens("---\n# A\n```wiredown\ntext: a\n```\n^a");
+    expect(screens).toEqual([{ id: "a", heading: "A", source: "text: a", line: 4 }]);
+  });
+
+  it("resolves a variant whose base comes later in the file", () => {
+    const file = "```wiredown\nextends: b\nremove: x\n```\n^a\n\n```wiredown\ntext: t #x\n```\n^b";
+    expect(checkScreens(file).errors).toEqual([]);
+  });
 });

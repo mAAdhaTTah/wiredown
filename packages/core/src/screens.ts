@@ -38,9 +38,9 @@ function scan(markdown: string): {
   let heading: string | undefined;
   let start = 0;
   if (lines[0] === "---") {
-    start = 1;
-    while (start < lines.length && !/^(---|\.\.\.)\s*$/.test(lines[start])) start++;
-    start++;
+    const end = lines.findIndex((l, i) => i > 0 && /^(---|\.\.\.)\s*$/.test(l));
+    // without a closing line it is not frontmatter, just a rule
+    if (end > 0) start = end + 1;
   }
   for (let i = start; i < lines.length; i++) {
     const title = /^ {0,3}#{1,6}(?:[ \t]+(.*)|$)/.exec(lines[i]);
