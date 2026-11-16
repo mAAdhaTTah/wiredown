@@ -59,8 +59,11 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    wiredown render flows/members.excalidraw.md --format png --out out
    ```
 
-6. After changing a screen, refresh its flows, then lint them. Refresh can
-   resize a frame into its neighbour; inspect the drawing again.
+6. After changing a screen, refresh its flows, then lint them. Refresh
+   resizes frames and moves their arrows, notes and overlays along, but it
+   never moves frames apart, so a grown frame can overlap its neighbour;
+   render and look again. Tell the person about anything `unresolved`, such
+   as an arrow they bent by hand.
 
    ```sh
    wiredown flow refresh flows/members.excalidraw.md --json
