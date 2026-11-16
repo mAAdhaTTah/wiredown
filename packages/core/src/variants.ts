@@ -177,6 +177,23 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
     });
     return null;
   };
+  /** Errors for ids of added components that the screen already uses; a replaced component frees its own. */
+  const clash = (added: SpecNode[], replaced?: SpecNode) => {
+    const taken = index(out);
+    const freed = replaced ? new Set([replaced.id, ...index(replaced).keys()]) : new Set();
+    const one = (node: SpecNode) => {
+      if (node.id && taken.has(node.id) && !freed.has(node.id)) {
+        errors.push({
+          line: node.line ?? 0,
+          message: `the id "${node.id}" is already used in "${baseId}"`,
+        });
+      }
+    };
+    added.forEach((node) => {
+      one(node);
+      walk(node, one);
+    });
+  };
   // changes may be indented under "extends:" or follow it at the same level
   for (const op of [...head.children, ...tree.children.slice(1)]) {
     const at = op.line ?? 0;
@@ -197,6 +214,7 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
       case "before": {
         const hit = target(op.text.replace(/^\^/, ""), at, op.type);
         if (!hit) break;
+        clash(op.children);
         const i = hit.parent.children.indexOf(hit.node) + (op.type === "after" ? 1 : 0);
         hit.parent.children.splice(i, 0, ...op.children);
         break;
@@ -224,25 +242,12 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
         }
         const hit = target(op.id, at, op.type);
         if (!hit) break;
+        clash([op], hit.node);
         // a container replaced by a bare line keeps its children: only its title or options change
         if (!op.children.length && op.type === hit.node.type) op.children = hit.node.children;
         hit.parent.children.splice(hit.parent.children.indexOf(hit.node), 1, op);
       }
     }
-  }
-  // Replacements have already removed the old node; only actual collisions remain.
-  if (!errors.length) {
-    const seen = new Map<string, number>();
-    walk(out, (node) => {
-      if (!node.id) return;
-      const first = seen.get(node.id);
-      if (first !== undefined) {
-        errors.push({
-          line: node.line ?? 0,
-          message: `the id "${node.id}" is used twice; first used on line ${first}`,
-        });
-      } else seen.set(node.id, node.line ?? 0);
-    });
   }
   return { tree: out, errors };
 }

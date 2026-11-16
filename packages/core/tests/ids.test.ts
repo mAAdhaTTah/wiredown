@@ -98,8 +98,31 @@ describe("#id shorthand", () => {
   it("rejects an insertion that duplicates a base id", () => {
     const result = resolve("extends: base\nafter: members\n  text: Again #invite", { lookup });
     expect(result.errors).toEqual([
-      { line: 3, message: 'the id "invite" is used twice; first used on line 2' },
+      { line: 3, message: 'the id "invite" is already used in "base"' },
     ]);
+  });
+
+  it("reports the variant's line when the insertion lands before the base component", () => {
+    const result = resolve("extends: base\nbefore: invite\n  text: Again #members", { lookup });
+    expect(result.errors).toEqual([
+      { line: 3, message: 'the id "members" is already used in "base"' },
+    ]);
+  });
+
+  it("lets a replacement keep the id it replaces, but not take another one", () => {
+    expect(resolve("extends: base\nbutton: New #invite", { lookup }).errors).toEqual([]);
+    const result = resolve("extends: base\nbox #invite\n  text: x #members", { lookup });
+    expect(result.errors).toEqual([
+      { line: 3, message: 'the id "members" is already used in "base"' },
+    ]);
+  });
+
+  it("reads ids on indented components, tabs, links and grey text", () => {
+    const { tree, errors } = parse(
+      "box\n  tabs: A | *B #tabs\n  link: Docs #docs\n  text: -muted- #note",
+    );
+    expect(errors).toEqual([]);
+    expect(tree.children[0].children.map((node) => node.id)).toEqual(["tabs", "docs", "note"]);
   });
 
   it("round-trips shorthand, long-only ids, and literal hashes", () => {
