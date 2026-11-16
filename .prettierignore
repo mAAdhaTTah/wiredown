@@ -18,4 +18,7 @@ packages/excalidraw/tests/fixtures/
 # Gitea page structures assumed from the prototypes, kept as written.
 packages/gitea/tests/fixtures/
 skills/wiredown/reference/syntax.md
-skills/wiredown/reference/components/
+
+# Vendored prototype syntax reference for the evals' old arm; padding its
+# tables would change what the model is given.
+packages/evals/fixtures/old/syntax.md
