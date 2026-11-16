@@ -131,6 +131,7 @@ const DEFAULT_OPTS: Partial<Record<NodeType, Record<string, number>>> = { button
 /** Words that may stand alone in the options brackets; each sets its option to 1. */
 export const FLAGS = new Set([
   "fill",
+  "fit",
   "disabled",
   "dark",
   "round",

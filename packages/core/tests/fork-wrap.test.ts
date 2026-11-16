@@ -76,6 +76,12 @@ describe("grids that wrap", () => {
   it("takes the width of a frame that has one", () => {
     const framed = draw(`window: T (w=420)\n  ${TABLE.split("\n").join("\n  ")}`, 2000);
     expect(framed.size.w).toBe(420);
+    const explicit = draw(
+      `window: T (w=420)\n  ${TABLE.replace("grid", "grid (fill)").split("\n").join("\n  ")}`,
+      2000,
+    );
+    expect(framed).toEqual(explicit);
+    expect(framed.ops.filter((o) => o.kind === "text").length).toBeGreaterThan(texts(TABLE).length);
   });
 });
 

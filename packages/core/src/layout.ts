@@ -11,6 +11,19 @@ import type {
   Theme,
 } from "./types";
 
+const GRID_FILL_PARENTS = new Set<NodeType>(["window", "browser", "box", "form", "section"]);
+
+/** Apply contextual defaults without changing the parsed or resolved tree. */
+function layoutDefaults(node: SpecNode, parent?: NodeType): SpecNode {
+  const grid = node.type === "grid";
+  const fill = grid && (node.opts.fit || (parent && GRID_FILL_PARENTS.has(parent)));
+  return {
+    ...node,
+    opts: fill ? { ...node.opts, fill: node.opts.fit ? 0 : 1 } : node.opts,
+    children: node.children.map((child) => layoutDefaults(child, node.type)),
+  };
+}
+
 /** Components that paint their own light background. */
 const LIGHT_SURFACES = new Set<NodeType>([
   "button",
@@ -80,6 +93,7 @@ export function layout(
   origin: { x: number; y: number },
   env: LayoutEnv,
 ): { ops: DrawOp[]; size: Size } {
+  tree = layoutDefaults(tree);
   const ops: DrawOp[] = [];
   const textStyle: TextStyle = { fontSize: env.style.fontSize, fontFamily: env.style.fontFamily };
   // Optional keys are only added when set, so ops without overrides stay
