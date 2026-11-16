@@ -123,8 +123,19 @@ export async function renderFlowSvg(
   width: number;
   height: number;
   missing: ({ element: string } & ScreenRef)[];
+  rejected: { id: string; reason: string }[];
 }> {
-  const files = { ...flow.files };
+  const files: Record<string, unknown> = {};
+  const rejected: { id: string; reason: string }[] = [];
+  for (const [id, file] of Object.entries(flow.files)) {
+    const dataURL =
+      file && typeof file === "object" && "dataURL" in file ? file.dataURL : undefined;
+    if (typeof dataURL !== "string") {
+      rejected.push({ id, reason: "missing or non-string dataURL" });
+    } else if (!/^data:image\/(png|jpeg|gif|webp|svg\+xml)(?:;[^,]*)?,/i.test(dataURL)) {
+      rejected.push({ id, reason: "expected an inline PNG, JPEG, GIF, WebP or SVG data URL" });
+    } else files[id] = file;
+  }
   const cache = new Map<string, string | undefined>();
   const missing: ({ element: string } & ScreenRef)[] = [];
   const elements: ExcalidrawElementJson[] = [];
@@ -163,7 +174,7 @@ export async function renderFlowSvg(
     }
   }
   const svg = await exportSvg({ elements, appState: flow.appState, files }, options);
-  return { svg, ...svgSize(svg), missing };
+  return { svg, ...svgSize(svg), missing, rejected };
 }
 
 function svgSize(svg: string): { width: number; height: number } {

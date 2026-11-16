@@ -358,3 +358,7 @@ A measured three-screen flow was 244,120 bytes with fonts and 77,374
 without. Use `--no-fonts` for smaller files when font portability is
 unnecessary.
 Dark flows use light screen images with Excalidraw's own dark image filter.
+
+Flow renders reject drawing image files unless they contain inline PNG, JPEG,
+GIF, WebP or SVG data URLs; each rejection is a finding (exit 1), and the
+render is still written, as with missing screens.
