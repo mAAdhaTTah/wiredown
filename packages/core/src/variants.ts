@@ -104,13 +104,24 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
   const sep = pipe ? " | " : ", ";
   // the header sets the width; a grid with no rows yet takes any
   const columns = rows.length ? split(rows[0].replace(MARKS, ""), pipe).length : Infinity;
-  const find = (key: string) => rows.findIndex((r, i) => i > 0 && rowKey(r, pipe) === key);
   const keys = () => rows.slice(1).map((r) => rowKey(r, pipe));
+  /** The row with this key: -1 if none, null if several (an error: which is meant?). */
+  const find = (key: string, line: number) => {
+    const hits = keys().flatMap((k, ri) => (k === key ? [ri + 1] : []));
+    if (hits.length > 1) {
+      errors.push({
+        line,
+        message: `rows: "${key}" matches ${hits.length} rows in the grid "${grid.id}"`,
+      });
+    }
+    return hits.length === 1 ? hits[0] : hits.length ? null : -1;
+  };
   op.body.forEach((patch, i) => {
     const line = (op.line ?? 0) + 1 + i;
     const removal = /^remove\s+(.+)$/i.exec(patch);
     if (removal && !patch.includes(pipe ? "|" : ",")) {
-      const at = find(removal[1].trim());
+      const at = find(removal[1].trim(), line);
+      if (at === null) return;
       if (at < 0) {
         errors.push({
           line,
@@ -120,8 +131,14 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
       return;
     }
     const marks = (MARKS.exec(patch) ?? [""])[0].replace(/\s/g, "");
-    const cells = split(patch.replace(MARKS, ""), pipe);
+    let cells = split(patch.replace(MARKS, ""), pipe);
     const key = cells.find((c) => c && c !== "=" && !parseCheck(c)) ?? "";
+    const at = find(key, line);
+    if (at === null) return;
+    // a patch that leaves out the row's checkbox starts at the key column
+    if (at > 0 && parseCheck(split(rows[at].replace(MARKS, ""), pipe)[0])) {
+      if (cells[0] !== "=" && !parseCheck(cells[0])) cells = ["=", ...cells];
+    }
     if (cells.length > columns) {
       errors.push({
         line,
@@ -129,7 +146,6 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
       });
       return;
     }
-    const at = find(key);
     if (at < 0) {
       if (cells.includes("=")) {
         errors.push({
