@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "skill": "node scripts/skill.mjs"
+    "skill": "node scripts/skill.mjs",
+    "smoke:web": "pnpm build && pnpm --filter @wiredown/web smoke"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
