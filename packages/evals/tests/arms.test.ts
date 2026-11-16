@@ -55,7 +55,7 @@ describe("the new arm", () => {
   it("rejects the old syntax: (hi) and implicit replacement", () => {
     const { errors } = newArm().check(OLD_FILE);
     const messages = errors.map((e) => e.message);
-    expect(messages).toContain('unknown option "hi"; did you mean "h"?');
+    expect(messages).toContain('"hi" is not an option; the highlight option is now (focus)');
     expect(messages.some((m) => m.startsWith("in a variant, say what this does"))).toBe(true);
   });
 
