@@ -1,0 +1,9 @@
+{
+  "id": "wiredown",
+  "name": "Wiredown",
+  "version": "0.0.0",
+  "minAppVersion": "1.7.2",
+  "description": "Text wireframes drawn through Excalidraw; layout forked from Sketchdown by Magnus Haggren (MIT).",
+  "author": "Wiredown",
+  "isDesktopOnly": false
+}
