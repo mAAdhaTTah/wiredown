@@ -159,8 +159,20 @@ test("each frame's overlays use the screens file its embed names", async () => {
   const gone = await run(["flow", "mark", file, "F2", "home", "1"]);
   expect(gone.exitCode).toBe(1);
   expect(gone.stderr).toBe(
-    `${file}: error: F2 embeds [[ui#^team]], but no ui.md was found from ${join(dir, "flows")} upward\n`,
+    `${file}: error: F2 embeds [[ui#^team]], but no ui.md was found in ${dir}\n`,
   );
+  // two files the link is a suffix of: refused, naming both, and nothing written
+  for (const sub of ["a", "b"]) {
+    await mkdir(join(dir, sub));
+    await writeFile(join(dir, sub, "ui.md"), BASE);
+  }
+  const before = await readFile(file, "utf8");
+  const ambiguous = await run(["flow", "mark", file, "F2", "home", "1"]);
+  expect(ambiguous.exitCode).toBe(1);
+  expect(ambiguous.stderr).toBe(
+    `${file}: error: F2 embeds [[ui#^team]], but it matches several files: a/ui.md, b/ui.md; name one by its path from ${dir}\n`,
+  );
+  expect(await readFile(file, "utf8")).toBe(before);
   expect((await run(["flow", "mark", file, "F1", "invite", "1"])).exitCode).toBe(0);
 });
 
@@ -181,11 +193,11 @@ test("an embed that points outside the flow's root is refused", async () => {
   expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
   const flow = parseFlow(await readFile(file, "utf8"));
   const [fileId, embed] = [...flow.embeds][0];
-  flow.embeds.set(fileId, { ...embed, path: "../screens" });
+  flow.embeds.set(fileId, { ...embed, path: "../../screens" });
   await writeFile(file, serializeFlow(flow));
   const result = await run(["flow", "highlight", file, "F1", "invite"]);
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toBe(
-    `${file}: error: F1 embeds [[../screens#^team]], which points outside ${join(dir, "spec")}\n`,
+    `${file}: error: F1 embeds [[../../screens#^team]], which points outside ${join(dir, "spec")}\n`,
   );
 });
