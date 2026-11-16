@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { flowFrames, parseFlow, serializeFlow } from "@wiredown/excalidraw";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { run } from "../src/index.js";
@@ -73,7 +73,7 @@ it("reports each frame whose embed names no file, and still writes the SVG", asy
   await rm(join(dir, "screens.md"));
   const missing = await run(args);
   expect(missing.exitCode).toBe(1);
-  const why = `embeds [[screens#^team]], but no screens.md was found from ${join(dir, "flows")} upward`;
+  const why = `embeds [[screens#^team]], but no screens.md was found in ${dir}`;
   expect(missing.stderr).toBe(`${file}: F1: error: ${why}\n${file}: F2: error: ${why}\n`);
   const svg = await readFile(join(dir, "f.svg"), "utf8");
   expect(svg.match(/data:image\/svg\+xml;base64/g)).toHaveLength(1); // F3, from ui.md
@@ -123,18 +123,19 @@ it("returns a write finding and valid JSON for an output under a file", async ()
 
 it("resolves embeds of a flow given relative to the current directory", async () => {
   const dir = await fixture({ "screens.md": BASE });
+  await mkdir(join(dir, "flows"));
   const script = `import { embedRoot, resolveEmbed } from ${JSON.stringify(new URL("../dist/embeds.js", import.meta.url).href)};
     const root = await embedRoot("f.excalidraw.md");
     console.log((await resolveEmbed("f.excalidraw.md", "screens", root)).path);
     console.log((await resolveEmbed("f.excalidraw.md", "ui", root)).why);`;
   const output = execFileSync(process.execPath, ["--input-type=module", "-e", script], {
-    cwd: dir,
+    cwd: join(dir, "flows"),
     encoding: "utf8",
   });
   const [path, ...rest] = output.split("\n");
   // the child resolves from its real cwd: /private/var/... on macOS
   expect(realpathSync(path)).toBe(realpathSync(join(dir, "screens.md")));
-  expect(rest).toEqual(["but no ui.md was found from . upward", ""]);
+  expect(rest).toEqual([`but no ui.md was found in ${realpathSync(dir)}`, ""]);
 });
 
 it("reports a missing hand-made embed by block id without an element id", async () => {
