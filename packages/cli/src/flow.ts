@@ -2,9 +2,13 @@ import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import {
+  addDecision,
+  addNote,
   addScreen,
+  connect,
   embedSize,
   flowFrames,
+  flowNodes,
   newFlow,
   screenElements,
   serializeFlow,
@@ -92,16 +96,19 @@ export async function editFlow(
           title,
           path: embed.embedPath,
           size: { width: rendered.width, height: rendered.height },
-          place: options.rightOf
-            ? { rightOf: options.rightOf }
-            : options.below
-              ? { below: options.below }
-              : undefined,
+          place: place(options),
         });
         const image = flowFrames(flow).find((f) => f.frame === frame)!.element;
         frames.push({ frame, screen: id, title, x: image.x, y: image.y, ...size.image });
       }
     }
+    // flow new scaffolds a path through the row: F1 -> F2 -> F3
+    const arrows = [];
+    if (command === "new")
+      for (const [i, to] of frames.slice(1).entries()) {
+        const from = frames[i].frame;
+        arrows.push({ id: connect(flow, from, to.frame), from, to: to.frame, label: null });
+      }
     const output = serializeFlow(flow);
     const styled = styleScreens(source);
     await mkdir(dirname(file), { recursive: true });
@@ -125,8 +132,14 @@ export async function editFlow(
       exitCode: 0,
       stderr: "",
       stdout: options.json
-        ? json({ flow: file, frames, screensFileUpdated })
-        : frames.map((f) => `${f.frame}  ${f.screen}  ${f.width}x${f.height}\n`).join(""),
+        ? json({
+            flow: file,
+            frames,
+            ...(command === "new" ? { arrows } : {}),
+            screensFileUpdated,
+          })
+        : frames.map((f) => `${f.frame}  ${f.screen}  ${f.width}x${f.height}\n`).join("") +
+          arrows.map(arrowLine).join(""),
     };
   } catch (error) {
     if (!findings.length) findings = [{ message: (error as Error).message }];
@@ -136,6 +149,7 @@ export async function editFlow(
         ? json({
             flow: file,
             frames: [],
+            ...(command === "new" ? { arrows: [] } : {}),
             screensFileUpdated: false,
             errors: findings,
           })
@@ -148,26 +162,108 @@ export async function editFlow(
     };
   }
 }
+interface Arrow {
+  id: string;
+  from: string;
+  to: string;
+  label: string | null;
+}
+const arrowLine = (a: Arrow) =>
+  `${a.from} -> ${a.to}${a.label === null ? "" : `  ${JSON.stringify(a.label)}`}\n`;
+
+/**
+ * connect, note and decision: one change to an existing drawing, no screens
+ * file needed. The drawing is written only if the change succeeds.
+ */
+export async function editNodes(
+  command: "connect" | "note" | "decision",
+  file: string,
+  args: string[],
+  options: FlowOptions = {},
+): Promise<Result> {
+  const key = command === "connect" ? "arrow" : command;
+  try {
+    const original = await readFile(file, "utf8");
+    const flow = parseEditableFlow(original);
+    let value: Record<string, unknown>, line: string;
+    if (command === "connect") {
+      const [from, to] = args;
+      const label = args[2] || undefined;
+      const arrow = { id: connect(flow, from, to, { label }), from, to, label: label ?? null };
+      [value, line] = [arrow, arrowLine(arrow)];
+    } else if (command === "note") {
+      const [node, text] = args;
+      const id = addNote(flow, node, text);
+      [value, line] = [{ id, node }, `${node}  note ${id}\n`];
+    } else {
+      const node = addDecision(flow, { text: args[0], place: place(options) });
+      const e = flowNodes(flow).find((n) => n.node === node)!.element;
+      value = { node, x: e.x, y: e.y, width: e.width, height: e.height };
+      line = `${node}  ${e.width}x${e.height}\n`;
+    }
+    await safeWrite(file, original, serializeFlow(flow));
+    return {
+      exitCode: 0,
+      stderr: "",
+      stdout: options.json ? json({ flow: file, [key]: value }) : line,
+    };
+  } catch (error) {
+    const findings: Finding[] = [{ message: (error as Error).message }];
+    return {
+      exitCode: 1,
+      stdout: options.json ? json({ flow: file, [key]: null, errors: findings }) : "",
+      stderr: options.json
+        ? ""
+        : error instanceof NewerFlowError
+          ? `${file}: ${error.message}\n`
+          : formatFindings(file, findings, []),
+    };
+  }
+}
+const place = (options: FlowOptions) =>
+  options.rightOf
+    ? { rightOf: options.rightOf }
+    : options.below
+      ? { below: options.below }
+      : undefined;
+
+/** Positionals each command takes after the file: [required, optional]. */
+const ARITY: Record<string, [number, number, string]> = {
+  new: [0, Infinity, "a file"],
+  "add-screen": [1, 0, "a file and one screen id"],
+  connect: [2, 1, "a file, two nodes and an optional label"],
+  note: [2, 0, "a file, a node and the note's text"],
+  decision: [1, 0, "a file and the decision's text"],
+};
+
 export function flowCommand(
   values: Record<string, string | boolean | string[] | undefined>,
   args: string[],
 ) {
-  const [command, file, ...ids] = args;
-  if (command !== "new" && command !== "add-screen")
-    throw new UsageError("flow needs new or add-screen");
-  if (!file || (command === "add-screen" && ids.length !== 1))
-    throw new UsageError(
-      `flow ${command} needs a file${command === "add-screen" ? " and one screen id" : ""}`,
-    );
+  const [command, file, ...rest] = args;
+  const arity = Object.hasOwn(ARITY, command ?? "") ? ARITY[command] : undefined;
+  if (!arity) throw new UsageError(`flow needs ${Object.keys(ARITY).join(", ")}`);
+  if (!file || rest.length < arity[0] || rest.length > arity[0] + arity[1])
+    throw new UsageError(`flow ${command} needs ${arity[2]}`);
+  if ((command === "note" || command === "decision") && !rest.at(-1)?.trim())
+    throw new UsageError(`flow ${command} needs non-empty text`);
   if (values["right-of"] && values.below)
     throw new UsageError("--right-of and --below are mutually exclusive");
-  if (command === "new" && (values["right-of"] || values.below || values.title))
-    throw new UsageError("placement and title options require add-screen");
-  return editFlow(command, file, ids, {
+  const placed = command === "add-screen" || command === "decision";
+  if (!placed && (values["right-of"] || values.below))
+    throw new UsageError("placement options require add-screen or decision");
+  const screens = command === "new" || command === "add-screen";
+  if (!screens && (values.title || values.screens))
+    throw new UsageError("--title and --screens require new or add-screen");
+  if (command === "new" && values.title) throw new UsageError("--title requires add-screen");
+  const options = {
     screens: values.screens as string | undefined,
     title: values.title as string | undefined,
     rightOf: values["right-of"] as string | undefined,
     below: values.below as string | undefined,
     json: values.json === true,
-  });
+  };
+  if (command === "connect" || command === "note" || command === "decision")
+    return editNodes(command, file, rest, options);
+  return editFlow(command, file, rest, options);
 }

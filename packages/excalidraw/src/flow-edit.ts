@@ -60,8 +60,8 @@ export interface FlowNode {
 /**
  * `customData.wiredown`. Frames keep `frame` (with `screen`); every other
  * node uses `node`. Arrows and their labels carry `from` and `to`. A
- * frame's image also records `group`, the Excalidraw group that holds the
- * frame's parts.
+ * frame's image (and a decision's diamond, once it has notes) also records
+ * `group`, the Excalidraw group that holds the node's parts.
  */
 interface Identity {
   v?: number;
@@ -73,7 +73,9 @@ interface Identity {
   from?: string;
   to?: string;
   group?: string;
-  /** The image element this label belongs to. */
+  /** An arrow's place among the arrows between its pair when it was made; absent for 0. */
+  slot?: number;
+  /** A note's node: the id of its image or diamond element. */
   anchor?: string;
 }
 function dataOf(e: ExcalidrawElementJson): Identity | undefined {
@@ -191,6 +193,31 @@ function element(
     locked: false,
     customData: { wiredown: { v: DATA_VERSION, ...data, id: elementId } },
   };
+}
+/** Tell Excalidraw an existing element changed. */
+export function touch(e: ExcalidrawElementJson) {
+  e.version = Number(e.version ?? 0) + 1;
+  e.versionNonce = random(2147483646) + 1;
+  e.updated = Date.now();
+}
+/**
+ * The `groupIds` a node's notes take, so they move with it: our group and
+ * every group around it, innermost first, so a part stays inside any group a
+ * person put the node in. A frame's group is made with the frame; a
+ * decision's on first need, inserted innermost on the diamond and its text.
+ */
+function nodeGroups(flow: Flow, node: ExcalidrawElementJson): string[] {
+  const data = identity(node)!;
+  const groups = (e: ExcalidrawElementJson) =>
+    Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
+  const at = data.group ? groups(node).indexOf(data.group) : -1;
+  if (at >= 0) return groups(node).slice(at);
+  data.group = id();
+  for (const e of [node, ...flow.elements.filter((e) => e.containerId === node.id)]) {
+    e.groupIds = [data.group, ...groups(e)];
+    touch(e);
+  }
+  return groups(node);
 }
 /** An Excalifont text element sized by core's measurer. */
 function textElement(
@@ -387,30 +414,25 @@ export function connect(flow: Flow, from: string, to: string, options: ConnectOp
   if (from === to) throw new Error(`cannot connect "${from}" to itself`);
   const start = findNode(flow, from),
     end = findNode(flow, to);
-  const a = boxOf(start),
-    b = boxOf(end);
-  const pair = new Set([start.element.id, end.element.id]);
-  const k = flow.elements.filter((e) => {
-    const s = (e.startBinding as { elementId?: string } | null | undefined)?.elementId,
-      t = (e.endBinding as { elementId?: string } | null | undefined)?.elementId;
-    return e.type === "arrow" && !e.isDeleted && s !== t && pair.has(s!) && pair.has(t!);
-  }).length;
-  const g = edgeGeometry(a, b, k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k / 2) * PAR);
+  const parallel = arrowsBetween(flow, start.element.id, end.element.id);
+  // the first free slot, so a deleted arrow's place is reused before a taken one
+  const taken = new Set(parallel.map((e) => identity(e)?.slot ?? 0));
+  let k = 0;
+  while (taken.has(k)) k++;
+  const g = arrowGeometry(start, end, k);
   const keys = nextIndices(flow, options.label ? 2 : 1);
   const arrow: ExcalidrawElementJson = {
-    ...element("arrow", g.sx, g.sy, Math.abs(g.ex - g.sx), Math.abs(g.ey - g.sy), keys[0], {
+    ...element("arrow", g.x, g.y, g.width, g.height, keys[0], {
       role: "arrow",
       from,
       to,
+      ...(k ? { slot: k } : {}),
     }),
     roundness: { type: 2 },
-    points: [
-      [0, 0],
-      [g.ex - g.sx, g.ey - g.sy],
-    ],
+    points: g.points,
     lastCommittedPoint: null,
-    startBinding: { elementId: start.element.id, mode: "orbit", fixedPoint: g.sfp },
-    endBinding: { elementId: end.element.id, mode: "orbit", fixedPoint: g.efp },
+    startBinding: { elementId: start.element.id, mode: "orbit", fixedPoint: g.startFixedPoint },
+    endBinding: { elementId: end.element.id, mode: "orbit", fixedPoint: g.endFixedPoint },
     startArrowhead: null,
     endArrowhead: "arrow",
     elbowed: false,
@@ -418,14 +440,15 @@ export function connect(flow: Flow, from: string, to: string, options: ConnectOp
   for (const n of [start, end]) {
     const bound = Array.isArray(n.element.boundElements) ? n.element.boundElements : [];
     n.element.boundElements = [...bound, { id: arrow.id, type: "arrow" }];
+    touch(n.element);
   }
   flow.elements.push(arrow);
   if (options.label) {
     const text = wrap(options.label, LABEL_WIDTH);
     const size = measurer.measure(text, { fontSize: FONT_SIZE, fontFamily: 5 });
     const label = textElement(
-      (g.sx + g.ex) / 2 - size.w / 2,
-      (g.sy + g.ey) / 2 - size.h / 2,
+      g.x + g.points[1][0] / 2 - size.w / 2,
+      g.y + g.points[1][1] / 2 - size.h / 2,
       text,
       FONT_SIZE,
       keys[1],
@@ -435,7 +458,53 @@ export function connect(flow: Flow, from: string, to: string, options: ConnectOp
     arrow.boundElements = [{ type: "text", id: label.id }];
     flow.elements.push(label);
   }
+  if (k) for (const a of [...parallel, arrow]) positionArrowLabel(flow, a, 1 / 3);
   return arrow.id;
+}
+
+/** Place bound text along its arrow, measured from the start. */
+export function positionArrowLabel(flow: Flow, arrow: ExcalidrawElementJson, fraction: number) {
+  const end = (arrow.points as number[][])[1];
+  for (const label of flow.elements.filter((e) => !e.isDeleted && e.containerId === arrow.id)) {
+    const x = Number(arrow.x) + end[0] * fraction - Number(label.width) / 2;
+    const y = Number(arrow.y) + end[1] * fraction - Number(label.height) / 2;
+    if (label.x !== x || label.y !== y) {
+      Object.assign(label, { x, y });
+      touch(label);
+    }
+  }
+}
+/** Live arrows bound between two node elements, in either direction, in drawing order. */
+export function arrowsBetween(flow: Flow, a: string, b: string) {
+  return flow.elements.filter((e) => {
+    const s = (e.startBinding as { elementId?: string } | null | undefined)?.elementId,
+      t = (e.endBinding as { elementId?: string } | null | undefined)?.elementId;
+    return (
+      e.type === "arrow" && !e.isDeleted && s !== t && [a, b].includes(s!) && [a, b].includes(t!)
+    );
+  });
+}
+/**
+ * The geometry `connect` gives the arrow in `slot` (its place among the
+ * arrows between one pair, offset 0, +70, -70, +140, ...) between two nodes
+ * as they are now: the arrow's `x`, `y`, `width`, `height`, `points` and its
+ * bindings' fixed points.
+ */
+export function arrowGeometry(start: FlowNode, end: FlowNode, slot: number) {
+  const offset = slot === 0 ? 0 : (slot % 2 ? 1 : -1) * Math.ceil(slot / 2) * PAR;
+  const g = edgeGeometry(boxOf(start), boxOf(end), offset);
+  return {
+    x: g.sx,
+    y: g.sy,
+    width: Math.abs(g.ex - g.sx),
+    height: Math.abs(g.ey - g.sy),
+    points: [
+      [0, 0],
+      [g.ex - g.sx, g.ey - g.sy],
+    ],
+    startFixedPoint: g.sfp,
+    endFixedPoint: g.efp,
+  };
 }
 function edgeGeometry(a: Box, b: Box, offset: number) {
   const gap = (lo1: number, len1: number, lo2: number, len2: number) =>
@@ -473,25 +542,30 @@ function edgeGeometry(a: Box, b: Box, offset: number) {
 }
 
 /**
- * Appends a free text note under a node, below its lowest earlier note,
- * wrapped to the node's width. Notes are not bound: a person moves them
- * freely. Returns the note's element id.
+ * Appends a free text note under a frame or to the right of a decision,
+ * below its lowest earlier note,
+ * wrapped to the node's width. A note is not bound, but it joins the node's
+ * group, so it moves with the node; double-click enters the group to move
+ * the note alone. Returns the note's element id.
  */
 export function addNote(flow: Flow, node: string, text: string): string {
   const n = findNode(flow, node);
   const box = boxOf(n);
   const notes = flow.elements.filter(
-    (e) => !e.isDeleted && identity(e)?.role === "note" && identity(e)?.node === node,
+    (e) => !e.isDeleted && identity(e)?.role === "note" && identity(e)?.anchor === n.element.id,
   );
-  const y = Math.max(box.y + box.h, ...notes.map((e) => Number(e.y) + Number(e.height))) + NOTE_GAP;
+  const wrapped = wrap(text, box.w);
+  // beside a decision, below the height an arrow leaves its right point at
+  const top = n.kind === "decision" ? box.y + box.h / 2 + NOTE_GAP : box.y + box.h + NOTE_GAP;
+  const y = Math.max(top, ...notes.map((e) => Number(e.y) + Number(e.height) + NOTE_GAP));
   const note = textElement(
-    box.x,
+    n.kind === "decision" ? box.x + box.w + NOTE_GAP : box.x,
     y,
-    wrap(text, box.w),
+    wrapped,
     FONT_SIZE,
     nextIndices(flow, 1)[0],
-    { role: "note", node },
-    { strokeColor: NOTE_COLOR },
+    { role: "note", node, anchor: n.element.id },
+    { strokeColor: NOTE_COLOR, groupIds: nodeGroups(flow, n.element) },
   );
   flow.elements.push(note);
   return note.id;

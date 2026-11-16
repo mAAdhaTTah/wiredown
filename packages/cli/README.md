@@ -88,13 +88,13 @@ so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
 ## flow
 
 `wiredown flow new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>]
-[--json]` creates an empty drawing or a row of frames; an existing file is
-an error.
+[--json]` creates an empty drawing or a row of frames, each connected to the
+next by an unlabelled arrow (F1 -> F2 -> F3); an existing file is an error.
 
 `wiredown flow add-screen <flow.excalidraw.md> <screen-id> [--right-of F2 |
 --below F2] [--title <text>] [--screens <screens.md>] [--json]` appends a frame
-relative to the current image position. Default placement is right of the
-rightmost frame. Titles default to the screen heading, then its id.
+relative to the current position of a node. Default placement is right of the
+rightmost node. Titles default to the screen heading, then its id.
 
 Each frame embeds its screen as `[[<path>#^<id>|WxH]]`, and that path says
 which screens file the frame uses. The path written is the screens file's
@@ -128,14 +128,14 @@ else in that directory, else in each directory further up to the root.
 A screens file whose path from the root contains `#`, `|` or `]` is
 refused, since those end the path in an embed link.
 Missing embed styling frontmatter is added; existing values are preserved.
-Invalid screens and unknown frames leave the drawing untouched.
+Invalid screens and unknown nodes leave the drawing untouched.
 A frame's image and its `F3 · Title` label share an Excalidraw group, so
 they move together: clicking either selects both; double-click to select
-one. Human output is one `F3  team-members  548x333` line per frame. The size is
-the embed image size in the drawing. JSON is
-`{ flow, frames: [{ frame, screen, title, x, y, width, height }],
-screensFileUpdated }`. Operational errors exit 1 (JSON adds an `errors`
-array); usage errors exit 2.
+one. Human output is one `F3  team-members  548x333` line per frame, then one
+`F1 -> F2` line per arrow. The size is the embed image size in the drawing.
+JSON is `{ flow, frames: [{ frame, screen, title, x, y, width, height }],
+screensFileUpdated }`; `flow new` adds `arrows: [{ id, from, to, label }]`.
+Operational errors exit 1 (JSON adds an `errors` array); usage errors exit 2.
 
 Flow commands refuse to overwrite a drawing or screens file that changed
 while the command was running, and replace files atomically. The check is
@@ -144,31 +144,26 @@ screens file changed, the drawing is left as it was, and `flow new` leaves no
 file behind. Close the drawing in Obsidian before running flow commands, or
 retry after a concurrent save.
 
-## API
+The next commands edit an existing drawing and need no screens file. Nodes
+are frames (F1, F2, ...) and decisions (D1, D2, ...); everything is placed
+relative to the nodes where they are now, so moving them by hand is fine.
 
-The root export runs the commands without a terminal. Each resolves to a
-`Result`, `{ exitCode, stdout, stderr }`, and never writes to the terminal
-or exits; `bin/wiredown.js` prints the result. Build the package
-(`pnpm build`) before running the bin.
+- `wiredown flow decision <flow.excalidraw.md> <text> [--right-of N |
+--below N] [--json]` appends a decision diamond (default: right of the
+  rightmost node). Prints `D1  260x170`; JSON is
+  `{ flow, decision: { node, x, y, width, height } }`.
+- `wiredown flow connect <flow.excalidraw.md> <from> <to> [<label>] [--json]`
+  appends a straight arrow between the facing edges of two nodes, bound to
+  both, with an optional label. A further arrow between the same pair is
+  offset beside the first. Existing arrows are not rerouted. Prints
+  `F2 -> D1  "Submit"`; JSON is `{ flow, arrow: { id, from, to, label } }`
+  (`label` is `null` when absent).
+- `wiredown flow note <flow.excalidraw.md> <node> <text> [--json]` appends a
+  free text note under the node, below its earlier notes, wrapped to the
+  node's width. The note joins the node's group, so it moves with the node.
+  Prints `F1  note <element-id>`; JSON is `{ flow, note: { id, node } }`.
 
-- **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
-  the script, as `bin/wiredown.js` does. Bad usage and unreadable files
-  give exit code 2, and the `flow` commands report their own errors with
-  exit code 1; any other error rejects.
-- **Check** (`check`): `check(files, options?)` runs the `check` command
-  on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
-  entry of the JSON document's `files`.
-- **Render** (`render`): `render(file, options?)` runs the `render`
-  command. `RenderOptions` are all optional: `screens` (ids; all screens
-  with an id when empty), `out` (default `.`), `theme` (`"light"` or
-  `"dark"`), `fonts` (default true) and `json`. `RenderedScreen` is one
-  entry of the JSON document's `screens`.
-- **Output** (`output`): `UsageError`, which `check` and `render` throw
-  for an unreadable file and `run` turns into exit code 2. `Finding` is a
-  finding as above; `Result` is what every command returns.
-
-```ts
-import { render } from "@wiredown/cli";
-
-const { exitCode, stdout } = await render("screens.md", { out: "out", json: true });
-```
+An unknown node (the error lists the nodes that exist), a node name two
+elements claim (a pasted copy of a frame: delete the copy), or connecting a
+node to itself writes nothing. Operational errors exit 1 (JSON adds an `errors`
+array, and the command's key is `null`); usage errors exit 2.

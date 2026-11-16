@@ -246,7 +246,12 @@ test("new creates empty drawings and a measured row, preserving existing files",
   const empty = join(dir, "empty/a.excalidraw.md");
   const result = await run(["flow", "new", empty, "--json"]);
   expect(result.exitCode).toBe(0);
-  expect(JSON.parse(result.stdout)).toEqual({ flow: empty, frames: [], screensFileUpdated: false });
+  expect(JSON.parse(result.stdout)).toEqual({
+    flow: empty,
+    frames: [],
+    arrows: [],
+    screensFileUpdated: false,
+  });
   expect(parseFlow(await readFile(empty, "utf8")).elements).toEqual([]);
   const file = join(dir, "flows/row.excalidraw.md");
   const row = await run(["flow", "new", file, "team", "team-after", "team", "--json"]);
@@ -467,7 +472,12 @@ test.each(["vault", "git", "neither"])(
   },
 );
 
-test("add-screen refuses newer live metadata before writing", async () => {
+test.each([
+  ["add-screen", "team"],
+  ["decision", "Choice"],
+  ["connect", "F1", "F1"],
+  ["note", "F1", "Note"],
+])("%s refuses newer live metadata before writing", async (...args) => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "a.excalidraw.md");
   expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
@@ -476,7 +486,7 @@ test("add-screen refuses newer live metadata before writing", async () => {
   const source = serializeFlow(flow);
   await writeFile(file, source);
   const screens = await readFile(join(dir, "screens.md"), "utf8");
-  const result = await run(["flow", "add-screen", file, "team"]);
+  const result = await run(["flow", args[0], file, ...args.slice(1)]);
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain(
     `${file}: this drawing was written by a newer wiredown (data version 2); upgrade wiredown to edit it`,

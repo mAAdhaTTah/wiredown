@@ -27,7 +27,8 @@ interface Command {
 const FLOW: [string, string][] = [
   [
     "new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>] [--json]",
-    `Creates a drawing, empty or with a row of frames, one per screen.
+    `Creates a drawing, empty or with a row of frames, one per screen, each
+connected to the next (F1 -> F2 -> F3).
 
 options:
   --screens <file>   the screens file to embed from (default: the nearest
@@ -53,6 +54,39 @@ options:
 example:
   wiredown flow add-screen flows/invite.excalidraw.md team-members-after --below F1`,
   ],
+  [
+    "decision <flow.excalidraw.md> <text> [--right-of F2 | --below F2] [--json]",
+    `Adds a decision diamond, right of the rightmost node unless placed.
+
+options:
+  --right-of <node>  place it right of this node
+  --below <node>     place it below this node
+  --json             print one JSON document instead
+
+example:
+  wiredown flow decision flows/invite.excalidraw.md 'Seats left?' --right-of F1`,
+  ],
+  [
+    "connect <flow.excalidraw.md> <from> <to> [<label>] [--json]",
+    `Adds a straight arrow between the facing edges of two nodes, with an
+optional label.
+
+options:
+  --json             print one JSON document instead
+
+example:
+  wiredown flow connect flows/invite.excalidraw.md D1 F2 'Yes'`,
+  ],
+  [
+    "note <flow.excalidraw.md> <node> <text> [--json]",
+    `Adds a text note under the node, below its earlier notes.
+
+options:
+  --json             print one JSON document instead
+
+example:
+  wiredown flow note flows/invite.excalidraw.md F2 'Maja accepts the invitation.'`,
+  ],
 ];
 
 // Each command parses its own options; add new commands (flow, lint) here.
@@ -60,6 +94,9 @@ const COMMANDS: Record<string, Command> = {
   flow: {
     summary: "create and edit flow drawings",
     help: `${FLOW.map(([usage], i) => `${i ? "      " : "usage:"} wiredown flow ${usage}`).join("\n")}
+
+Nodes are frames (F1, F2, ...) and decisions (D1, D2, ...). new connects
+its screens in a row; placement is relative to a node, never coordinates.
 
 Run "wiredown flow <command> --help" for its options and an example.
 `,
