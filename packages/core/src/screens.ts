@@ -1,6 +1,9 @@
 import { check } from "./check.js";
 import { closingFence, FENCE_KEYWORD } from "./detect.js";
 import type { SpecNode } from "./types.js";
+import { BLOCK_ID } from "./variants.js";
+
+const ID = new RegExp(`^${BLOCK_ID.source}$`);
 
 export interface Screen {
   id?: string;
@@ -91,7 +94,7 @@ export function checkScreens(markdown: string): CheckScreensResult {
     const { id, line } = screen;
     if (id === undefined) {
       warnings.push({ line, message: "screen has no ^id; it can't be embedded in a flow" });
-    } else if (!/^[A-Za-z0-9-]+$/.test(id)) {
+    } else if (!ID.test(id)) {
       errors.push({ line: idLines[i], message: `invalid block id "${id}"`, screen: id });
     } else {
       const first = byId.get(id);
@@ -108,6 +111,8 @@ export function checkScreens(markdown: string): CheckScreensResult {
     const result = check(screen.source, {
       lookup: (id) => byId.get(id)?.source,
       known: () => [...byId.keys()],
+      // a base's lines are file lines too
+      lineOf: (id, line) => byId.get(id)!.line + line - 1,
     });
     const map = (diagnostic: { line: number; message: string }): ScreenDiagnostic => ({
       line: screen.line + diagnostic.line - 1,

@@ -80,11 +80,34 @@ describe("screens documents", () => {
     expect(checkScreens(md).screens).toHaveLength(1);
   });
 
-  it("keeps the base error wording in a variant", () => {
+  it("keeps the base error wording in a variant, with the base's file line", () => {
     const result = checkScreens(block("buton: Bad") + "\n" + block("extends: base", "variant"));
     expect(
-      result.errors.some((e) => e.screen === "variant" && e.message.includes('in "base", line 1')),
+      result.errors.some((e) => e.screen === "variant" && e.message.includes('in "base", line 2')),
     ).toBe(true);
+  });
+
+  it("names only file lines for an error in a base of a base", () => {
+    const md = [
+      block("text: a\nbuton: Bad", "c"),
+      block("extends: c", "b"),
+      block("extends: b", "a"),
+    ].join("\n\n");
+    expect(checkScreens(md).errors.filter((e) => e.screen === "a")).toEqual([
+      {
+        line: 13,
+        message:
+          'in "b", line 8: in "c", line 3: unknown component "buton"; did you mean "button"?',
+        screen: "a",
+      },
+    ]);
+  });
+
+  it("resolves a variant of a block id that starts with a digit", () => {
+    const md = block("text: Code #code", "2fa") + "\n" + block("extends: ^2fa\nremove: code", "v");
+    const result = checkScreens(md);
+    expect(result.errors).toEqual([]);
+    expect(result.screens[1].tree.children).toEqual([]);
   });
 
   it("reads a file that opens with a rule, not frontmatter", () => {
