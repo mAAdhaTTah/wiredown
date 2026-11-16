@@ -6,7 +6,8 @@ headlessly in Node, with JSON output for agents.
 ```sh
 wiredown check <file.md>... [--json]
 wiredown lint [<path>...] [--json]
-wiredown render <file.md> [--screen <id>]... [--out <dir>] [--theme light|dark] [--no-fonts] [--json]
+wiredown render <file.md> [--screen <id>]... [--out <dir>] [--format svg|png] [--scale <n>]
+                [--transparent] [--theme light|dark] [--no-fonts] [--screens <screens.md>] [--json]
 wiredown --help | <command> --help | flow <command> --help | --version
 ```
 
@@ -83,8 +84,60 @@ findings are those of the rendered screens plus any outside a screen; the
 errors for an unknown `--screen` id and for nothing to render have no
 `line`.
 
+The document also has `"format": "svg"` (or `"png"`) at the top level.
+
 `--theme dark` lets Excalidraw draw the dark theme; file names don't change,
 so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
+
+### PNG
+
+`--format png` writes `<out>/<id>.png` (or `<out>/<name>.png` for a flow)
+instead of SVG; one format per run. PNGs are rasterised in Node by resvg,
+with no browser, from the same SVG, so they look like it: Excalifont text,
+hand-drawn strokes, the theme's colours and, in flows, the embedded
+screens. The same input gives byte-identical PNGs on the same machine.
+
+- `--scale <n>`, a whole number from 1 to 4 (default 2), multiplies the
+  pixel size, so text stays legible.
+- The background is the theme's canvas colour: white (`#ffffff`) for light,
+  and `#121212`, Excalidraw's dark canvas (its white through the dark-mode
+  filter), for dark. `--transparent` keeps the SVG's transparency instead.
+- `--scale` and `--transparent` need `--format png`; `--no-fonts` is SVG
+  only, since a PNG always draws its text in Excalifont.
+
+In the JSON the path key is the format, and the pixel size is added next to
+the SVG size; `width` and `height` keep their meaning, the image size flow
+embeds use:
+
+```json
+{
+  "file": "screens.md",
+  "format": "png",
+  "screens": [
+    {
+      "id": "team-members",
+      "png": "out/team-members.png",
+      "width": 528,
+      "height": 328,
+      "pixelWidth": 1056,
+      "pixelHeight": 656,
+      "boxes": { "invite": { "x": 278.8, "y": 60, "w": 147.2, "h": 40 } }
+    }
+  ],
+  "errors": [],
+  "warnings": []
+}
+```
+
+A flow's is `{ file, format, flow: { png, width, height, pixelWidth,
+pixelHeight }, errors, warnings }`. Without `--json` each line is
+`out/team-members.png  528x328  (1056x656 px)`. A PNG that can't be
+rendered or written is an error finding, as for SVG, and the exit code is 1.
+
+Characters missing from Excalifont (`check` warns about them, for example
+`⋯`, `✓` or `▾`) are drawn with a system font that has them, so how they
+look in a PNG depends on the machine's fonts; with no such font, they come
+out as empty boxes. Use text Excalifont has when the PNG matters.
 
 ## lint
 
@@ -360,15 +413,13 @@ label or note with a group absent from its node is left untouched and does not
 take a place in the note stack.
 
 `wiredown render flows/example.excalidraw.md --out out --json` exports the
-whole drawing to `out/example.svg`. Each frame's screen comes from the
-screens file its embed names, resolved from the flow as the flow commands
-do. `--screen` is only for screens files.
-Missing or invalid screens, and embeds that name no screens file, are
-reported as `flow lint` words them, one finding per frame or image; nothing
-is drawn in their place. An image that embeds a whole file or a heading
-rather than a screen block is not drawn either, and is reported. In each
-case the SVG is still written and the command exits 1. Flow JSON is
-`{ file, flow: { svg, width, height }, errors, warnings }`. The size is
+whole drawing to `out/example.svg` (`out/example.png` with `--format png`).
+Each frame's screen comes from the screens file its embed names, resolved
+from the flow as the flow commands do. `--screen` is only for screens files.
+Missing or invalid screens, and embeds that name no screens file (one
+finding per frame), leave placeholders; the image is still written, findings
+are reported, and the command exits 1. Flow JSON is
+`{ file, format, flow: { svg, width, height }, errors, warnings }`. The size is
 rounded to whole pixels, as a screen's is; the SVG keeps Excalidraw's exact
 size.
 A file that is not an Excalidraw drawing, a drawing written by a newer

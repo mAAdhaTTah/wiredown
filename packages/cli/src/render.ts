@@ -2,7 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import type { Box, CheckedScreen } from "@wiredown/core";
-import { FlowError, flowFrames, screenElements } from "@wiredown/excalidraw";
+import { BACKGROUND, renderFlowSvg, renderScreenSvg, svgToPng } from "@wiredown/excalidraw/node";
+import { flowFrames, screenElements } from "@wiredown/excalidraw";
 import { renderFlowSvg, renderScreenSvg } from "@wiredown/excalidraw/node";
 import { embeddedScreen, embeddedScreens } from "./flow";
 import {
@@ -22,18 +23,32 @@ export interface RenderOptions {
   /** Output directory, created if missing. Defaults to ".". */
   out?: string;
   theme?: "light" | "dark";
-  /** Embed Excalifont in the SVG. Defaults to true. */
+  /** Embed Excalifont in the SVG. Defaults to true; PNGs always use it. */
   fonts?: boolean;
+  /** Defaults to "svg". */
+  format?: "svg" | "png";
+  /** PNG pixels per SVG unit. Defaults to 2. */
+  scale?: number;
+  /** Keep a PNG's background transparent instead of the theme's canvas colour. */
+  transparent?: boolean;
   json?: boolean;
 }
 
-export interface RenderedScreen {
-  id: string;
-  svg: string;
+/**
+ * A written image. The path is under its format's key (`svg` or `png`).
+ * `width` and `height` are the SVG size, which flow embeds use; a PNG adds
+ * its size in pixels.
+ */
+export interface Output {
+  svg?: string;
+  png?: string;
   width: number;
   height: number;
-  boxes: Record<string, Box>;
+  pixelWidth?: number;
+  pixelHeight?: number;
 }
+
+export type RenderedScreen = Output & { id: string; boxes: Record<string, Box> };
 
 /**
  * Render a file's screens to `<out>/<id>.svg`. Screens with errors are
@@ -63,28 +78,53 @@ export async function render(file: string, options: RenderOptions = {}): Promise
   for (const id of wanted) {
     const screen = byId.get(id);
     if (!screen || failed.has(id)) continue;
-    const { svg, width, height, boxes } = await renderScreenSvg(screen.tree, {
-      theme: options.theme,
-      fonts: options.fonts,
-    });
-    const path = join(out, `${id}.svg`);
-    if (await writeSvg(path, svg, errors, id))
-      screens.push({ id, svg: path, width, height, boxes });
+    const { svg, width, height, boxes } = await renderScreenSvg(screen.tree, svgOptions(options));
+    const output = await writeImage(join(out, id), { svg, width, height }, options, errors, id);
+    if (output) screens.push({ id, ...output, boxes });
   }
   return renderResult(file, options, { screens }, screens, errors, warnings);
 }
 
-async function writeSvg(path: string, svg: string, errors: Finding[], screen?: string) {
+const svgOptions = (options: RenderOptions) => ({
+  theme: options.theme,
+  fonts: options.format === "png" || options.fonts,
+});
+
+/** Write `<base>.svg` or `<base>.png`; a failure is an error finding. */
+async function writeImage(
+  base: string,
+  image: { svg: string; width: number; height: number },
+  options: RenderOptions,
+  errors: Finding[],
+  screen?: string,
+): Promise<Output | undefined> {
+  const format = options.format ?? "svg";
+  const path = `${base}.${format}`;
+  const fail = (message: string) => {
+    errors.push({ message, ...(screen ? { screen } : {}) });
+    return undefined;
+  };
+  let bytes: string | Uint8Array = image.svg;
+  const output: Output = { [format]: path, width: image.width, height: image.height };
+  if (format === "png") {
+    try {
+      const png = await svgToPng(image.svg, {
+        scale: options.scale ?? 2,
+        ...(options.transparent ? {} : { background: BACKGROUND[options.theme ?? "light"] }),
+      });
+      bytes = png.png;
+      output.pixelWidth = png.width;
+      output.pixelHeight = png.height;
+    } catch (error) {
+      return fail(`can't render ${path}: ${(error as Error).message}`);
+    }
+  }
   try {
     await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, svg);
-    return true;
+    await writeFile(path, bytes);
+    return output;
   } catch (error) {
-    errors.push({
-      message: `can't write ${path}: ${(error as Error).message}`,
-      ...(screen ? { screen } : {}),
-    });
-    return false;
+    return fail(`can't write ${path}: ${(error as Error).message}`);
   }
 }
 
@@ -92,15 +132,20 @@ function renderResult(
   file: string,
   options: RenderOptions,
   data: Record<string, unknown>,
-  outputs: { svg: string; width: number; height: number }[],
+  outputs: Output[],
   errors: Finding[],
   warnings: Finding[],
 ): Result {
+  const format = options.format ?? "svg";
+  const line = (o: Output) =>
+    `${o[format]}  ${o.width}x${o.height}` +
+    (o.pixelWidth ? `  (${o.pixelWidth}x${o.pixelHeight} px)` : "") +
+    "\n";
   return {
     exitCode: errors.length ? 1 : 0,
     stdout: options.json
-      ? json({ file, ...data, errors, warnings })
-      : outputs.map((s) => `${s.svg}  ${s.width}x${s.height}\n`).join(""),
+      ? json({ file, format, ...data, errors, warnings })
+      : outputs.map(line).join(""),
     stderr: options.json ? "" : formatFindings(file, errors, warnings),
   };
 }
@@ -141,7 +186,7 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
       }
       return found.screen && screenElements(layoutScreen(found.screen.tree)).elements;
     },
-    options,
+    svgOptions(options),
   );
   for (const { id, reason } of rendered.rejected)
     errors.push({ message: `image file ${id}: ${reason}` });
@@ -163,11 +208,17 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
     const ref = embed.path + (embed.heading ? `#${embed.heading}` : "");
     problem(e.id, `embeds [[${ref}]], but only screen blocks (#^id) can be rendered`);
   }
-  const path = join(options.out ?? ".", basename(file, ".excalidraw.md") + ".svg");
+  const base = join(options.out ?? ".", basename(file, ".excalidraw.md"));
   // Excalidraw sizes a drawing to its elements, fractions included; screens
   // report whole sizes, so a flow does too
-  const output = (await writeSvg(path, rendered.svg, errors))
-    ? { svg: path, width: Math.round(rendered.width), height: Math.round(rendered.height) }
-    : null;
-  return renderResult(file, options, { flow: output }, output ? [output] : [], errors, warnings);
+  const size = { width: Math.round(rendered.width), height: Math.round(rendered.height) };
+  const output = await writeImage(base, { ...rendered, ...size }, options, errors);
+  return renderResult(
+    file,
+    options,
+    { flow: output ?? null },
+    output ? [output] : [],
+    errors,
+    warnings,
+  );
 }
