@@ -60,14 +60,14 @@ describe("extends", () => {
   });
 
   it("replaces the component with the same id, in place", () => {
-    const r = run("extends: base\nalert: {check} Applied (id=notice)");
+    const r = run("extends: base\nreplace: notice\n  alert: {check} Applied");
     expect(r.errors).toEqual([]);
     expect(types(win(r))).toEqual(["text", "row", "alert", "grid"]);
     expect(win(r).children[2].text).toBe("{check} Applied");
   });
 
   it("keeps a container's children when only its own line is replaced", () => {
-    const r = run("extends: base\nwindow: Review, narrow (id=win, w=640)");
+    const r = run("extends: base\nreplace: win\n  window: Review, narrow (w=640)");
     expect(win(r)).toMatchObject({ text: "Review, narrow", opts: { w: 640 } });
     expect(types(win(r))).toEqual(["text", "row", "alert", "grid"]);
   });
@@ -156,10 +156,14 @@ describe("variant errors", () => {
     expect(r.tree.children).toEqual([]);
   });
 
-  it("asks for an id or a place for a component that has neither", () => {
+  it("asks what a component line without a verb does", () => {
     const r = run("extends: base\nbutton: Stray");
-    expect(r.errors[0]).toMatchObject({ line: 2 });
-    expect(r.errors[0].message).toContain("needs the (id=...)");
+    expect(r.errors).toEqual([
+      {
+        line: 2,
+        message: 'in a variant, say what this does: "replace: …", "after: …" or "before: …"',
+      },
+    ]);
   });
 
   it("reports a row that isn't there, with the rows that are", () => {

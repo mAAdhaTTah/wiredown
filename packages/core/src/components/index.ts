@@ -76,4 +76,5 @@ export const COMPONENTS: Record<NodeType, Component> = {
   after: nothing,
   before: nothing,
   rows: nothing,
+  replace: nothing,
 };

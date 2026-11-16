@@ -87,7 +87,7 @@ describe("#id shorthand", () => {
 
   it("supports replacement and bare-id variant verbs", () => {
     const result = resolve(
-      "extends: base\nbutton: Invited #invite\nafter: members\n  text: Done #done\nremove: members",
+      "extends: base\nreplace: invite\n  button: Invited\nafter: members\n  text: Done #done\nremove: members",
       { lookup },
     );
     expect(result.errors).toEqual([]);
@@ -110,10 +110,14 @@ describe("#id shorthand", () => {
   });
 
   it("lets a replacement keep the id it replaces, but not take another one", () => {
-    expect(resolve("extends: base\nbutton: New #invite", { lookup }).errors).toEqual([]);
-    const result = resolve("extends: base\nbox #invite\n  text: x #members", { lookup });
+    expect(
+      resolve("extends: base\nreplace: invite\n  button: New #invite", { lookup }).errors,
+    ).toEqual([]);
+    const result = resolve("extends: base\nreplace: invite\n  box #invite\n    text: x #members", {
+      lookup,
+    });
     expect(result.errors).toEqual([
-      { line: 3, message: 'the id "members" is already used in "base"' },
+      { line: 4, message: 'the id "members" is already used in "base"' },
     ]);
   });
 

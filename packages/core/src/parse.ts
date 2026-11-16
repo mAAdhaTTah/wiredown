@@ -86,6 +86,7 @@ const KEYWORDS = new Map<string, NodeType>([
   ["after", "after"],
   ["before", "before"],
   ["rows", "rows"],
+  ["replace", "replace"],
 ]);
 const FRAMES: NodeType[] = ["window", "dialog", "browser", "phone"];
 const CONTAINERS = new Set<NodeType>([
@@ -98,6 +99,7 @@ const CONTAINERS = new Set<NodeType>([
   "columns",
   "after",
   "before",
+  "replace",
   "extends",
   ...FRAMES,
 ]);
@@ -111,7 +113,7 @@ const BARE_OK = new Set<NodeType>([
   "columns",
   ...FRAMES,
 ]); // may appear without a colon
-const DIRECTIVES = new Set<NodeType>(["extends", "remove", "after", "before", "rows"]);
+const DIRECTIVES = new Set<NodeType>(["extends", "remove", "after", "before", "rows", "replace"]);
 const CONTAINER_NAMES = [...CONTAINERS].filter((t) => t !== "root" && !DIRECTIVES.has(t));
 // containers that take no continuation lines (tabs takes extra tab names)
 const NO_BODY = new Set<NodeType>([...CONTAINERS].filter((t) => t !== "tabs"));
