@@ -392,9 +392,10 @@ label or note with a group absent from its node is left untouched and does not
 take a place in the note stack.
 
 The Node entry exports `renderFlowSvg(flow, screens, options?)`, returning
-`{ svg, width, height, missing }`. The lookup returns adapter elements or
-`undefined`; missing entries contain `element` and `blockId`. Screen SVGs
-are cached by block id, padded using `embedSize`, and supplied as SVG data
+`{ svg, width, height, missing }`. The lookup is asked per embed,
+`screens({ path, blockId })`, and returns adapter elements or `undefined`;
+missing entries contain `element`, `path` and `blockId`. Screen SVGs are
+cached by embed path and block id, padded using `embedSize`, and supplied as SVG data
 URLs alongside existing drawing files. Nested screens inline their own
 fonts unless `fonts: false`. Excalidraw filters light SVG images for dark
 flows, so nested screens are always exported light.
