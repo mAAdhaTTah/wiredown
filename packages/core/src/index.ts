@@ -1,35 +1,28 @@
-export { FENCE_KEYWORD } from "./detect";
-export { formatError, nearest, parse, parseOptions } from "./parse";
-export { CATALOG, COMMON_FLAGS, catalogEntry, optionsOf } from "./catalog";
-export type { CatalogEntry } from "./catalog";
-export { check } from "./check";
-export type { CheckResult } from "./check";
-export { extendsId, resolve, serialize } from "./variants";
-export type { Lookup, ResolveOptions } from "./variants";
-export {
-  ASCENT,
-  DESCENT,
-  FONT_CSS,
-  FONT_STACK,
-  LINE_HEIGHT,
-  tableMeasure,
-  unmeasured,
-  fontMeasurer,
-} from "./metrics";
-export type { FontMetrics } from "./metrics";
-export { layout } from "./layout";
-export type { Box, LayoutResult, LayoutEnv } from "./layout";
-export { DARK_COLORS, DARK_INK, DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme";
-export { ICON_NAMES, isIcon } from "./icons";
-export type * from "./types";
-export { EXCALIFONT } from "./metrics-excalifont";
-export { layoutScreen } from "./screen";
-export type { LayoutScreenOptions } from "./screen";
-export { parseScreens, checkScreens } from "./screens";
-export type {
-  BlockCheck,
-  Screen,
-  CheckedScreen,
-  ScreenDiagnostic,
-  CheckScreensResult,
-} from "./screens";
+export { FENCE_KEYWORD } from "./detect.js";
+export { formatError } from "./parse.js";
+export { nearest } from "./parse.js";
+export { parse } from "./parse.js";
+export { CATALOG } from "./catalog.js";
+export { COMMON_FLAGS } from "./catalog.js";
+export { check } from "./check.js";
+export { extendsId } from "./variants.js";
+export { resolve } from "./variants.js";
+export { fontMeasurer } from "./metrics.js";
+export type { Box } from "./layout.js";
+export type { LayoutResult } from "./layout.js";
+export { DEFAULT_THEME } from "./theme.js";
+export { FONT_SIZE } from "./theme.js";
+export { INK } from "./theme.js";
+export { LIGHT_INK } from "./theme.js";
+export { ICON_NAMES } from "./icons.js";
+export { EXCALIFONT } from "./metrics-excalifont.js";
+export { layoutScreen } from "./screen.js";
+export { parseScreens } from "./screens.js";
+export { checkScreens } from "./screens.js";
+export type { Screen } from "./screens.js";
+export type { CheckedScreen } from "./screens.js";
+export type { ScreenDiagnostic } from "./screens.js";
+export type { CheckScreensResult } from "./screens.js";
+export type { SpecNode } from "./types.js";
+export type { DrawOp } from "./types.js";
+export { EXCALIFONT_FAMILY } from "./screen.js";

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { check, resolve } from "../src/index";
+import { check } from "../src/check.js";
+import { resolve } from "../src/variants.js";
 
 // the running example of the syntax proposal
 const TEAM_MEMBERS = `window: Team settings

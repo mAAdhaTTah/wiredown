@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { extendsId, parse, resolve, serialize } from "../src/index";
-import type { SpecNode } from "../src/index";
+import { extendsId, resolve } from "../src/variants.js";
+import { parse } from "../src/parse.js";
+import type { SpecNode } from "../src/types.js";
 
 const BASE = [
   "window: Review (id=win)",
@@ -63,7 +64,7 @@ describe("extends", () => {
   it("draws the base unchanged when nothing else is said", () => {
     const r = run("extends: base");
     expect(r.errors).toEqual([]);
-    expect(serialize(r.tree)).toBe(serialize(resolve(BASE).tree));
+    expect(r.tree).toEqual(resolve(BASE).tree);
   });
 
   it("replaces the component with the same id, in place", () => {

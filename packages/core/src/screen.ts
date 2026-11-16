@@ -5,6 +5,8 @@ import { fontMeasurer } from "./metrics";
 import { FONT_SIZE } from "./theme";
 import type { SpecNode, Theme } from "./types";
 
+export const EXCALIFONT_FAMILY = 5;
+
 export interface LayoutScreenOptions {
   maxWidth?: number;
   theme?: Theme;
@@ -19,7 +21,7 @@ export function layoutScreen(tree: SpecNode, options: LayoutScreenOptions = {}):
     { x: 0, y: 0 },
     {
       measure,
-      style: { fontSize: FONT_SIZE, fontFamily: 5 },
+      style: { fontSize: FONT_SIZE, fontFamily: EXCALIFONT_FAMILY },
       ...options,
     },
   );

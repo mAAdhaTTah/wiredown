@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_THEME, FONT_SIZE, layout, parse } from "../src/index";
-import type { RectOp } from "../src/index";
-import { fakeMeasure } from "./helpers/fakeMeasure";
+import { DEFAULT_THEME, FONT_SIZE } from "../src/theme.js";
+import { layout } from "../src/layout.js";
+import { parse } from "../src/parse.js";
+import type { RectOp } from "../src/types.js";
+import { fakeMeasure } from "./helpers/fakeMeasure.js";
 
 const style = { fontSize: FONT_SIZE, fontFamily: 5 };
 const draw = (source: string) =>

@@ -91,7 +91,12 @@ export function parseScreens(markdown: string): Screen[] {
 }
 
 /** Check all blocks, resolving variants against the first valid occurrence of each id. */
-export function checkScreens(markdown: string, checkBlock: BlockCheck = check): CheckScreensResult {
+export function checkScreens(markdown: string): CheckScreensResult {
+  return checkScreensInternal(markdown, check);
+}
+
+/** Unstable hook for the eval baseline; outside the public entry. */
+export function checkScreensInternal(markdown: string, checkBlock: BlockCheck): CheckScreensResult {
   const { screens, errors, idLines } = scan(markdown);
   const warnings: ScreenDiagnostic[] = [];
   const byId = new Map<string, Screen>();

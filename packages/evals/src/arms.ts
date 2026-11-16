@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { checkScreensInternal } from "@wiredown/core/internal";
 import { checkScreens } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
 import { loadBaseline } from "./baseline.ts";
@@ -55,7 +56,7 @@ export function newArm(): Arm {
  * are then the same code in both arms, and only the block parser differs.
  */
 export function checkWithBaseline(core: BaselineCore, markdown: string): Report {
-  const { screens, errors, warnings } = checkScreens(markdown, (source, options) => {
+  const { screens, errors, warnings } = checkScreensInternal(markdown, (source, options) => {
     const { tree, errors } = core.resolve(source, options);
     // the baseline's tree is not checked or drawn, only carried along
     return { tree: tree as unknown as SpecNode, errors, warnings: [] };

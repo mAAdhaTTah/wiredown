@@ -23,21 +23,5 @@ export const DEFAULT_THEME: Theme = {
 /** A fill that means "the stroke colour", for solid dots and icons. */
 export const INK = "ink";
 
-/** The same colours for a dark page. */
-export const DARK_COLORS: Theme["colors"] = {
-  fill: "#3b4046",
-  primary: "#1c5a8f",
-  selected: "#1d3b57",
-  paper: "#1e1e1e",
-  disabled: "#6c757d",
-  muted: "#9aa1a8",
-  dark: "#0f1012",
-  onDark: "#f8f9fa",
-  stripe: "#26292d",
-  link: "#74b9ff",
-  error: "#ff6b6b",
-  highlight: "#ffa94d",
-};
-/** Ink (strokes and text) for a light and a dark page. */
+/** Ink (strokes and text) for a light page. */
 export const LIGHT_INK = "#1e1e1e";
-export const DARK_INK = "#dadada";

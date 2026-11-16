@@ -1,6 +1,8 @@
 import { expect, it } from "vitest";
-import { CATALOG, check, parse } from "../src/index";
-import type { SpecNode } from "../src/index";
+import { CATALOG } from "../src/catalog.js";
+import { check } from "../src/check.js";
+import { parse } from "../src/parse.js";
+import type { SpecNode } from "../src/types.js";
 
 const hasType = (node: SpecNode, type: string): boolean =>
   node.type === type || node.children.some((child) => hasType(child, type));

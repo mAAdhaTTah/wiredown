@@ -1,6 +1,8 @@
+import { checkScreensInternal } from "../src/internal.js";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkScreens, layoutScreen, parseScreens } from "../src/index";
+import { checkScreens, parseScreens } from "../src/screens.js";
+import { layoutScreen } from "../src/screen.js";
 
 const block = (source: string, id = "base") => `\`\`\`wiredown\n${source}\n\`\`\`\n^${id}`;
 
@@ -9,7 +11,7 @@ describe("screens documents", () => {
     const seen: string[] = [];
     const md =
       block("text: A", "a") + "\n\n" + block("text: B", "a") + "\n\n```wiredown\ntext: C\n";
-    const result = checkScreens(md, (source, options) => {
+    const result = checkScreensInternal(md, (source, options) => {
       seen.push(`${source} ${options.known?.().join(",")}`);
       return {
         tree: { type: "root", text: "", opts: {}, body: [], children: [] },

@@ -1,4 +1,4 @@
-import type { MeasureText, Size } from "../../src/index";
+import type { MeasureText, Size } from "../../src/types.js";
 
 export const CHAR_W = 9;
 export const LINE_H = 21;
