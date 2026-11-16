@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { flowFrames, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -130,7 +131,10 @@ it("resolves embeds of a flow given relative to the current directory", async ()
     cwd: dir,
     encoding: "utf8",
   });
-  expect(output).toBe(`${join(dir, "screens.md")}\nbut no ui.md was found from . upward\n`);
+  const [path, ...rest] = output.split("\n");
+  // the child resolves from its real cwd: /private/var/... on macOS
+  expect(realpathSync(path)).toBe(realpathSync(join(dir, "screens.md")));
+  expect(rest).toEqual(["but no ui.md was found from . upward", ""]);
 });
 
 it("reports a missing hand-made embed by block id without an element id", async () => {
