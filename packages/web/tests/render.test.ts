@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { addScreen, embedSize, newFlow, serializeFlow } from "@wiredown/excalidraw";
+import { checkScreens, layoutScreen } from "@wiredown/core";
+import { addScreen, embedSize, newFlow, screenElements, serializeFlow } from "@wiredown/excalidraw";
 import type { ExcalidrawElementJson } from "@wiredown/excalidraw";
 import type { Block, Host } from "../src/host.js";
 import { fetchText, render, resolveBlocks } from "../src/render.js";
@@ -335,4 +336,22 @@ it("draws Excalidraw's other fonts in Excalifont unless the site added them", as
   const added = await notes(" Virgil, Nunito ");
   expect(added.families).toEqual([1, 6, 2]);
   expect(added.notice).not.toContain("fallback font");
+});
+
+it("says when a flow is out of date with its screens, and draws it as it was", async () => {
+  const source = fence("text: One", "one");
+  const size = screenElements(layoutScreen(checkScreens(source).screens[0]!.tree));
+  const flow = newFlow();
+  addScreen(flow, { screenId: "one", title: "one", path: "screens", size });
+  const notice = async (screens: string) => {
+    document.body.innerHTML = "";
+    serve({ [FLOW_URL]: serializeFlow(flow), [SCREENS_URL]: screens });
+    await render({ blocks: [], flow: flowTarget() }, host(), fakeExport(), document);
+    expect(document.querySelector(".wiredown-flow svg")).not.toBeNull();
+    return document.querySelector(".wiredown-notice")?.textContent;
+  };
+  expect(await notice(source)).toBeUndefined();
+  expect(await notice(fence("text: One\ntext: Two", "one"))).toBe(
+    "This flow is out of date with its screens; run wiredown flow refresh.",
+  );
 });
