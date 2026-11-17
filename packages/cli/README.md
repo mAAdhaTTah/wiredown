@@ -506,7 +506,8 @@ drawing coordinates (write `--to=-200,0` for a negative x). What of ours
 belongs to the node moves with it by the same distance: its label or text,
 its notes, its highlights and marks, as `flow remove` would take them. Our
 straight arrows bound to it are re-routed as `flow refresh` re-routes them,
-labels included; one a person bent is left and reported as `unresolved`.
+labels included; one a person bent is left, and reported as `unresolved` when
+it no longer meets a node, as refresh and lint report it.
 A person's arrows, copies and drawing never move, even inside the node's
 group.
 
@@ -518,7 +519,7 @@ arrow, as refresh prints it:
 
 ```text
 moved F3 to 760,0 (frame, 1 note, 2 overlays, 2 arrows)
-F3  arrow F2 -> F3 unresolved: it was bent by hand; reconnect it by hand
+F3  arrow F2 -> F3 unresolved: it was bent by hand and no longer meets F3; straighten or move it in the drawing
 ```
 
 The counts are the notes and overlays that moved and the arrows re-routed.

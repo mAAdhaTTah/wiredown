@@ -353,8 +353,6 @@ export function arrowRoutes(flow: Flow): Route[] {
   });
 }
 
-/** Why refresh and move leave an arrow a person bent. */
-export const BENT = "it was bent by hand; reconnect it by hand";
 /** Puts a straight arrow where `connect` would, in its slot, its label along it. */
 export function reroute(flow: Flow, { arrow, start, end, geometry: g }: Route) {
   Object.assign(arrow, { x: g.x, y: g.y, width: g.width, height: g.height, points: g.points });
@@ -370,7 +368,7 @@ export function reroute(flow: Flow, { arrow, start, end, geometry: g }: Route) {
  * off the node's box than `connect` or Excalidraw would leave it, or inside a
  * frame's (a frame that grew under it).
  */
-function unmet({ arrow, start, end }: Route): string[] {
+export function unmet({ arrow, start, end }: Route): string[] {
   const points = arrow.points as number[][];
   const ends: [FlowNode, number[]][] = [
     [start, points[0]],

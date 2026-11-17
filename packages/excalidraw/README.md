@@ -490,7 +490,7 @@ to remove.
 `{ x, y }`. Its label or text, notes and overlays (what `removeFromFlow`
 takes with it, but not arrows) move by the same delta; our straight arrows
 bound to it are re-routed as `refreshFlow` re-routes them, and bent ones are
-left and returned in `unresolved`. A person's arrows, copies and drawing do
+left, those that no longer meet a node returned in `unresolved`. A person's arrows, copies and drawing do
 not move. It throws, changing nothing, for an unknown node, a name two
 nodes claim, its own name as `place`, or a place where it would overlap
 another node (touching edges do not). It returns `{ node, kind, x, y,

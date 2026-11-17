@@ -9,7 +9,7 @@ import {
   placeNode,
   touch,
 } from "./flow-edit.js";
-import { arrowRoutes, BENT, intersects, rect, reroute } from "./flow-refresh.js";
+import { arrowRoutes, bentArrow, intersects, rect, reroute, unmet } from "./flow-refresh.js";
 import type { FlowChange } from "./flow-refresh.js";
 
 /** Where `moveNode` puts a node: next to another node, as add-screen places, or at a top-left. */
@@ -26,7 +26,7 @@ export interface Moved {
   notes: number;
   overlays: number;
   arrows: number;
-  /** Arrows of ours a person bent, left as they are. */
+  /** Arrows of ours a person bent that no longer meet a node, left as they are. */
   unresolved: Extract<FlowChange, { kind: "arrow" }>[];
 }
 
@@ -79,13 +79,12 @@ export function moveNode(flow: Flow, name: string, to: MoveTo): Moved {
     arrows: straight.length,
     unresolved: routes
       .filter((r) => r.shaped)
-      .map((r) => ({
-        frame: n.node,
-        kind: "arrow" as const,
-        element: r.arrow.id,
-        from: r.start.node,
-        to: r.end.node,
-        unresolved: BENT,
-      })),
+      .flatMap((r) => {
+        const [off] = unmet(r);
+        if (!off) return [];
+        const { arrow, start, end } = r;
+        const change = { frame: off, kind: "arrow" as const, element: arrow.id };
+        return [{ ...change, from: start.node, to: end.node, unresolved: bentArrow(off) }];
+      }),
   };
 }
