@@ -262,9 +262,8 @@ resized or a person moved a node, is re-routed that way, keeping its place
 among parallel arrows, its label (placed along it as `flow connect` places
 it) and its id. An arrow a person
 bent (more than two points) is left alone and reported as unresolved when
-one of its frames was resized; a note a person moved away from under its
-frame stays where it is, and so do decisions, their notes, hand-drawn
-arrows and frame labels. Frames are never moved apart, so a frame that grew
+one of its frames was resized. Displaced labels and notes return to their
+places; decisions and hand-drawn arrows stay where they are. Frames are never moved apart, so a frame that grew
 may now overlap its neighbouring frame; lint does not report that. An
 overlay whose component is gone is left where it is and reported as
 unresolved. The file is written only if something changed.
