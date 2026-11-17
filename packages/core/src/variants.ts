@@ -172,7 +172,7 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
     errors.push({
       line: at,
       message:
-        `${what}: "${baseId}" has no component with (id=${id})` +
+        `${what}: "${baseId}" has no component #${id}` +
         (guess ? `; did you mean "${guess}"?` : `; its ids are: ${known().join(", ") || "(none)"}`),
     });
     return null;

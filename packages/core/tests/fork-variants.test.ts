@@ -143,7 +143,7 @@ describe("variant errors", () => {
     expect(r.errors).toEqual([
       {
         line: 2,
-        message: 'remove: "base" has no component with (id=notise); did you mean "notice"?',
+        message: 'remove: "base" has no component #notise; did you mean "notice"?',
       },
     ]);
   });
