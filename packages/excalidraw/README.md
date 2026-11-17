@@ -116,7 +116,10 @@ numbers too. Existing elements are never changed. A frame's label and image
 share a new Excalidraw group, recorded as `group` in the image's
 `customData.wiredown`. Every `customData.wiredown` carries `v`
 (`DATA_VERSION`, now 1); data without `v` is version 1, and data with a
-higher `v` is ignored.
+higher `v` is ignored. New elements also carry `id`, equal to the element's
+id. Data naming a different element belongs to a person's pasted copy and
+is ignored by flow commands. Existing data without `id` keeps its previous
+behaviour; writes do not migrate it.
 
 An embed's path names its screens file within a root, a directory URL
 ending in `/`: the git repository's root, else the Obsidian vault's, else

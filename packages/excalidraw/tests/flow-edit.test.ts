@@ -6,6 +6,7 @@ import {
   flowFrames,
   formatEmbed,
   newFlow,
+  newerDataVersion,
   parseFlow,
   serializeFlow,
 } from "../src/index.js";
@@ -105,7 +106,9 @@ test("identities, distinct embeds, and appended indices", () => {
       const e = flow.elements[i * 2 + offset];
       expect(e.id).toHaveLength(8);
       const group = role === "screen" ? { group: (e.groupIds as string[])[0] } : {};
-      expect(e.customData).toEqual({ wiredown: { v: 1, frame, role, screen: "home", ...group } });
+      expect(e.customData).toEqual({
+        wiredown: { v: 1, id: e.id, frame, role, screen: "home", ...group },
+      });
       if (i === 1) expect(String(e.index) > last).toBe(true);
     }
   }
@@ -127,11 +130,27 @@ test("a frame's image and label share a group; the image records it", () => {
 test("a copied frame name is refused; data from a newer wiredown is ignored", () => {
   const flow = newFlow();
   addScreen(flow, options);
-  const copy: ExcalidrawElementJson = { ...flow.elements[1], id: "copy0001" };
+  const copy: ExcalidrawElementJson = structuredClone(flow.elements[1]);
+  copy.id = "copy0001";
+  delete (copy.customData as { wiredown: { id?: string } }).wiredown.id;
   flow.elements.push(copy);
   expect(() => addScreen(flow, { ...options, place: { rightOf: "F1" } })).toThrow(
     `F1 is claimed by elements ${flow.elements[1].id} and copy0001; delete the copy`,
   );
   copy.customData = { wiredown: { v: 2, role: "screen", frame: "F1", screen: "home" } };
   expect(flowFrames(flow).map((f) => f.element.id)).toEqual([flow.elements[1].id]);
+});
+
+test("pasted frames are ignored as anchors and do not imply a newer version", () => {
+  const flow = newFlow();
+  addScreen(flow, options);
+  const copy = structuredClone(flow.elements[1]);
+  copy.id = "pasted01";
+  copy.groupIds = ["pasted-group"];
+  copy.x = 5000;
+  flow.elements.push(copy);
+  expect(flowFrames(flow).map((f) => f.element.id)).toEqual([flow.elements[1].id]);
+  expect(newerDataVersion(flow)).toBeUndefined();
+  expect(addScreen(flow, { ...options, place: { rightOf: "F1" } })).toBe("F2");
+  expect(flowFrames(flow)[1].element.x).toBe(460);
 });
