@@ -147,6 +147,16 @@ wiredown flow remove flows/members.excalidraw.md 'F2#notice:1' --json
 { "removed": [{ "kind": "mark", "node": "F2", "target": "notice", "label": "1" }] }
 ```
 
+Move a node, as you would one that lint reports overlapping another:
+
+```sh
+wiredown flow move flows/members.excalidraw.md F2 --below D1 --json
+```
+
+```json
+{ "moved": { "node": "F2", "kind": "frame", "notes": 0, "overlays": 0, "arrows": 1 } }
+```
+
 ## Settings form
 
 This can be another screen in the same file.

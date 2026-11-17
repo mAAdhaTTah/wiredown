@@ -84,6 +84,16 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    wiredown flow remove flows/members.excalidraw.md 'F2#notice:1' --json
    ```
 
+   When lint reports that two nodes overlap, run the `flow move` its finding
+   suggests, or place the node `--below` another instead. It moves the
+   node's label, notes and overlays with it and re-routes its arrows; a
+   person's drawing stays. If the new place would overlap another node, it
+   refuses and names it: move that node first, or pick another place.
+
+   ```sh
+   wiredown flow move flows/members.excalidraw.md F2 --below D1 --json
+   ```
+
 7. Before committing, lint the spec directory (the default is the current
    directory). Markdown files without `wiredown` blocks, such as the PRD
    itself, each get a "no wiredown blocks" warning; skip them with
@@ -198,6 +208,8 @@ read; it prints only a message on stderr, even with `--json`.
 `flow refresh --json` returns `changes` and `unresolved` arrays.
 `flow remove --json` returns `removed` and `unbound`: tell the person about
 hand-drawn arrows it unbound.
+`flow move --json` returns `moved` and `unresolved`: tell the person about
+arrows they bent, which it left.
 `render --json` returns `screens` with `id`, output path (`png` or `svg`),
 `width`, `height` and `boxes` keyed by component id. Each box is
 `{ x, y, w, h }` in image coordinates; use ids for overlays, not these numbers.
