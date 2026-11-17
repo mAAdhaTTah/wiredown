@@ -552,13 +552,15 @@ function edgeGeometry(a: Box, b: Box, offset: number) {
 export function addNote(flow: Flow, node: string, text: string): string {
   const n = findNode(flow, node);
   const box = boxOf(n);
-  const notes = flow.elements.filter(
-    (e) => !e.isDeleted && identity(e)?.role === "note" && identity(e)?.anchor === n.element.id,
+  const notes = nodeAttachments(flow, n).filter(
+    (p) => identity(p.element)?.role === "note" && !p.far,
   );
   const wrapped = wrap(text, box.w);
-  // beside a decision, below the height an arrow leaves its right point at
   const top = n.kind === "decision" ? box.y + box.h / 2 + NOTE_GAP : box.y + box.h + NOTE_GAP;
-  const y = Math.max(top, ...notes.map((e) => Number(e.y) + Number(e.height) + NOTE_GAP));
+  const y = Math.max(
+    top,
+    ...notes.map(({ element: e }) => Number(e.y) + Number(e.height) + NOTE_GAP),
+  );
   const note = textElement(
     n.kind === "decision" ? box.x + box.w + NOTE_GAP : box.x,
     y,
@@ -570,4 +572,23 @@ export function addNote(flow: Flow, node: string, text: string): string {
   );
   flow.elements.push(note);
   return note.id;
+}
+
+/** Command positions, with 60px slack for hand nudges; only our own attachments. */
+export function nodeAttachments(flow: Flow, n: FlowNode) {
+  const b = boxOf(n);
+  let y = n.kind === "decision" ? b.y + b.h / 2 + NOTE_GAP : b.y + b.h + NOTE_GAP;
+  const x = n.kind === "decision" ? b.x + b.w + NOTE_GAP : b.x;
+  return flow.elements.flatMap((e) => {
+    const d = identity(e);
+    if (e.isDeleted || !d || !["label", "note"].includes(d.role) || e.containerId) return [];
+    if (d.anchor ? d.anchor !== n.element.id : d.role !== "label" || (d.frame ?? d.node) !== n.node)
+      return [];
+    const label = d.role === "label";
+    const want = label ? { x: b.x, y: b.y - 48 } : { x, y };
+    const distance = Math.hypot(Number(e.x) - want.x, Number(e.y) - want.y);
+    const far = distance > 3 * NOTE_GAP;
+    if (!label && !far) y = Number(e.y) + Number(e.height) + NOTE_GAP;
+    return [{ element: e, ...want, distance, far }];
+  });
 }
