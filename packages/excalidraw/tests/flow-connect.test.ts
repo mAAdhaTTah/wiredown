@@ -362,7 +362,15 @@ test("parallel labels move to one third from their own start", () => {
   expect(Number(label.version)).toBe(version + 1);
   const other = flow.elements.find((e) => e.containerId === second)!;
   expect(Number(label.x) + Number(label.width)).toBeLessThan(Number(other.x));
+  // a person's copy of the first arrow and its label is left where it is
+  const copy: ExcalidrawElementJson = { ...structuredClone(byId(flow, first)), id: "copyarrw" };
+  const copied = { ...structuredClone(label), id: "copylabl", containerId: copy.id, x: 2100 };
+  copy.boundElements = [{ type: "text", id: copied.id }];
+  flow.elements.push(copy, copied);
+  const before = structuredClone(copied);
   const third = connect(flow, "F1", "F2", { label: "Again" });
+  expect(copied).toEqual(before);
+  flow.elements.splice(flow.elements.indexOf(copy), 2);
   for (const id of [first, second, third]) {
     const a = byId(flow, id);
     const t = flow.elements.find((e) => e.containerId === id)!;
