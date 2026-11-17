@@ -192,8 +192,9 @@ it, placement ignores it, and its name stays taken. Two live nodes with one
 name (data without `id`, or edited by hand) make every command that takes
 that name throw, naming both element ids. Every element records itself in
 `customData.wiredown`, with `v: 1` and its own `id`: frames as `{ frame,
-screen, role: "screen" | "label" }` (the image adds `group`), decisions as `{ node, role: "decision" | "label" }` (the
-diamond adds `group` once it has one), arrows as `{ role: "arrow", from, to,
+screen, role: "screen" | "label" }` (the image adds `group`), decisions as
+`{ node, role: "decision" | "label" }` (the diamond adds `group` once it
+has one), arrows as `{ role: "arrow", from, to,
 slot? }`, where `slot` is the arrow's place among the arrows between its
 pair, 1 for the first offset one (their labels `role: "label"`), notes as
 `{ role: "note", node, anchor }` where `anchor` is the node's element id.
