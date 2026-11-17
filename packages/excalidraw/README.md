@@ -244,11 +244,12 @@ with its text bound to it. Highlights have a 4px outset; badges are at least
 diameter)`: up and left of the component's top-left corner by a third of
 its diameter, so it sits just outside the corner. Neither is bound to the
 image; both join the frame's group. `frameImage(flow, frame)` is a frame's
-image element. Overlays record `{ v: 1, role: "highlight" | "mark", frame,
-screen, target, label?, anchor }` in `customData.wiredown`, where `anchor`
-is the frame image's element id and `frame` is for people; bound text has
-the same data and role `label`. Duplicate highlights or identical mark
-labels on one component throw.
+image element. Overlays record `{ v: 1, id, role: "highlight" | "mark",
+frame, screen, target, label?, anchor }` in `customData.wiredown`, where
+`anchor` is the frame image's element id and `frame` is for people; bound
+text has the same data (with its own `id`) and role `label`. Duplicate
+highlights or identical mark labels on one component throw; a person's
+copy of an overlay is not one of ours.
 
 Embed alignment in Obsidian remains unverified. Padding assumptions live in
 `flow-edit.ts`'s existing embed constants: 10px on each side, zero above,
