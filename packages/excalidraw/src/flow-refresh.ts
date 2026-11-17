@@ -246,6 +246,19 @@ function notesUnder(flow: Flow, anchor: string, old: Rect, now: Rect) {
   const shift = overlapping.length ? bottom(now) + NOTE_GAP - top : bottom(now) - bottom(old);
   return { notes, overlapping, shift };
 }
+/** Whether two boxes share area; touching edges do not. */
+const intersects = (a: Rect, b: Rect) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+/** Each pair of our nodes whose boxes intersect, once, named on the later node. */
+function overlappingNodes(flow: Flow) {
+  const nodes = flowNodes(flow);
+  return nodes.flatMap((n, i) =>
+    nodes
+      .slice(0, i)
+      .filter((o) => intersects(rect(o.element), rect(n.element)))
+      .map((o) => ({ node: n.node, element: n.element, other: o.node })),
+  );
+}
 /** A note's first words, for messages. */
 function noteStart(e: ExcalidrawElementJson) {
   const words = String(e.text ?? "")
@@ -334,8 +347,8 @@ export function bindingFailures(elements: ExcalidrawElementJson[]): FlowFinding[
 /**
  * What is broken in a flow given its screens now: frames whose screen is
  * missing or whose embed size or aspect is stale, two nodes claiming one
- * name, overlays that are stale, lost their target or frame, or were drawn
- * for another screen, dangling arrows, images without an `## Embedded Files`
+ * name, two nodes whose boxes overlap, overlays that are stale, lost their
+ * target or frame, or were drawn for another screen, dangling arrows, images without an `## Embedded Files`
  * entry, and data from a newer wiredown. Never reports style or hand-drawn
  * elements that work.
  */
@@ -397,6 +410,13 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
         message: `${what} is ${Math.round(p.distance)} px from its ${n.kind}; move it back, or run "wiredown flow refresh <flow>"`,
       });
     }
+  for (const { node, element, other } of overlappingNodes(flow))
+    if (!ambiguous.has(node) && !ambiguous.has(other))
+      out.push({
+        frame: node,
+        element: element.id,
+        message: `overlaps ${other}; move one of them in the drawing`,
+      });
   // a screen embedded by hand has no frame, but its reference can still break
   const framed = new Set(flowFrames(flow).map((f) => f.element.id));
   for (const image of flow.elements) {

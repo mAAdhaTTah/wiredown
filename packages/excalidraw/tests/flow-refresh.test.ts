@@ -772,3 +772,35 @@ test("refresh restores a displaced note after a replacement note", () => {
   expect(kept).toEqual(before);
   expect(away.y).toBe(Number(kept.y) + Number(kept.height) + 20);
 });
+
+test("lint reports each pair of overlapping nodes once, on the later one", () => {
+  const flow = newFlow();
+  add(flow, "home", home);
+  add(flow, "other", other);
+  add(flow, "home", home);
+  addDecision(flow, { text: "Ok?" });
+  const screens = lookup({ home, other });
+  expect(lintFlow(flow, screens)).toEqual([]);
+  // F3 buried inside F1 (refresh grew F1), and F2 just touching F1's right edge
+  const [f1, f2, f3] = ["F1", "F2", "F3"].map((f) => image(flow, f));
+  Object.assign(f1, { width: 800, height: 600 });
+  Object.assign(f3, { x: 10, y: 10 });
+  Object.assign(f2, { x: 800 });
+  // a person's copy of F2's frame on top of F1 is a copy, not an overlap
+  flow.elements.push({ ...structuredClone(f2), id: "copyOfF2", x: 100, y: 100 });
+  const overlaps = lintFlow(flow, screens).filter((f) => f.message.startsWith("overlaps"));
+  expect(overlaps).toEqual([
+    { frame: "F3", element: f3.id, message: "overlaps F1; move one of them in the drawing" },
+  ]);
+  // the decision overlapping F2 by a pixel is reported; refresh moves no node
+  const d1 = flowNodes(flow).find((n) => n.node === "D1")!.element;
+  Object.assign(d1, { x: 800 + Number(f2.width) - 1, y: 0 });
+  const at = () => flowNodes(flow).map(({ element: e }) => [e.x, e.y]);
+  const before = at();
+  refreshFlow(flow, screens);
+  expect(at()).toEqual(before);
+  expect(lintFlow(flow, screens).filter((f) => f.message.startsWith("overlaps"))).toEqual([
+    { frame: "F3", element: f3.id, message: "overlaps F1; move one of them in the drawing" },
+    { frame: "D1", element: d1.id, message: "overlaps F2; move one of them in the drawing" },
+  ]);
+});

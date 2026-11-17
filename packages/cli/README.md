@@ -320,13 +320,16 @@ overlaps F1; run "wiredown flow refresh" or move it`;
 - a straight arrow of ours whose end is more than 1px from where
   `flow connect` would put it now: `arrow F1 -> F2 no longer meets F1; run
 "wiredown flow refresh"`;
+- two of our frames or decisions whose boxes overlap, once per pair on the
+  later one: `F3: overlaps F1; move one of them in the drawing` (touching
+  edges are fine);
 - an image whose `fileId` has no `## Embedded Files` entry;
 - data written by a newer wiredown, once: `this drawing was written by a
 newer wiredown (data version N)`; that data is otherwise ignored.
 
-Style, overlapping frames, bent arrows and working hand-drawn elements are
-never reported; when lint finds nothing, refresh has nothing to do. Exit 1
-if any file has findings. JSON is `{ files: [{ file, findings }] }`, a
+Style, bent arrows and working hand-drawn elements are never reported;
+when lint finds nothing, refresh has nothing to do. Exit 1 if any file has
+findings. JSON is `{ files: [{ file, findings }] }`, a
 finding being `{ message, frame?, element? }` (`element` is the element id).
 
 Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"

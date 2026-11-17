@@ -279,7 +279,8 @@ with one block id are never confused) and returns `{ width, height, boxes }`
 from `screenElements`, or a string saying why there is none. `lintFlow`
 returns findings `{ message, frame?, element? }`: missing screens, stale
 embed sizes or image aspect (a uniformly scaled frame is fine), two nodes
-claiming one name (`claimedNames`), a person's copies of our elements
+claiming one name (`claimedNames`), two nodes whose boxes overlap
+(touching edges do not), a person's copies of our elements
 (`pastedCopies`: one finding per set pasted together), stale overlays,
 ones whose target or frame is gone or that were drawn for another screen,
 notes whose node is gone, notes whose
