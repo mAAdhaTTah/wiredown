@@ -20,6 +20,8 @@ import {
 export interface EmbedRoot {
   url: string;
   flow: string;
+  /** The root's `.md` files, listed on first use and kept for the command. */
+  files?: Promise<string[]>;
 }
 
 const dirUrl = (dir: string) => pathToFileURL(dir.endsWith(sep) ? dir : dir + sep).href;
@@ -48,10 +50,15 @@ export async function embedRoot(file: string): Promise<EmbedRoot> {
   const logical = resolve(file);
   const found = await repoOrVault(dirname(logical));
   if (found) return { url: dirUrl(found), flow: pathToFileURL(logical).href };
-  const realDir = await realpath(dirname(logical)).catch(() => undefined);
-  const real = realDir && (await repoOrVault(realDir));
-  if (real)
-    return { url: dirUrl(real), flow: pathToFileURL(join(realDir, basename(logical))).href };
+  // the flow file's real path, or its directory's for a flow not yet made
+  const realFlow =
+    (await realpath(logical).catch(() => undefined)) ??
+    (await realpath(dirname(logical)).then(
+      (dir) => join(dir, basename(logical)),
+      () => undefined,
+    ));
+  const real = realFlow && (await repoOrVault(dirname(realFlow)));
+  if (real) return { url: dirUrl(real), flow: pathToFileURL(realFlow).href };
   let dir = dirname(logical);
   while (basename(dir) !== "flows" && dirname(dir) !== dir) dir = dirname(dir);
   return {
@@ -111,7 +118,8 @@ export async function resolveEmbed(
     url = undefined;
     if (!isRelativeEmbed(embedPath)) {
       const link = embedPath.replace(/\.md$/i, "");
-      const matches = (await markdownFiles(fileURLToPath(root.url)))
+      root.files ??= markdownFiles(fileURLToPath(root.url));
+      const matches = (await root.files)
         .filter((path) => {
           const name = path.replace(/\.md$/i, "");
           return name === link || name.endsWith("/" + link);
@@ -167,5 +175,11 @@ export async function screensToEmbed(flowFile: string, screens: string | undefin
   if (!url.startsWith(root.url)) url = pathToFileURL(await realpath(path)).href;
   if (!url.startsWith(root.url) || !(await inside(path, root)))
     throw new Error(`the screens file ${path} points outside ${rootPath(root)}`);
-  return { path, embedPath: embedPathFor(url, root.url)! };
+  const embedPath = embedPathFor(url, root.url)!;
+  // parseEmbed ends the path at # or |, and the link at ]
+  if (/[#|\]]/.test(embedPath))
+    throw new Error(
+      `${path}: a screens file's path cannot contain #, | or ], which end the path in an embed link`,
+    );
+  return { path, embedPath };
 }

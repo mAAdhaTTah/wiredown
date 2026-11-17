@@ -345,6 +345,39 @@ test("a flow folder linked into a repository: the repository is the root", async
   expect(await embedRoot(join(repo, "spec/flows/x.excalidraw.md"))).toEqual(await embedRoot(file));
 });
 
+test("a flow file linked into a repository: the repository is the root", async () => {
+  const dir = await fixture({});
+  const repo = join(dir, "repo");
+  await mkdir(join(repo, "spec/flows"), { recursive: true });
+  await mkdir(join(dir, "links"));
+  await writeFile(join(repo, ".git"), "");
+  await writeFile(join(repo, "spec/screens.md"), BASE);
+  const real = join(repo, "spec/flows/x.excalidraw.md");
+  expect((await run(["flow", "new", real])).exitCode).toBe(0);
+  const file = join(dir, "links/x.excalidraw.md");
+  await symlink(real, file);
+  expect((await run(["flow", "add-screen", file, "team"])).exitCode).toBe(0);
+  expect(await embedPaths(real)).toEqual(["spec/screens"]);
+});
+
+test("a screens file whose path would end the embed link early is refused", async () => {
+  const dir = await fixture({});
+  await writeFile(join(dir, ".git"), "");
+  for (const name of ["a#b", "a|b", "a]b"]) {
+    await mkdir(join(dir, name));
+    await writeFile(join(dir, name, "screens.md"), BASE);
+    const file = join(dir, name, "flows/x.excalidraw.md");
+    for (const screens of [[], ["--screens", join(dir, name, "screens.md")]]) {
+      const result = await run(["flow", "new", file, "team", ...screens]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        `${join(dir, name, "screens.md")}: a screens file's path cannot contain #, | or ], which end the path in an embed link`,
+      );
+      await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
+    }
+  }
+});
+
 test("--screens must be a .md file inside the root", async () => {
   const dir = await fixture({ "screens.md": BASE, "screens.txt": BASE });
   await mkdir(join(dir, "repo/flows"), { recursive: true });

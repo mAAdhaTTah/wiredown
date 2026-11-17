@@ -128,6 +128,8 @@ embed screens from several files.
 error (`the screens file <file> points outside <root>`). Without it, the
 screens file is the `screens.md` in the parent of the flow's directory,
 else in that directory, else in each directory further up to the root.
+A screens file whose path from the root contains `#`, `|` or `]` is
+refused, since those end the path in an embed link.
 Missing embed styling frontmatter is added; existing values are preserved.
 Invalid screens and unknown frames leave the drawing untouched.
 A frame's image and its `F3 · Title` label share an Excalidraw group, so
