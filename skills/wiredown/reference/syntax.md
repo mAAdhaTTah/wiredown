@@ -25,9 +25,10 @@ an action outline, or >* for both (put a space before the first cell).
 Numeric data cells align right. Rows shorter than the header are accepted.
 In a variant's rows: patch, the row key is the first cell that is not a
 checkbox or =, and must match exactly one row (no match adds the row).
-= keeps a cell and remove <row-key> removes a row. A patch may leave out
-the row's checkbox cell, and then starts at the key column; it may not
-have more cells than the grid has columns.
+Change each row at most once per patch. = keeps a cell and remove <row-key>
+removes a row. A patch may leave out the checkbox cell, and then starts at
+the key column; a new row gets an unchecked box when the last row has one.
+A patch may not have more cells than the grid has columns.
 
 A field wraps one non-container component: field: Label | component: content.
 Put its #id and options after the inner content; the id names the whole
