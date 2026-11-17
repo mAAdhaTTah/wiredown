@@ -3,7 +3,7 @@ import { DATA_VERSION, parseFlow } from "@wiredown/excalidraw";
 export class NewerFlowError extends Error {}
 
 /** Refuse newer metadata before a CLI command interprets or edits a drawing. */
-export function parseEditableFlow(source: string) {
+export function parseEditableFlow(source: string, verb = "edit") {
   const flow = parseFlow(source);
   const unsupported: unknown[] = [];
   for (const element of flow.elements) {
@@ -17,7 +17,7 @@ export function parseEditableFlow(source: string) {
     const numbers = unsupported.filter((v): v is number => typeof v === "number");
     const version = numbers.length ? Math.max(...numbers) : unsupported[0];
     throw new NewerFlowError(
-      `this drawing was written by a newer wiredown (data version ${JSON.stringify(version)}); upgrade wiredown to edit it`,
+      `this drawing was written by a newer wiredown (data version ${JSON.stringify(version)}); upgrade wiredown to ${verb} it`,
     );
   }
   return flow;
