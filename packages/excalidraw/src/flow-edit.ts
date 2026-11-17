@@ -371,7 +371,7 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
  */
 export function addDecision(flow: Flow, options: AddDecisionOptions): string {
   const numbers = flow.elements.map((e) =>
-    Number(/^D(\d+)$/.exec(identity(e)?.node ?? "")?.[1] ?? 0),
+    Number(/^D(\d+)$/.exec(dataOf(e)?.node ?? "")?.[1] ?? 0),
   );
   const node = `D${Math.max(0, ...numbers) + 1}`;
   const keys = nextIndices(flow, 2);

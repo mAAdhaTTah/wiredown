@@ -57,7 +57,7 @@ test("decisions: numbering, diamond, centred text and placement", () => {
     height: 170,
     backgroundColor: "#fff3bf",
     roundness: { type: 2 },
-    customData: { wiredown: { node: "D1", role: "decision" } },
+    customData: { wiredown: { node: "D1", role: "decision", id: d1.id } },
   });
   const text = flow.elements.at(-1)!;
   expect(d1.boundElements).toEqual([{ type: "text", id: text.id }]);
@@ -70,7 +70,7 @@ test("decisions: numbering, diamond, centred text and placement", () => {
     verticalAlign: "middle",
     x: 460 + (260 - size.w) / 2,
     y: 17.5 + (170 - size.h) / 2,
-    customData: { wiredown: { node: "D1", role: "label" } },
+    customData: { wiredown: { node: "D1", role: "label", id: text.id } },
   });
   expect(addDecision(flow, { text: "Below?", place: { below: "D1" } })).toBe("D2");
   expect(node(flow, "D2")).toMatchObject({ x: 460, y: 17.5 + 170 + 340 });
@@ -127,7 +127,7 @@ test.each([
     boundElements: null,
     startBinding: { elementId: node(flow, "F1").id, mode: "orbit", fixedPoint: start },
     endBinding: { elementId: node(flow, "F2").id, mode: "orbit", fixedPoint: end },
-    customData: { wiredown: { role: "arrow", from: "F1", to: "F2" } },
+    customData: { wiredown: { role: "arrow", from: "F1", to: "F2", id } },
   });
   expect((arrow.points as number[][])[0]).toEqual([0, 0]);
   for (const name of ["F1", "F2"])
@@ -150,7 +150,7 @@ test("a labelled arrow has its label as bound text", () => {
     textAlign: "center",
     verticalAlign: "middle",
     fontSize: 16,
-    customData: { wiredown: { role: "label", from: "F1", to: "F2" } },
+    customData: { wiredown: { role: "label", from: "F1", to: "F2", id: label.id } },
   });
   const [sx, sy, ex, ey] = points(arrow);
   expect(Number(label.x) + Number(label.width) / 2).toBeCloseTo((sx + ex) / 2);
@@ -227,7 +227,7 @@ test("notes stack under a frame or decision, wrapped to its width", () => {
     strokeColor: "#495057",
     containerId: null,
     boundElements: null,
-    customData: { wiredown: { role: "note", node: "F1" } },
+    customData: { wiredown: { role: "note", node: "F1", id: first.id } },
   });
   const lines = String(first.text).split("\n");
   expect(lines.length).toBeGreaterThan(1);
@@ -278,7 +278,7 @@ test("a note records its node's element and joins the node's group", () => {
   const before = structuredClone(image);
   const note = byId(flow, addNote(flow, "F1", "A"));
   expect(note.customData).toEqual({
-    wiredown: { v: 1, role: "note", node: "F1", anchor: image.id },
+    wiredown: { v: 1, role: "note", node: "F1", anchor: image.id, id: note.id },
   });
   expect(note.groupIds).toEqual([group]);
   expect(image).toEqual(before); // a frame's group exists already
@@ -317,12 +317,38 @@ test("a node name claimed twice is refused, naming both elements", () => {
   const flow = newFlow();
   addScreen(flow, small);
   const image = node(flow, "F1");
+  // data written before elements recorded their own id
+  delete (image.customData as { wiredown: { id?: string } }).wiredown.id;
   flow.elements.push({ ...structuredClone(image), id: "copy0001" });
   const before = structuredClone(flow.elements);
   expect(() => addNote(flow, "F1", "hi")).toThrow(
     `F1 is claimed by elements ${image.id} and copy0001; delete the copy`,
   );
   expect(flow.elements).toEqual(before);
+});
+
+test("a person's pasted copy of a node is not a node", () => {
+  const flow = newFlow();
+  addScreen(flow, small);
+  addDecision(flow, { text: "Ok?" });
+  const image = node(flow, "F1");
+  const diamond = node(flow, "D1");
+  // Excalidraw pastes with new ids and a new group, and the data verbatim
+  for (const [e, id] of [
+    [image, "pasted01"],
+    [diamond, "pasted02"],
+  ] as const)
+    flow.elements.push({ ...structuredClone(e), id, x: 5000, groupIds: ["pasted"] });
+  expect(flowNodes(flow).map((n) => n.element.id)).toEqual([image.id, diamond.id]);
+  const note = byId(flow, addNote(flow, "F1", "hi"));
+  expect(note.customData).toMatchObject({ wiredown: { anchor: image.id, id: note.id } });
+  expect(byId(flow, connect(flow, "F1", "D1")).startBinding).toMatchObject({
+    elementId: image.id,
+  });
+  // placement and numbering: right of the rightmost node, the copies' names taken
+  expect(addDecision(flow, { text: "Next?" })).toBe("D2");
+  expect(Number(node(flow, "D2").x)).toBeLessThan(5000);
+  valid(flow);
 });
 
 test("parallel labels move to one third from their own start", () => {
