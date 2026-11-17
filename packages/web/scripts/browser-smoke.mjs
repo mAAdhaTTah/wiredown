@@ -38,6 +38,18 @@ const SUBSETTING = [
   /^console error: Failed to use workers for subsetting, falling back to the main thread\./,
   /^console error: Skipped glyph subsetting EvalError: Evaluating a string as JavaScript violates the following Content Security Policy directive because 'unsafe-eval' is not an allowed source of script/,
 ];
+function unexpectedErrors(errors, strict) {
+  return errors.filter((e) => {
+    if (!strict) return true;
+    if (SUBSETTING.slice(1).some((m) => m.test(e))) return false;
+    // The worker's EvalError must originate in the subsetting worker asset that
+    // contains Excalidraw's subsetting code, not just share its message.
+    return !(
+      SUBSETTING[0].test(e) &&
+      /\/assets\/wiredown\/chunks\/subset-worker\.chunk-[\w-]+\.js:\d+:\d+/.test(e)
+    );
+  });
+}
 const esc = (s) => s.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
 function renderMd(md) {
   const lines = md.split("\n"),
@@ -98,6 +110,16 @@ const server = createServer(async (req, res) => {
               url.searchParams.get("fonts"),
             ),
       );
+      return;
+    }
+    if (url.pathname === "/unrelated-eval.js") {
+      res.setHeader("content-type", "text/javascript");
+      res.end('eval("1")');
+      return;
+    }
+    if (url.pathname === "/unrelated-eval") {
+      res.setHeader("content-type", "text/html");
+      res.end('<script src="/unrelated-eval.js"></script>');
       return;
     }
     if (url.pathname === "/plain") {
@@ -195,7 +217,7 @@ try {
     const errors = [],
       assets = [],
       responses = [];
-    page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
+    page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}\n${e.stack ?? ""}`));
     page.on("console", (m) => {
       if (m.type() === "error") errors.push(`console error: ${m.text()}`);
     });
@@ -348,7 +370,7 @@ try {
           "the renderer's styles apply under the policy",
         );
       }
-      const unexpected = errors.filter((e) => !(strict && SUBSETTING.some((m) => m.test(e))));
+      const unexpected = unexpectedErrors(errors, strict);
       assert.deepEqual(unexpected, [], `${name}: browser errors`);
       await page.screenshot({ path: join(out, `${name}.png`), fullPage: true });
       console.log(
@@ -376,6 +398,19 @@ try {
   }
   strict = true;
   await visit("flow-csp", "/me/app/src/branch/main/flows/f.excalidraw.md", "flow");
+  const control = await browser.newPage();
+  const controlErrors = [];
+  control.on("pageerror", (e) => controlErrors.push(`pageerror: ${e.message}\n${e.stack ?? ""}`));
+  await control.goto(base + "/unrelated-eval");
+  await control.waitForLoadState("networkidle");
+  assert.equal(controlErrors.length, 1, "negative control must trigger an EvalError");
+  assert.equal(
+    unexpectedErrors(controlErrors, true).length,
+    1,
+    "unrelated eval must be unexpected",
+  );
+  await control.close();
+  console.log("PASS CSP negative control: unrelated eval counted as unexpected");
   strict = false;
   await visit("flow-virgil", "/me/app/src/branch/main/flows/f.excalidraw.md?fonts=Virgil", "flow");
   await visit("raw-failure", "/me/app/src/branch/main/flows/f.excalidraw.md?failRaw=1", "failure");
