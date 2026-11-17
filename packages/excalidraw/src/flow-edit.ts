@@ -16,8 +16,8 @@ const GAP = 340,
   PORT_Y = 180,
   DEC_W = 260,
   DEC_H = 170,
-  PAR = 70,
-  END_GAP = 6;
+  PAR = 70;
+export const END_GAP = 6;
 // gen-flow.mjs captions: 16px, grey, 20px under the frame.
 export const NOTE_GAP = 20;
 const NOTE_COLOR = "#495057",

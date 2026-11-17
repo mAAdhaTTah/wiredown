@@ -301,8 +301,8 @@ apart, so a frame that grew may overlap its neighbour. It returns `{ frame,
 kind: "embed", element, link, image }`, `{ frame, kind: "highlight" | "mark",
 element, target, label?, unresolved? }`, `{ frame, kind: "note", element }` and
 `{ frame, kind: "arrow", element, from, to, unresolved? }` changes, where
-`unresolved` says why an overlay, or a bent arrow on a resized frame, was left
-in place. It throws, changing nothing, when two nodes claim one name. A flow
+`unresolved` says why an overlay, or a bent arrow that no longer meets its
+node, was left in place. It throws, changing nothing, when two nodes claim one name. A flow
 that `lintFlow` finds nothing in is one `refreshFlow` leaves untouched.
 
 Embed alignment in Obsidian remains unverified. Padding assumptions live in
