@@ -104,10 +104,13 @@ describe("screens documents", () => {
   });
 
   it("resolves a variant of a block id that starts with a digit", () => {
-    const md = block("text: Code #code", "2fa") + "\n" + block("extends: ^2fa\nremove: code", "v");
+    const md =
+      block("text: Code #code\ntext: Kept", "2fa") +
+      "\n" +
+      block("extends: ^2fa\nremove: code", "v");
     const result = checkScreens(md);
     expect(result.errors).toEqual([]);
-    expect(result.screens[1].tree.children).toEqual([]);
+    expect(result.screens[1].tree.children.map((c) => c.text)).toEqual(["Kept"]);
   });
 
   it("reads a file that opens with a rule, not frontmatter", () => {
@@ -116,7 +119,8 @@ describe("screens documents", () => {
   });
 
   it("resolves a variant whose base comes later in the file", () => {
-    const file = "```wiredown\nextends: b\nremove: x\n```\n^a\n\n```wiredown\ntext: t #x\n```\n^b";
+    const file =
+      "```wiredown\nextends: b\nremove: x\n```\n^a\n\n```wiredown\ntext: t #x\ntext: u\n```\n^b";
     expect(checkScreens(file).errors).toEqual([]);
   });
 });
