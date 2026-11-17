@@ -157,7 +157,7 @@ relative to the nodes where they are now, so moving them by hand is fine.
   `F2 -> D1  "Submit"`; JSON is `{ flow, arrow: { id, from, to, label } }`
   (`label` is `null` when absent).
 - `wiredown flow note <flow.excalidraw.md> <node> <text> [--json]` appends a
-  free text note under the node, below its earlier notes, wrapped to the
+  free text note under the node, below the notes still in its stack, wrapped to the
   node's width. The note joins the node's group, so it moves with the node.
   Prints `F1  note <element-id>`; JSON is `{ flow, note: { id, node } }`.
 
@@ -167,3 +167,8 @@ the copy), or connecting a node to itself writes nothing. A copy pasted
 since is left alone: commands use the original. Operational errors exit 1
 (JSON adds an `errors` array, and the command's key is `null`); usage
 errors exit 2.
+
+A new note goes under the notes still in the stack. Notes moved far away
+are ignored for stacking. Notes allow 60 px horizontal nudges and gaps of
+up to 200 px after the node or the previous note, leaving room for a deleted
+note. Decision notes stack beside the diamond.
