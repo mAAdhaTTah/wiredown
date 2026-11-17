@@ -159,8 +159,10 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
         });
   }
   const path = join(options.out ?? ".", basename(file, ".excalidraw.md") + ".svg");
+  // Excalidraw sizes a drawing to its elements, fractions included; screens
+  // report whole sizes, so a flow does too
   const output = (await writeSvg(path, rendered.svg, errors))
-    ? { svg: path, width: rendered.width, height: rendered.height }
+    ? { svg: path, width: Math.round(rendered.width), height: Math.round(rendered.height) }
     : null;
   return renderResult(file, options, { flow: output }, output ? [output] : [], errors, warnings);
 }
