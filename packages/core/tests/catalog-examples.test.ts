@@ -9,7 +9,7 @@ it.each(CATALOG)("checks the $type catalog example", (entry) => {
   const base =
     entry.type === "rows"
       ? "grid #target\nName | Status\nAnna | Invited"
-      : "text: Original #target";
+      : "text: Original #target\ntext: Kept";
   const result = check(entry.example, { lookup: (id) => (id === "base" ? base : undefined) });
   expect(result.errors).toEqual([]);
   expect(result.warnings).toEqual([]);
