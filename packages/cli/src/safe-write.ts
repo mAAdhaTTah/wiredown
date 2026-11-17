@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
  */
 export async function safeWrite(path: string, original: string, text: string): Promise<void> {
   const changed = new Error(
-    `${path} changed while the command was running; nothing was written. Close the drawing in Obsidian, or run the command again.`,
+    `${path} changed while the command was running, so it was not written. Close the drawing in Obsidian, or run the command again.`,
   );
   // a symlink keeps pointing at its file, which is the one replaced
   const target = await realpath(path).catch(() => Promise.reject(changed));

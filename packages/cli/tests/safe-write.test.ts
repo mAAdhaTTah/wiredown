@@ -19,7 +19,7 @@ test("atomic replacement cleans up, and stale edits preserve the directory", asy
   expect(await readFile(file, "utf8")).toBe("replacement");
   expect(await readdir(dir)).toEqual(entries);
   await expect(safeWrite(file, "original", "stale")).rejects.toThrow(
-    `${file} changed while the command was running; nothing was written. Close the drawing in Obsidian, or run the command again.`,
+    `${file} changed while the command was running, so it was not written. Close the drawing in Obsidian, or run the command again.`,
   );
   expect(await readFile(file, "utf8")).toBe("replacement");
   expect(await readFile(join(dir, "other.md"), "utf8")).toBe("untouched");
@@ -43,7 +43,9 @@ test("add-screen refuses a concurrent Obsidian save", async () => {
   try {
     const result = await run(["flow", "add-screen", file, "team"]);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("changed while the command was running; nothing was written.");
+    expect(result.stderr).toContain(
+      "changed while the command was running, so it was not written.",
+    );
     expect(await read(file, "utf8")).toBe(newer);
   } finally {
     spy.mockRestore();
@@ -81,7 +83,9 @@ test("flow new leaves no drawing behind when the screens file changes", async ()
   try {
     const result = await run(["flow", "new", file, "team"]);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("changed while the command was running; nothing was written.");
+    expect(result.stderr).toContain(
+      "changed while the command was running, so it was not written.",
+    );
     expect(await readdir(dir)).toEqual(["screens.md"]);
     // so running it again works
     spy.mockRestore();
@@ -114,11 +118,15 @@ for (const command of ["new", "add-screen"]) {
     try {
       const result = await run(["flow", command, file, "team"]);
       expect(result.exitCode).toBe(1);
+      // names both files: why the screens file was not written, and the flow's state
       expect(result.stderr).toContain(
-        "flow file was changed by another program and was left in place",
+        `${screens} changed while the command was running, so it was not written.`,
       );
-      expect(result.stderr).not.toContain("nothing was written");
+      expect(result.stderr).toContain(
+        `Another program also changed ${file}, so it was left as it is, with the new frames.`,
+      );
       expect(await read(file, "utf8")).toBe(newer);
+      expect(await read(screens, "utf8")).toBe(BASE + "\nHuman save\n");
     } finally {
       spy.mockRestore();
     }
