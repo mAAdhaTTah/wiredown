@@ -6,7 +6,7 @@ headlessly in Node, with JSON output for agents.
 ```sh
 wiredown check <file.md>... [--json]
 wiredown render <file.md> [--screen <id>]... [--out <dir>] [--theme light|dark] [--no-fonts] [--json]
-wiredown --help | <command> --help | --version
+wiredown --help | <command> --help | flow <command> --help | --version
 ```
 
 `check` prints its findings on stdout: they are its result. `render` prints

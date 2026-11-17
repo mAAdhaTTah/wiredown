@@ -79,6 +79,16 @@ describe("run", () => {
     expect(await run(["--version"])).toEqual({ exitCode: 0, stdout: "0.0.0\n", stderr: "" });
   });
 
+  it("prints a flow command's own help, and every flow command's usage for flow", async () => {
+    const flow = (await run(["flow", "--help"])).stdout;
+    const own = (await run(["flow", "add-screen", "--help"])).stdout;
+    expect(flow).toMatch(/wiredown flow new .*\n.*wiredown flow add-screen /);
+    expect(own).toMatch(/^usage: wiredown flow add-screen /);
+    expect(own).toContain("--right-of <node>");
+    expect(own).toContain("example:\n  wiredown flow add-screen ");
+    expect(own).not.toContain("wiredown flow new");
+  });
+
   it("exits 2 with usage on stderr for bad usage", async () => {
     for (const argv of [[], ["nope"], ["check"], ["check", "--bogus", "a.md"]]) {
       const result = await run(argv);
