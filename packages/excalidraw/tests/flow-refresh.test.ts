@@ -886,3 +886,59 @@ test("ambiguous legacy labels are neither checked for distance nor moved", () =>
   refreshFlow(flow, lookup({ home }));
   expect(JSON.stringify([label, copy])).toBe(before);
 });
+
+test("personally grouped displaced notes stay untouched and leave the stack free", () => {
+  const flow = newFlow();
+  addScreen(flow, { screenId: "home", title: "Home", path: "screens", size: home });
+  const note = byId(flow, addNote(flow, "F1", "Mine"));
+  note.groupIds = ["mine"];
+  note.y = Number(note.y) + 900;
+  const before = structuredClone(note);
+  expect(lintFlow(flow, lookup({ home }))).toEqual([]);
+  refreshFlow(flow, lookup({ home }));
+  expect(note).toEqual(before);
+  const next = byId(flow, addNote(flow, "F1", "New"));
+  expect(next.y).toBe(Number(image(flow, "F1").height) + 20);
+});
+
+test.each([
+  [190, 0, false],
+  [210, 0, true],
+  [20, 60, false],
+  [20, 61, true],
+])("note gap %s and horizontal offset %s: far=%s", (gap, dx, far) => {
+  const flow = newFlow();
+  addScreen(flow, { screenId: "home", title: "Home", path: "screens", size: home });
+  const note = byId(flow, addNote(flow, "F1", "Note"));
+  note.y = Number(image(flow, "F1").height) + Number(gap);
+  note.x = Number(note.x) + Number(dx);
+  expect(lintFlow(flow, lookup({ home })).some((f) => f.message.includes("px from"))).toBe(far);
+});
+
+test("lint skips far findings while the embed is stale", () => {
+  const flow = newFlow();
+  addScreen(flow, { screenId: "home", title: "Home", path: "screens", size: home });
+  const larger = { ...home, height: 500 };
+  for (let i = 0; i < 3; i++) addNote(flow, "F1", `Note ${i}`);
+  for (const e of flow.elements.filter((e) => identity(e)?.role === "note"))
+    e.y = Number(e.y) + 300;
+  expect(
+    lintFlow(flow, lookup({ home: larger })).filter((f) => f.message.includes("px from")),
+  ).toEqual([]);
+  refreshFlow(flow, lookup({ home: larger }));
+  expect(lintFlow(flow, lookup({ home: larger }))).toEqual([]);
+});
+
+test("retained notes precede displaced notes restored in vertical order", () => {
+  const flow = newFlow();
+  addScreen(flow, { screenId: "home", title: "Home", path: "screens", size: home });
+  const notes = ["One", "Two", "Three", "Four"].map((text) =>
+    byId(flow, addNote(flow, "F1", text)),
+  );
+  for (const e of [notes[0], notes[2]]) e.x = Number(e.x) + 900;
+  const retained = [structuredClone(notes[1]), structuredClone(notes[3])];
+  refreshFlow(flow, lookup({ home }));
+  expect([notes[1], notes[3]]).toEqual(retained);
+  expect(notes[0].y).toBe(Number(notes[3].y) + Number(notes[3].height) + 20);
+  expect(notes[2].y).toBe(Number(notes[0].y) + Number(notes[0].height) + 20);
+});

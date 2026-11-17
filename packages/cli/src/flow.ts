@@ -278,7 +278,7 @@ function changeLine(c: FlowChange): string {
       : `${c.frame}  embed ${sizeText(link.from)} -> ${sizeText(link.to)}\n`;
   }
   if (c.kind === "label") return `${c.frame}  label moved\n`;
-  if (c.kind === "group") return `${c.frame}  element ${c.element} regrouped\n`;
+  if (c.kind === "group") return `${c.frame}  ${c.part} regrouped\n`;
   if (c.kind === "note") return `${c.frame}  note ${c.element} moved\n`;
   const what =
     c.kind === "arrow"

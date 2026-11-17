@@ -272,42 +272,38 @@ text has the same data (with its own `id`) and role `label`. Duplicate
 highlights or identical mark labels on one component throw; a person's
 copy of an overlay is not one of ours.
 
-`lintFlow(flow, screens)` and `refreshFlow(flow, screens)` compare a flow
-with the screens it embeds as they lay out now. `screens({ path, blockId })`
-is asked per embed (the path as written in the link, so two screens files
-with one block id are never confused) and returns `{ width, height, boxes }`
-from `screenElements`, or a string saying why there is none. `lintFlow`
-returns findings `{ message, frame?, element? }`: missing screens, stale
-embed sizes or image aspect (a uniformly scaled frame is fine), two nodes
-claiming one name (`claimedNames`), two nodes whose boxes overlap
-(touching edges do not), a person's copies of our elements
-(`pastedCopies`: one finding per set pasted together), stale overlays,
-ones whose target or frame is gone or that were drawn for another screen,
-notes whose node is gone, notes whose
-top edge lies inside their frame, straight arrows of ours whose ends are
-more than 1px from where `connect` would put them now, dangling arrow or
-text bindings (`bindingFailures(elements)` on its own), images without an
-`## Embedded Files` entry, and data from a newer wiredown. Overlays belong
-to the frame whose image id their `anchor` records. `refreshFlow` updates
-each frame's link size and image size (same top-left and scale), moves its
-overlays to where `addHighlight` and `addMark` would place them, and moves
-the notes under it (those overlapping it sideways with their top below its
-old top) by the change in its bottom edge, or, when the top one overlaps
-the frame, to 20px under it, keeping their order. It then re-routes each
-two-point arrow of ours whose ends are off with the geometry `connect`
-uses, keeping the arrow's slot, id and bindings' mode, and places its
-label as `connect` does (halfway, or a third along when the pair has
+`lintFlow(flow, screens)` and `refreshFlow(flow, screens)` compare a flow with
+the screens it embeds as they lay out now. `screens({ path, blockId })` is asked
+per embed (the path as written in the link, so two screens files with one block
+id are never confused) and returns `{ width, height, boxes }` from
+`screenElements`, or a string saying why there is none. `lintFlow` returns
+findings `{ message, frame?, element? }`: missing screens, stale embed sizes or
+image aspect (a uniformly scaled frame is fine), two nodes claiming one name
+(`claimedNames`), two nodes whose boxes overlap (touching edges do not), a
+person's copies of our elements (`pastedCopies`: one finding per set pasted
+together), stale overlays, ones whose target or frame is gone or that were drawn
+for another screen, notes whose node is gone, notes whose top edge lies inside
+their frame, straight arrows of ours whose ends are more than 1px from where
+`connect` would put them now, dangling arrow or text bindings
+(`bindingFailures(elements)` on its own), images without an `## Embedded Files`
+entry, and data from a newer wiredown. Overlays belong to the frame whose image
+id their `anchor` records. `refreshFlow` updates each frame's link size and
+image size (same top-left and scale), moves its overlays to where `addHighlight`
+and `addMark` would place them, and moves the notes under it (those overlapping
+it sideways with their top below its old top) by the change in its bottom edge,
+or, when the top one overlaps the frame, to 20px under it, keeping their order.
+It then re-routes each two-point arrow of ours whose ends are off with the
+geometry `connect` uses, keeping the arrow's slot, id and bindings' mode, and
+places its label as `connect` does (halfway, or a third along when the pair has
 parallel arrows). Displaced labels and notes return to their places. Bent
 arrows, decisions and hand-drawn elements never move. Frames are not moved
-apart, so a frame that grew may overlap its neighbour. It
-returns `{ frame, kind: "embed", element, link, image }`,
-`{ frame, kind: "highlight" | "mark", element, target, label?, unresolved? }`,
-`{ frame, kind: "note", element }` and
+apart, so a frame that grew may overlap its neighbour. It returns `{ frame,
+kind: "embed", element, link, image }`, `{ frame, kind: "highlight" | "mark",
+element, target, label?, unresolved? }`, `{ frame, kind: "note", element }` and
 `{ frame, kind: "arrow", element, from, to, unresolved? }` changes, where
-`unresolved` says why an overlay, or a bent arrow on a resized frame, was
-left in place. It throws, changing nothing, when two nodes claim one name.
-A flow that `lintFlow` finds nothing in is one `refreshFlow` leaves
-untouched.
+`unresolved` says why an overlay, or a bent arrow on a resized frame, was left
+in place. It throws, changing nothing, when two nodes claim one name. A flow
+that `lintFlow` finds nothing in is one `refreshFlow` leaves untouched.
 
 Embed alignment in Obsidian remains unverified. Padding assumptions live in
 `flow-edit.ts`'s existing embed constants: 10px on each side, zero above,
@@ -331,10 +327,12 @@ for the first candidate that `exists` (a fetch in the browser),
 matches a path not found from the root against the end of every `.md`
 file's path and refuses more than one match.
 
-Lint reports labels more than 60 px from their place above the frame.
-Notes stay in the stack within 60 px horizontally and with a vertical gap
-of at most 200 px from the node or previous in-place note, leaving room for
-a deleted note. They may overlap that edge by up to 60 px. Refresh returns
-displaced notes after the retained stack in vertical order, under a frame
-or beside a decision. It restores groups only on parts with no group;
-personal groups and small hand nudges stay untouched.
+Lint reports labels more than 60 px from their place above the frame. Notes stay
+in the stack within 60 px horizontally and with a vertical gap of at most 200 px
+from the node or previous in-place note, leaving room for a deleted note. They
+may overlap that edge by up to 60 px. Refresh returns displaced notes after the
+retained stack in vertical order, under a frame or beside a decision. It
+restores groups only on parts with no group; personal groups and small hand
+nudges stay untouched. Far notes beside a decision are handled the same way. A
+label or note with a group absent from its node is left untouched and does not
+take a place in the note stack.
