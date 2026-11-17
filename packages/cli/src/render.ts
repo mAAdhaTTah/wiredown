@@ -102,10 +102,10 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
   if (options.screens?.length) throw new UsageError("--screen cannot be used with a flow");
   let flow;
   try {
-    flow = parseEditableFlow(await readSource(file));
+    flow = parseEditableFlow(await readSource(file), "use");
   } catch (error) {
     if (!(error instanceof NewerFlowError)) throw error;
-    const message = error.message.replace("to edit it", "to use it");
+    const { message } = error;
     return {
       exitCode: 1,
       stdout: options.json
