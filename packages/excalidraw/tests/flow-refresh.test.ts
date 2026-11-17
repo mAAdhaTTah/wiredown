@@ -760,3 +760,15 @@ test("refresh repairs detached labels, notes and groups, preserving nudges and c
   expect(a).toEqual(before);
   expect(lintFlow(flow, screens).filter((f) => f.message.includes("px from"))).toEqual([]);
 });
+
+test("refresh restores a displaced note after a replacement note", () => {
+  const flow = newFlow();
+  addScreen(flow, { screenId: "home", title: "Home", path: "screens", size: home });
+  const away = byId(flow, addNote(flow, "F1", "Away"));
+  away.y = Number(away.y) + 260;
+  const kept = byId(flow, addNote(flow, "F1", "Kept"));
+  const before = structuredClone(kept);
+  refreshFlow(flow, lookup({ home }));
+  expect(kept).toEqual(before);
+  expect(away.y).toBe(Number(kept.y) + Number(kept.height) + 20);
+});

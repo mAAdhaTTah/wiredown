@@ -535,9 +535,21 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
     }
   }
   for (const n of flowNodes(flow)) {
-    // Recompute after each repair so displaced notes occupy successive slots.
-    for (const e of flow.elements) {
-      const p = nodeAttachments(flow, n).find((p) => p.element === e && p.far);
+    // Keep the existing stack first, then append displaced notes in drawing order.
+    const far = new Set(
+      nodeAttachments(flow, n)
+        .filter((p) => p.far)
+        .map((p) => p.element.id),
+    );
+    const ordered = {
+      ...flow,
+      elements: [
+        ...flow.elements.filter((e) => !far.has(e.id)),
+        ...flow.elements.filter((e) => far.has(e.id)),
+      ],
+    };
+    for (const e of ordered.elements.filter((e) => far.has(e.id))) {
+      const p = nodeAttachments(ordered, n).find((p) => p.element === e && p.far);
       if (!p) continue;
       Object.assign(e, { x: p.x, y: p.y });
       touch(e);
