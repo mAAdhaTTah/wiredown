@@ -5,6 +5,8 @@ import type { CheckScreensResult, CheckedScreen, ScreenDiagnostic } from "@wired
 import {
   FLOW_MARGIN,
   embedNotFound,
+  embedSize,
+  flowFrames,
   flowScene,
   parseFlow,
   resolveEmbedPath,
@@ -250,17 +252,25 @@ async function renderFlow(
       );
     }
     const serializer = new (document.defaultView?.XMLSerializer ?? XMLSerializer)();
+    const sizes = new Map<string, { width: number; height: number }>();
     const { missing, rejected, ...scene } = await flowScene(flow, async ({ path, blockId }) => {
       const checked = files.get(path);
       if (typeof checked !== "object") return undefined;
       const screen = checked.screens.find((s) => s.id === blockId);
       if (!screen || checked.errors.some((e) => e.screen === blockId)) return undefined;
+      const { elements, width, height } = screenElements(layoutScreen(screen.tree));
+      sizes.set(`${path}#^${blockId}`, { width, height });
       // The outer dark export filters SVG images; export screens light.
-      const svg = await exportSvg(sceneOf(screenElements(layoutScreen(screen.tree)).elements), {
-        theme: "light",
-        padding: 0,
-      });
+      const svg = await exportSvg(sceneOf(elements), { theme: "light", padding: 0 });
       return serializer.serializeToString(svg);
+    });
+    // A frame keeps the size of the screen it was made or refreshed for; a
+    // screen that changed since is drawn squeezed into it.
+    const stale = flowFrames(flow).some(({ element }) => {
+      const embed = flow.embeds.get(String(element.fileId));
+      const size = embed && sizes.get(`${embed.path}#^${embed.blockId}`);
+      const want = size && embedSize(size.width, size.height).link;
+      return want && (embed.width !== want.width || embed.height !== want.height);
     });
     problems.push(...rejected.map(({ id, reason }) => `image file ${id}: ${reason}`));
     // Excalifont (5) is shipped, Helvetica (2) is a local font, and the
@@ -297,6 +307,12 @@ async function renderFlow(
     container.append(fitted(svg));
     if (problems.length)
       container.append(messages(document, "wiredown-notice", ["Not drawn:", ...problems]));
+    if (stale)
+      container.append(
+        messages(document, "wiredown-notice", [
+          "This flow is out of date with its screens; run wiredown flow refresh.",
+        ]),
+      );
     const details = document.createElement("details");
     details.className = "wiredown-source";
     const summary = document.createElement("summary");

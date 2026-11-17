@@ -135,7 +135,9 @@ The file-view and raw URLs are new and come from no prototype.
   `<details class="wiredown-source">` named "Source". If drawing fails, the
   original content remains visible. Screens it cannot draw, and embeds
   whose file was not found or that point outside the root, are listed under
-  the drawing.
+  the drawing. A flow whose frames were sized for older screens is drawn as
+  it is, squeezed into those sizes, with a notice under it: "This flow is out
+  of date with its screens; run wiredown flow refresh."
 - **Theme.** It draws for the page's theme at render time. Switching theme
   later does not redraw.
 - **Failures.** If the renderer cannot load, a fetch fails or Excalidraw
