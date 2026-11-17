@@ -135,11 +135,13 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
     const key = cells.find((c) => c && c !== "=" && !parseCheck(c)) ?? "";
     const at = find(key, line);
     if (at === null) return;
-    // a patch that leaves out the row's checkbox starts at the key column
+    // a patch that leaves out the checkbox starts at the key column: of the
+    // row it changes or, for a row it adds, of the last row
+    const like = rows[at > 0 ? at : rows.length - 1];
     let implied = "";
-    if (at > 0 && parseCheck(split(rows[at].replace(MARKS, ""), pipe)[0])) {
+    if (like && parseCheck(split(like.replace(MARKS, ""), pipe)[0])) {
       if (cells[0] !== "=" && !parseCheck(cells[0])) {
-        cells = ["=", ...cells];
+        cells = [at > 0 ? "=" : "[ ]", ...cells];
         implied = " with its checkbox";
       }
     }

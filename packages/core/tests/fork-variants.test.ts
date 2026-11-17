@@ -233,6 +233,21 @@ describe("rows", () => {
     ]);
   });
 
+  it("lines up a new row that leaves out the checkbox cell", () => {
+    const base = "grid #g\n[ ] | Name | Email\n[ ] | Anna | a@x";
+    const r = run("extends: base\nrows: g\n  Cara | c@x\n  Dan | d@x | x", { base });
+    expect(r.errors).toEqual([
+      {
+        line: 4,
+        message: 'rows: "Dan" has 4 cells with its checkbox, but the grid "g" has 3 columns',
+      },
+    ]);
+    expect(r.tree.children[0].body).toEqual(["[ ] | Anna | a@x", "[ ] | Cara | c@x"]);
+    // without a checkbox column, a new row is added as written
+    const plain = run("extends: base\nrows: g\n  Cara | c@x", { base: "grid #g\nName | Email" });
+    expect(plain.tree.children[0].body).toEqual(["Cara | c@x"]);
+  });
+
   it("counts a patch's width after lining it up", () => {
     // "Anna" in the checkbox column was the old reading of this patch
     const base = "grid #g\n[ ] | Name | Role\n[ ] | Anna | Member";
