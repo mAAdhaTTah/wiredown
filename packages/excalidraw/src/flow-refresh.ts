@@ -87,7 +87,7 @@ export type FlowChange =
     }
   | { frame: string; kind: "note"; element: string }
   | { frame: string; kind: "label"; element: string }
-  | { frame: string; kind: "group"; element: string };
+  | { frame: string; kind: "group"; element: string; part: string };
 
 /** Overlays, frames, arrow ends and notes within this many drawing px of their place are current. */
 const TOLERANCE = 1;
@@ -238,6 +238,12 @@ function notesUnder(flow: Flow, anchor: string, old: Rect, now: Rect) {
   const notes = flow.elements.filter((e) => {
     const d = identity(e);
     if (e.isDeleted || d?.role !== "note" || d.anchor !== anchor || far.has(e.id)) return false;
+    if (
+      (e.groupIds as string[] | undefined)?.some(
+        (g) => !(n?.element.groupIds as string[] | undefined)?.includes(g),
+      )
+    )
+      return false;
     const r = rect(e);
     return r.x < old.x + old.width && r.x + r.width > old.x && r.y > old.y;
   });
@@ -275,7 +281,11 @@ function ungroupedParts(flow: Flow, n: FlowNode) {
   });
 }
 const partName = (e: ExcalidrawElementJson) =>
-  identity(e)!.role === "label" ? "label" : `${identity(e)!.role} ${e.id}`;
+  identity(e)!.role === "screen"
+    ? "frame"
+    : identity(e)!.role === "label"
+      ? "label"
+      : `${identity(e)!.role} ${e.id}`;
 
 /** A note's first words, for messages. */
 function noteStart(e: ExcalidrawElementJson) {
@@ -425,7 +435,9 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
       });
   const far = new Set<string>();
   const ambiguous = new Set(claimedNames(flow).map((c) => c.node));
-  for (const n of flowNodes(flow).filter((n) => !ambiguous.has(n.node)))
+  for (const n of flowNodes(flow).filter(
+    (n) => !ambiguous.has(n.node) && !states.some((s) => s.image === n.element && s.stale),
+  ))
     for (const p of nodeAttachments(flow, n).filter((p) => p.far)) {
       far.add(p.element.id);
       const what = identity(p.element)!.role === "label" ? "label" : `note ${p.element.id}`;
@@ -557,7 +569,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       if (s.embed.height !== undefined) link.height = s.embed.height;
       flow.embeds.set(String(s.image.fileId), { ...s.embed, ...s.stale.link });
       Object.assign(s.image, s.stale.image);
-      touch(s.image);
+      touchOnce(s.image);
       resized.add(s.image.id);
       out.push({
         frame: s.frame,
@@ -597,7 +609,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
     for (const e of ungroupedParts(flow, n)) {
       e.groupIds = [identity(n.element)!.group!];
       touchOnce(e);
-      out.push({ frame: n.node, kind: "group", element: e.id });
+      out.push({ frame: n.node, kind: "group", element: e.id, part: partName(e) });
     }
   }
 

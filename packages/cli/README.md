@@ -153,24 +153,20 @@ A screens file or root found from the flow is printed relative to the
 working directory when the flow's path was given relative, and absolute when
 it was given absolute. Paths given on the command line print as given.
 
-`--screens` names the screens file and is required whenever screens are
-added; there is no default. It takes any `.md` file inside the root; one
-outside it is an error (`the screens file <file> points outside <root>`).
-A screens file whose path from the root contains `#`, `|` or `]` is
-refused, since those end the path in an embed link.
-Missing embed styling frontmatter is added; existing values are preserved.
-Invalid screens and unknown nodes leave the drawing untouched.
-A frame's image and its `F3 · Title` label share an Excalidraw group, so
-they move together: clicking either selects both; double-click to select
-one. Human output is one `F3  team-members  548x333` line per frame, then one
-`F1 -> F2` line per arrow. The size is the embed image size in the drawing.
-JSON is `{ flow, frames: [{ frame, screen, title, id, x, y, width, height }],
-screensFileUpdated }`, where `id` is the image's element id; `flow new` adds
-`arrows: [{ id, from, to, label, x, y, width, height }]`.
-A file or input problem, such as a missing file, an unknown screen or node,
-or a file that is not a drawing, exits 1 with a plain message (JSON adds an
-`errors` array); usage errors exit 2. Any other error is a bug and crashes
-with a stack trace.
+`--screens` takes any `.md` file inside the root; one outside it is an error
+(`the screens file <file> points outside <root>`). Without it, the screens file
+is the `screens.md` in the parent of the flow's directory, else in that
+directory, else in each directory further up to the root. A screens file whose
+path from the root contains `#`, `|` or `]` is refused, since those end the path
+in an embed link. Missing embed styling frontmatter is added; existing values
+are preserved. Invalid screens and unknown nodes leave the drawing untouched. A
+frame's image and its `F3 · Title` label share an Excalidraw group, so they move
+together: clicking either selects both; double-click to select one. Human output
+is one `F3  team-members  548x333` line per frame, then one `F1 -> F2` line per
+arrow. The size is the embed image size in the drawing. JSON is `{ flow, frames:
+[{ frame, screen, title, x, y, width, height }], screensFileUpdated }`; `flow
+new` adds `arrows: [{ id, from, to, label }]`. Operational errors exit 1 (JSON
+adds an `errors` array); usage errors exit 2.
 
 Flow commands refuse to overwrite a drawing or screens file that changed
 while the command was running, and replace files atomically. The check is
@@ -247,26 +243,25 @@ there corrects both embed sizing and overlay placement.
 ### refresh and lint
 
 `wiredown flow refresh <flow> [--json]` brings a flow up to date after its
-screens change. Each frame's screen comes from the screens file its embed
-names, so one flow may use several. For each frame whose screen exists it
-sets the `## Embedded Files` link size, resizes the image to the new screen
-size at the scale it had (a frame a person scaled stays scaled; its
-top-left stays put), and moves the frame's highlights and marks to where
-`flow highlight` and `flow mark` would put them now. Whenever it rewrites a
-frame's link it writes the path from the root, as new embeds are written;
-links it leaves alone keep their form. Notes under the frame
-move with its bottom edge, keeping their order and gaps; a note dragged
-onto the frame goes back under it, with the notes below it. Every straight arrow of ours whose ends
-are not where `flow connect` would put them now, because a frame was
-resized or a person moved a node, is re-routed that way, keeping its place
-among parallel arrows, its label (placed along it as `flow connect` places
-it) and its id. An arrow a person
-bent (more than two points) is left alone and reported as unresolved when
-one of its frames was resized. Displaced labels and notes return to their
-places; decisions and hand-drawn arrows stay where they are. Frames are never moved apart, so a frame that grew
-may now overlap its neighbouring frame; lint does not report that. An
-overlay whose component is gone is left where it is and reported as
-unresolved. The file is written only if something changed.
+screens change. Each frame's screen comes from the screens file its embed names,
+so one flow may use several. For each frame whose screen exists it sets the `##
+Embedded Files` link size, resizes the image to the new screen size at the scale
+it had (a frame a person scaled stays scaled; its top-left stays put), and moves
+the frame's highlights and marks to where `flow highlight` and `flow mark` would
+put them now. Whenever it rewrites a frame's link it writes the path from the
+root, as new embeds are written; links it leaves alone keep their form. Notes
+under the frame move with its bottom edge, keeping their order and gaps; a note
+dragged onto the frame goes back under it, with the notes below it. Every
+straight arrow of ours whose ends are not where `flow connect` would put them
+now, because a frame was resized or a person moved a node, is re-routed that
+way, keeping its place among parallel arrows, its label (placed along it as
+`flow connect` places it) and its id. An arrow a person bent (more than two
+points) is left alone and reported as unresolved when one of its frames was
+resized. Displaced labels and notes return to their places; decisions and hand-
+drawn arrows stay where they are. Frames are never moved apart, so a frame that
+grew may now overlap its neighbouring frame; lint reports that. An overlay whose
+component is gone is left where it is and reported as unresolved. The file is
+written only if something changed.
 
 Human output is one line per change, or `up to date`:
 
@@ -343,10 +338,12 @@ Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"
 in the Excalidraw plugin's Saving settings. `flow lint` reports compressed
 drawings; `flow refresh` rewrites them as JSON even when already up to date.
 
-Lint reports labels more than 60 px from their place above the frame.
-Notes stay in the stack within 60 px horizontally and with a vertical gap
-of at most 200 px from the node or previous in-place note, leaving room for
-a deleted note. They may overlap that edge by up to 60 px. Refresh returns
-displaced notes after the retained stack in vertical order, under a frame
-or beside a decision. It restores groups only on parts with no group;
-personal groups and small hand nudges stay untouched.
+Lint reports labels more than 60 px from their place above the frame. Notes stay
+in the stack within 60 px horizontally and with a vertical gap of at most 200 px
+from the node or previous in-place note, leaving room for a deleted note. They
+may overlap that edge by up to 60 px. Refresh returns displaced notes after the
+retained stack in vertical order, under a frame or beside a decision. It
+restores groups only on parts with no group; personal groups and small hand
+nudges stay untouched. Far notes beside a decision are handled the same way. A
+label or note with a group absent from its node is left untouched and does not
+take a place in the note stack.
