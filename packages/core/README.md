@@ -125,6 +125,6 @@ widths to headless Chromium canvas within 0.015 px after measuring at
 1,000 px and scaling to 16 px, avoiding small-size font rounding. It needs the web package's
 Playwright browser installation (`PLAYWRIGHT_BROWSERS_PATH` when applicable).
 
-`checkScreens(markdown)` is the public checker. The eval baseline uses
-`checkScreensInternal` from `@wiredown/core/internal` to inject its block
-checker. This subpath is unstable and has no compatibility guarantee.
+`checkScreens(markdown)` is the public checker. The private eval baseline
+imports `checkScreensInternal` directly from core's built workspace output
+to inject its block checker; it is not a published package subpath.

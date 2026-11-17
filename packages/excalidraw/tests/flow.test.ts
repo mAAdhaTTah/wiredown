@@ -1,3 +1,5 @@
+import { formatEmbed } from "../src/flow.js";
+import { parseEmbed } from "../src/flow.js";
 import { readFileSync } from "node:fs";
 import LZString from "lz-string";
 import { describe, expect, it } from "vitest";
