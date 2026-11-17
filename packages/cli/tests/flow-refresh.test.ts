@@ -257,6 +257,31 @@ test("an embed whose file is gone is reported for its frame; the rest still refr
   ]);
 });
 
+test("refresh writes nothing when several files match a frame's embed", async () => {
+  const dir = await fixture({});
+  await writeFile(join(dir, ".git"), "");
+  const one = BASE.replace("^team", "^one");
+  for (const path of ["screens.md", "a/a/ui.md", "b/a/ui.md"]) {
+    await mkdir(join(dir, path, ".."), { recursive: true });
+    await writeFile(join(dir, path), one);
+  }
+  const file = join(dir, "flows/f.excalidraw.md");
+  expect((await run(["flow", "new", file, "one", "one"])).exitCode).toBe(0);
+  // F1 is stale and could be refreshed; F2's embed matches two files
+  const flow = parseFlow(await readFile(file, "utf8"));
+  const [[f1, e1], [f2, e2]] = [...flow.embeds];
+  flow.embeds.set(f1, { ...e1, width: 1 });
+  flow.embeds.set(f2, { ...e2, path: "a/ui" });
+  await writeFile(file, serializeFlow(flow));
+  const before = await readFile(file, "utf8");
+  const result = await run(["flow", "refresh", file]);
+  expect(result).toMatchObject({ exitCode: 1, stdout: "" });
+  expect(result.stderr).toBe(
+    `${file}: F2: error: embeds [[a/ui#^one]], but it matches several files: a/a/ui.md, b/a/ui.md; name one by its path from ${dir}\n`,
+  );
+  expect(await readFile(file, "utf8")).toBe(before);
+});
+
 test("refresh writes each link it rewrites with the path from the root", async () => {
   const dir = await fixture({});
   await writeFile(join(dir, ".git"), "");

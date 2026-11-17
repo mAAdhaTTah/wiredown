@@ -196,11 +196,14 @@ async function screenLookup(file: string, flow: Flow) {
   const files = new Map<string, Awaited<ReturnType<typeof loadScreens>>>();
   const unresolved = new Map<string, string>();
   const paths = new Map<string, string>();
+  const ambiguous = new Set<string>();
   for (const embed of flow.embeds.values()) {
     if (!embed.blockId || files.has(embed.path) || unresolved.has(embed.path)) continue;
     const found = await resolveEmbed(file, embed.path, root);
-    if ("why" in found) unresolved.set(embed.path, found.why);
-    else {
+    if ("why" in found) {
+      unresolved.set(embed.path, found.why);
+      if (found.ambiguous) ambiguous.add(embed.path);
+    } else {
       files.set(embed.path, await loadScreens(found.path));
       paths.set(embed.path, found.embedPath);
     }
@@ -225,7 +228,7 @@ async function screenLookup(file: string, flow: Flow) {
     if (!cache.has(key)) cache.set(key, state(embed));
     return cache.get(key)!;
   };
-  return { lookup, errors, unresolved, paths };
+  return { lookup, errors, unresolved, paths, ambiguous };
 }
 
 /** One flow's lint result, as `flow lint` and `lint` report it. */
@@ -294,8 +297,14 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
   try {
     const original = await readFile(file, "utf8");
     const flow = parseEditableFlow(original);
-    const { lookup, errors, unresolved: lost, paths } = await screenLookup(file, flow);
-    const all = refreshFlow(flow, lookup);
+    const { lookup, errors, unresolved: lost, paths, ambiguous } = await screenLookup(file, flow);
+    // a frame whose embed several files match would be a guess: report it
+    // and write nothing
+    const guess = flowFrames(flow).some(({ element }) =>
+      ambiguous.has(flow.embeds.get(String(element.fileId))?.path ?? ""),
+    );
+    const all = guess ? [] : refreshFlow(flow, lookup);
+    const decompressed = flow.compressed && !guess;
     const changes = all.filter((c) => !("unresolved" in c && c.unresolved));
     // an embed refresh rewrites takes the path new embeds are written with
     for (const c of changes) {
@@ -305,7 +314,7 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
       flow.embeds.set(fileId, { ...embed, path: paths.get(embed.path) ?? embed.path });
     }
     const unresolved = all.filter((c) => "unresolved" in c && c.unresolved);
-    if (changes.length || flow.compressed) await safeWrite(file, original, serializeFlow(flow));
+    if (changes.length || decompressed) await safeWrite(file, original, serializeFlow(flow));
     // each frame whose embed names no file, then each screens file's errors;
     // an error outside any screen affects every screen: report it once
     const reports: { file: string; findings: Finding[] }[] = [
@@ -335,7 +344,7 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
         exitCode,
         stdout: json({
           flow: file,
-          ...(flow.compressed ? { decompressed: true } : {}),
+          ...(decompressed ? { decompressed: true } : {}),
           changes,
           unresolved,
           ...(found.length ? { errors: found } : {}),
@@ -345,8 +354,8 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
     return {
       exitCode,
       stdout:
-        (flow.compressed ? "rewrote compressed-json drawing as JSON\n" : "") +
-        (all.length ? all.map(changeLine).join("") : flow.compressed ? "" : "up to date\n"),
+        (decompressed ? "rewrote compressed-json drawing as JSON\n" : "") +
+        (all.length ? all.map(changeLine).join("") : decompressed || guess ? "" : "up to date\n"),
       stderr: reports.map((r) => formatFindings(r.file, r.findings, [])).join(""),
     };
   } catch (error) {
