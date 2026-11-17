@@ -226,13 +226,13 @@ const removeIt = (what: string) => `remove it with "wiredown flow remove <flow> 
 const overlayName = (o: Overlay) =>
   o.role === "mark" ? `mark ${o.label} #${o.target}` : `highlight #${o.target}`;
 
-interface Rect {
+export interface Rect {
   x: number;
   y: number;
   width: number;
   height: number;
 }
-const rect = (e: ExcalidrawElementJson): Rect => ({ x: num(e.x), y: num(e.y), ...size(e) });
+export const rect = (e: ExcalidrawElementJson): Rect => ({ x: num(e.x), y: num(e.y), ...size(e) });
 const bottom = (r: Rect) => r.y + r.height;
 /**
  * Our live notes under the frame image `anchor` whose box was `old`: those
@@ -266,7 +266,7 @@ function notesUnder(flow: Flow, anchor: string, old: Rect, now: Rect) {
   return { notes, overlapping, shift };
 }
 /** Whether two boxes share area; touching edges do not. */
-const intersects = (a: Rect, b: Rect) =>
+export const intersects = (a: Rect, b: Rect) =>
   a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 /** Each pair of our nodes whose boxes intersect, once, named on the later node. */
 function overlappingNodes(flow: Flow) {
@@ -308,7 +308,7 @@ function noteStart(e: ExcalidrawElementJson) {
   return words.slice(0, 4).join(" ") + (words.length > 4 ? "…" : "");
 }
 
-interface Route {
+export interface Route {
   arrow: ExcalidrawElementJson;
   start: FlowNode;
   end: FlowNode;
@@ -322,7 +322,7 @@ interface Route {
  * Each live arrow of ours bound at both ends to two live nodes, with the
  * geometry `connect` gives its slot between the nodes as they are now.
  */
-function arrowRoutes(flow: Flow): Route[] {
+export function arrowRoutes(flow: Flow): Route[] {
   const nodes = new Map(flowNodes(flow).map((n) => [n.element.id, n]));
   const bound = (b: unknown) => nodes.get(String((b as { elementId?: string } | null)?.elementId));
   return flow.elements.flatMap((arrow) => {
@@ -351,6 +351,18 @@ function arrowRoutes(flow: Flow): Route[] {
       .map(([n]) => n.node);
     return [{ arrow, start, end, geometry, shaped: points.length !== 2, missed }];
   });
+}
+
+/** Why refresh and move leave an arrow a person bent. */
+export const BENT = "it was bent by hand; reconnect it by hand";
+/** Puts a straight arrow where `connect` would, in its slot, its label along it. */
+export function reroute(flow: Flow, { arrow, start, end, geometry: g }: Route) {
+  Object.assign(arrow, { x: g.x, y: g.y, width: g.width, height: g.height, points: g.points });
+  arrow.startBinding = { ...(arrow.startBinding as object), fixedPoint: g.startFixedPoint };
+  arrow.endBinding = { ...(arrow.endBinding as object), fixedPoint: g.endFixedPoint };
+  touch(arrow);
+  const pair = arrowsBetween(flow, start.element.id, end.element.id);
+  positionArrowLabel(flow, arrow, pair.length > 1 ? 1 / 3 : 1 / 2);
 }
 
 /**
@@ -675,9 +687,8 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       out.push({ frame: n.node, kind: "group", element: e.id, part: partName(e), group });
     }
   }
-
   for (const route of arrowRoutes(flow)) {
-    const { arrow, start, end, geometry: g, shaped, missed } = route;
+    const { arrow, start, end, shaped, missed } = route;
     if (!missed.length) continue;
     const change = {
       frame: missed[0],
@@ -691,12 +702,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       if (off) out.push({ ...change, frame: off, unresolved: bentArrow(off) });
       continue;
     }
-    Object.assign(arrow, { x: g.x, y: g.y, width: g.width, height: g.height, points: g.points });
-    arrow.startBinding = { ...(arrow.startBinding as object), fixedPoint: g.startFixedPoint };
-    arrow.endBinding = { ...(arrow.endBinding as object), fixedPoint: g.endFixedPoint };
-    touch(arrow);
-    const pair = arrowsBetween(flow, start.element.id, end.element.id);
-    positionArrowLabel(flow, arrow, pair.length > 1 ? 1 / 3 : 1 / 2);
+    reroute(flow, route);
     out.push(change);
   }
   const images = new Set(flowFrames(flow).map((f) => f.element.id));
