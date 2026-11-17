@@ -494,7 +494,7 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
       out.push({
         frame: node,
         element: element.id,
-        message: `overlaps ${other}; move one of them in the drawing`,
+        message: `overlaps ${other}; move one of them in the drawing, or run "wiredown flow move <flow> ${node} --right-of ${other}"`,
       });
   // a screen embedded by hand has no frame, but its reference can still break
   const framed = new Set(flowFrames(flow).map((f) => f.element.id));
