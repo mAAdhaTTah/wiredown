@@ -425,3 +425,13 @@ test("new notes ignore a note dragged out of the stack", () => {
   const image = node(flow, "F1");
   expect(next.y).toBe(Number(image.y) + Number(image.height) + 20);
 });
+
+test("notes stack by position after their drawing order is swapped", () => {
+  const flow = newFlow();
+  addScreen(flow, small);
+  const a = byId(flow, addNote(flow, "F1", "A"));
+  const b = byId(flow, addNote(flow, "F1", "B"));
+  [a.y, b.y] = [b.y, a.y];
+  const c = byId(flow, addNote(flow, "F1", "C"));
+  expect(c.y).toBe(305);
+});
