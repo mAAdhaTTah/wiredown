@@ -107,9 +107,11 @@ after: members
 
 In `rows:` patches, the row key is the first cell that is not a checkbox or
 `=`; keep it unchanged, and it must match exactly one row (no match adds a
-new row as written). `=` keeps a cell. Write the row's checkbox cell or
-leave it out; without it, the patch starts at the key column. Either way it
-may not have more cells than the grid has columns. These are the same patch:
+new row). Change each row at most once per patch. `=` keeps a cell. Write the
+row's checkbox cell or leave it out; without it, the patch starts at the key
+column (a new row gets an unchecked box when the last row has one). Either
+way it may not have more cells than the grid has columns. These are the same
+patch:
 
 ```text
 rows: members
