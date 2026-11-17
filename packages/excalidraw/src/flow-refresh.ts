@@ -259,6 +259,24 @@ function overlappingNodes(flow: Flow) {
       .map((o) => ({ node: n.node, element: n.element, other: o.node })),
   );
 }
+/** Parts with no personal group, shared by lint and refresh. */
+function ungroupedParts(flow: Flow, n: FlowNode) {
+  if (n.kind !== "frame" || !identity(n.element)?.group) return [];
+  return flow.elements.filter((e) => {
+    const d = identity(e);
+    return (
+      !e.isDeleted &&
+      !(e.groupIds as string[] | undefined)?.length &&
+      d &&
+      (e === n.element ||
+        d.anchor === n.element.id ||
+        (!d.anchor && d.frame === n.node && d.role === "label" && !e.containerId))
+    );
+  });
+}
+const partName = (e: ExcalidrawElementJson) =>
+  identity(e)!.role === "label" ? "label" : `${identity(e)!.role} ${e.id}`;
+
 /** A note's first words, for messages. */
 function noteStart(e: ExcalidrawElementJson) {
   const words = String(e.text ?? "")
@@ -398,6 +416,13 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
       });
     }
   }
+  for (const n of flowNodes(flow))
+    for (const e of ungroupedParts(flow, n))
+      out.push({
+        frame: n.node,
+        element: e.id,
+        message: `${partName(e)} is not grouped with its frame; run "wiredown flow refresh"`,
+      });
   const far = new Set<string>();
   const ambiguous = new Set(claimedNames(flow).map((c) => c.node));
   for (const n of flowNodes(flow).filter((n) => !ambiguous.has(n.node)))
@@ -407,7 +432,7 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
       out.push({
         frame: n.node,
         element: p.element.id,
-        message: `${what} is ${Math.round(p.distance)} px from its ${n.kind}; move it back, or run "wiredown flow refresh <flow>"`,
+        message: `${what} is ${Math.round(p.distance)} px from its place ${what === "label" ? "above" : n.kind === "decision" ? "beside" : "under"} ${n.node}; run "wiredown flow refresh"`,
       });
     }
   for (const { node, element, other } of overlappingNodes(flow))
@@ -512,6 +537,13 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
   const [claim] = claimedNames(flow);
   if (claim) throw new Error(claim.message);
   const out: FlowChange[] = [];
+  const touched = new Set<string>();
+  const touchOnce = (e: ExcalidrawElementJson) => {
+    if (!touched.has(e.id)) {
+      touch(e);
+      touched.add(e.id);
+    }
+  };
   const overlays = liveOverlays(flow);
   const states = frameStates(flow, screens);
   const resized = new Set<string>();
@@ -539,7 +571,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
     if (shift)
       for (const e of notes) {
         e.y = num(e.y) + shift;
-        touch(e);
+        touchOnce(e);
         out.push({ frame: s.frame, kind: "note", element: e.id });
       }
     for (const o of overlays.filter((o) => o.anchor === s.image.id)) {
@@ -549,42 +581,26 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       else if (!plan.every(placed)) {
         for (const p of plan.filter((p) => !placed(p))) {
           Object.assign(p.element, { x: p.x, y: p.y, width: p.width, height: p.height });
-          touch(p.element);
+          touchOnce(p.element);
         }
         out.push(change);
       }
     }
   }
   for (const n of flowNodes(flow)) {
-    // Recompute after each repair, retaining notes already in the stack.
-    for (const e of flow.elements) {
-      const p = nodeAttachments(flow, n).find((p) => p.element === e && p.far);
-      if (!p) continue;
+    for (const p of nodeAttachments(flow, n).filter((p) => p.far)) {
+      const e = p.element;
       Object.assign(e, { x: p.x, y: p.y });
-      touch(e);
+      touchOnce(e);
       out.push({ frame: n.node, kind: identity(e)!.role as "label" | "note", element: e.id });
     }
-    if (n.kind !== "frame") continue;
-    const group = identity(n.element)!.group;
-    if (!group) continue;
-    const parts = flow.elements.filter((e) => {
-      const d = identity(e);
-      return (
-        !e.isDeleted &&
-        d &&
-        (e === n.element ||
-          d.anchor === n.element.id ||
-          (!d.anchor && d.frame === n.node && d.role === "label" && !e.containerId))
-      );
-    });
-    for (const e of parts) {
-      const groups = (e.groupIds ?? []) as string[];
-      if (groups.includes(group)) continue;
-      e.groupIds = [group, ...groups];
-      touch(e);
+    for (const e of ungroupedParts(flow, n)) {
+      e.groupIds = [identity(n.element)!.group!];
+      touchOnce(e);
       out.push({ frame: n.node, kind: "group", element: e.id });
     }
   }
+
   for (const { arrow, start, end, geometry: g, shaped, missed } of arrowRoutes(flow)) {
     if (!missed.length) continue;
     const change = {

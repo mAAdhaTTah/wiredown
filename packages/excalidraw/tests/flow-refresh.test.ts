@@ -658,7 +658,7 @@ test("a note dragged onto its frame is reported, and refresh puts it under", () 
     {
       frame: "F1",
       element: second,
-      message: `note ${second} is 165 px from its frame; move it back, or run "wiredown flow refresh <flow>"`,
+      message: `note ${second} is 165 px from its place under F1; run "wiredown flow refresh"`,
     },
   ]);
   settles(flow, screens);
@@ -741,7 +741,7 @@ test("refresh repairs detached labels, notes and groups, preserving nudges and c
   const findings = lintFlow(flow, screens).filter((f) => f.message.includes("px from"));
   expect(findings).toHaveLength(3);
   expect(findings.find((f) => f.element === label.id)?.message).toBe(
-    'label is 448 px from its frame; move it back, or run "wiredown flow refresh <flow>"',
+    'label is 448 px from its place above F1; run "wiredown flow refresh"',
   );
   for (const note of [a, b]) expect(findings.filter((f) => f.element === note.id)).toHaveLength(1);
   const changes = refreshFlow(flow, screens);
@@ -803,4 +803,86 @@ test("lint reports each pair of overlapping nodes once, on the later one", () =>
     { frame: "F3", element: f3.id, message: "overlaps F1; move one of them in the drawing" },
     { frame: "D1", element: d1.id, message: "overlaps F2; move one of them in the drawing" },
   ]);
+});
+
+test("displaced notes retain vertical order without holes", () => {
+  const flow = newFlow();
+  add(flow, "home", home);
+  const notes = [0, 1, 2].map(() => byId(flow, addNote(flow, "F1", "Two\nlines")));
+  for (const [i, y] of [500, 1000, 700].entries()) notes[i].y = y;
+  refreshFlow(flow, lookup({ home }));
+  const ordered = [notes[0], notes[2], notes[1]];
+  expect(ordered[0].y).toBe(Number(image(flow, "F1").height) + 20);
+  for (let i = 1; i < ordered.length; i++)
+    expect(ordered[i].y).toBe(Number(ordered[i - 1].y) + Number(ordered[i - 1].height) + 20);
+});
+
+test("deleted notes and 40px nudges stay current; far frame and decision notes return", () => {
+  const flow = newFlow();
+  add(flow, "home", home);
+  const notes = [0, 1, 2].map(() => byId(flow, addNote(flow, "F1", "Note")));
+  for (const [i, note] of notes.entries()) Object.assign(note, { height: 60, y: 225 + i * 80 });
+  notes[0].isDeleted = true;
+  expect(lintFlow(flow, lookup({ home }))).toEqual([]);
+  expect(refreshFlow(flow, lookup({ home }))).toEqual([]);
+  notes[1].x = Number(notes[1].x) + 40;
+  notes[1].y = Number(notes[1].y) + 40;
+  const before = serializeFlow(flow);
+  expect(lintFlow(flow, lookup({ home }))).toEqual([]);
+  expect(refreshFlow(flow, lookup({ home }))).toEqual([]);
+  expect(serializeFlow(flow)).toBe(before);
+  addDecision(flow, { text: "Ok?" });
+  const decision = byId(flow, addNote(flow, "D1", "Why"));
+  for (const note of [notes[2], decision]) note.x = Number(note.x) + 448;
+  expect(
+    lintFlow(flow, lookup({ home })).filter((f) => f.message.includes("px from")),
+  ).toHaveLength(2);
+  refreshFlow(flow, lookup({ home }));
+  expect(lintFlow(flow, lookup({ home }))).toEqual([]);
+});
+
+test("group repair matches lint, preserves personal groups and touches once", () => {
+  const { flow, hi, mark, note } = build();
+  const label = flow.elements.find((e) => identity(e)?.role === "label" && !e.containerId)!;
+  for (const e of [label, byId(flow, hi), byId(flow, mark), byId(flow, note)]) e.groupIds = [];
+  label.x = Number(label.x) + 448;
+  const version = Number(label.version);
+  expect(
+    lintFlow(flow, lookup({ home, other })).filter((f) => f.message.includes("not grouped")),
+  ).toHaveLength(4);
+  refreshFlow(flow, lookup({ home, other }));
+  expect(label.version).toBe(version + 1);
+  expect(lintFlow(flow, lookup({ home, other }))).toEqual([]);
+  const before = serializeFlow(flow);
+  expect(refreshFlow(flow, lookup({ home, other }))).toEqual([]);
+  expect(serializeFlow(flow)).toBe(before);
+  label.groupIds = ["PERSON"];
+  const rectangle = {
+    id: "personalrect",
+    type: "rectangle",
+    x: -900,
+    y: -900,
+    width: 20,
+    height: 20,
+    groupIds: ["PERSON"],
+  };
+  flow.elements.push(rectangle);
+  const personal = JSON.stringify([label, rectangle]);
+  expect(lintFlow(flow, lookup({ home, other }))).toEqual([]);
+  expect(refreshFlow(flow, lookup({ home, other }))).toEqual([]);
+  expect(JSON.stringify([label, rectangle])).toBe(personal);
+});
+
+test("ambiguous legacy labels are neither checked for distance nor moved", () => {
+  const flow = newFlow();
+  add(flow, "home", home);
+  const label = flow.elements.find((e) => identity(e)?.role === "label")!;
+  delete identity(label)!.anchor;
+  delete identity(label)!.id;
+  const copy = { ...structuredClone(label), id: "oldlabel", x: 9000 };
+  flow.elements.push(copy);
+  const before = JSON.stringify([label, copy]);
+  expect(lintFlow(flow, lookup({ home })).filter((f) => f.message.includes("px from"))).toEqual([]);
+  refreshFlow(flow, lookup({ home }));
+  expect(JSON.stringify([label, copy])).toBe(before);
 });
