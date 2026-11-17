@@ -277,9 +277,13 @@ function refuseUntrustedImages(svg: string, trusted: ReadonlySet<string>) {
   const refused = () =>
     new Error("svgToPng: refusing an SVG image that is not one of the trusted screens");
   if (/<!ENTITY/i.test(svg)) throw refused();
-  // Links occur in markup and CSS, not in a drawing's visible text.
+  // Links are attributes, so scan the tags (and CSS), not a drawing's visible
+  // text. Comments, CDATA and processing instructions are tokens of their own:
+  // read as tags, a quote inside one would hide part of the tag after it.
   let rest = (
-    svg.match(/<style\b[^>]*>[\s\S]*?<\/style\s*>|<(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi) ?? []
+    svg.match(
+      /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<style\b[^>]*>[\s\S]*?<\/style\s*>|<(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi,
+    ) ?? []
   ).join("");
   for (const url of trusted) rest = rest.replaceAll(url, "");
   const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
@@ -291,8 +295,7 @@ function refuseUntrustedImages(svg: string, trusted: ReadonlySet<string>) {
       return String.fromCodePoint(code);
     })
     .replace(/[\t\n\r]/g, "");
-  if (/<!ENTITY|data:(?!image\/(?:png|jpeg|gif|webp)[;,]|font\/woff2[;,])/i.test(rest))
-    throw refused();
+  if (/data:(?!image\/(?:png|jpeg|gif|webp)[;,]|font\/woff2[;,])/i.test(rest)) throw refused();
 }
 
 /**

@@ -257,6 +257,13 @@ it.each([
   '<rect style="fill: url(DATA:IMAGE/SVG+XML;base64,AAAA)"/>',
   '<image href="&#100;ata:image/svg+xml;base64,AAAA"/>',
   '<!DOCTYPE svg [<!ENTITY link "data:image/svg+xml;base64,AAAA">]>',
+  "<image href='data:image/svg+xml;base64,AAAA'/>",
+  '<g id="a>b"/><image href="data:text/plain;base64,AAAA"/>',
+  // a quote outside any tag must not hide part of the tag after it
+  '<!-- " --><image x="1>2" href="data:image/svg+xml;base64,AAAA"/>',
+  '<?p " ?><image x="1>2" href="data:image/svg+xml;base64,AAAA"/>',
+  '<![CDATA[ " ]]><image x="1>2" href="data:image/svg+xml;base64,AAAA"/>',
+  `<text>it's "</text><image x="1>2" href="data:image/svg+xml;base64,AAAA"/>`,
 ])("refuses untrusted data URLs in markup and CSS: %s", async (content) => {
   await expect(
     svgToPng(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">${content}</svg>`),
