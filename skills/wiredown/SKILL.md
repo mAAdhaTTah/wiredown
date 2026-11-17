@@ -138,8 +138,9 @@ use supported text or icons instead of glyphs that may render as empty boxes.
 Never hand-compute coordinates. Use `--right-of` and `--below` relative to
 existing nodes. Placement ignores what a person drew by hand, so after placing
 next to their drawing, render it and look for overlaps (`flow lint` reports
-only overlaps between nodes). A flow is a drawing a person also edits: never
-regenerate an existing flow. Use the commands, which preserve their edits. A frame's parts
+only overlaps between nodes).
+A flow is a drawing a person also edits: never regenerate an
+existing flow. Use the commands, which preserve their edits. A frame's parts
 (image, label, notes, overlays) are grouped and move together. A copy a
 person pastes (a frame, a note, an overlay) is theirs: commands leave it
 alone, and `flow lint` reports it until they delete it. In a drawing from
