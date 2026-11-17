@@ -261,6 +261,21 @@ describe("rows", () => {
     expect(r.tree.children[0].body).toEqual(["[ ] | Anna | Admin"]);
   });
 
+  it("names the source lines of patch rows with comments between them", () => {
+    const base = "grid #g\nName | Role\nAnna | User";
+    const r = run(
+      "extends: base\nrows: g\n  // note\n  Anna | Admin\n  // note\n  Anna | Owner\n  remove Erik",
+      { base },
+    );
+    expect(r.errors).toEqual([
+      { line: 6, message: 'rows: "Anna" is changed twice; first on line 4' },
+      { line: 7, message: 'no row "Erik" in the grid "g"; its rows are: Anna' },
+    ]);
+    // a blank line ends the patch, so a row after it is not understood
+    const blank = run("extends: base\nrows: g\n  Anna | Admin\n\n  Anna | Owner", { base });
+    expect(blank.errors).toEqual([{ line: 5, message: 'don\'t understand "Anna | Owner"' }]);
+  });
+
   it("counts a patch's width after lining it up", () => {
     // "Anna" in the checkbox column was the old reading of this patch
     const base = "grid #g\n[ ] | Name | Role\n[ ] | Anna | Member";

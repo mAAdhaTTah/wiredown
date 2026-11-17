@@ -98,7 +98,8 @@ function rowKey(row: string, pipe: boolean): string {
   return cells.find((c) => c && !parseCheck(c)) ?? "";
 }
 
-function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
+/** Applies a rows: patch to a grid; `lines` are the block's, to name each patch row's line. */
+function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[], lines: string[]): void {
   const rows = [grid.text, ...grid.body].filter(Boolean);
   const pipe = [...rows, ...op.body].some((r) => r.includes("|"));
   const sep = pipe ? " | " : ", ";
@@ -125,8 +126,13 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
     }
     return first !== undefined;
   };
+  // the patch rows follow the rows: line; comment lines between them don't count
+  const patchLines: number[] = [];
+  for (let n = op.line ?? 0; patchLines.length < op.body.length && n < lines.length; n++) {
+    if (!lines[n].trim().startsWith("//")) patchLines.push(n + 1);
+  }
   op.body.forEach((patch, i) => {
-    const line = (op.line ?? 0) + 1 + i;
+    const line = patchLines[i];
     const removal = /^remove\s+(.+)$/i.exec(patch);
     if (removal && !patch.includes(pipe ? "|" : ",")) {
       const key = removal[1].trim();
@@ -291,7 +297,7 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
             line: at,
             message: `rows: "${op.text}" is a ${hit.node.type}, not a grid`,
           });
-        } else patchRows(hit.node, op, errors);
+        } else patchRows(hit.node, op, errors, source.replace(/\r/g, "").split("\n"));
         break;
       }
       case "replace": {
