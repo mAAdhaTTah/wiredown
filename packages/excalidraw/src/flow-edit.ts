@@ -574,11 +574,26 @@ export function addNote(flow: Flow, node: string, text: string): string {
   return note.id;
 }
 
-/** Command positions, with 60px slack for hand nudges; only our own attachments. */
+// Allow hand nudges of 60px, and 200px gaps left by a deleted note.
+const HAND_NUDGE = 60,
+  NOTE_STACK_GAP = 200;
+
+/** Command positions for our own unambiguous attachments. */
 export function nodeAttachments(flow: Flow, n: FlowNode) {
   const b = boxOf(n);
   let y = n.kind === "decision" ? b.y + b.h / 2 + NOTE_GAP : b.y + b.h + NOTE_GAP;
   const x = n.kind === "decision" ? b.x + b.w + NOTE_GAP : b.x;
+  const legacy = flow.elements.filter((e) => {
+    const d = identity(e);
+    return (
+      !e.isDeleted &&
+      d?.role === "label" &&
+      !d.anchor &&
+      !d.id &&
+      !e.containerId &&
+      (d.frame ?? d.node) === n.node
+    );
+  });
   const plans = [...flow.elements]
     .sort((a, b) => Number(a.y) - Number(b.y))
     .flatMap((e) => {
@@ -588,10 +603,14 @@ export function nodeAttachments(flow: Flow, n: FlowNode) {
         d.anchor ? d.anchor !== n.element.id : d.role !== "label" || (d.frame ?? d.node) !== n.node
       )
         return [];
+      if (!d.anchor && !d.id && legacy.length > 1) return [];
       const label = d.role === "label";
-      const want = label ? { x: b.x, y: b.y - 48 } : { x, y };
+      const want = label ? { x: b.x, y: b.y - LABEL_OFFSET } : { x, y };
       const distance = Math.hypot(Number(e.x) - want.x, Number(e.y) - want.y);
-      const far = distance > 3 * NOTE_GAP;
+      const gap = Number(e.y) - (y - NOTE_GAP);
+      const far = label
+        ? distance > HAND_NUDGE
+        : Math.abs(Number(e.x) - x) > HAND_NUDGE || gap > NOTE_STACK_GAP || gap < -HAND_NUDGE;
       if (!label && !far) y = Number(e.y) + Number(e.height) + NOTE_GAP;
       return [{ element: e, ...want, distance, far }];
     });
