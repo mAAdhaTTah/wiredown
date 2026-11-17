@@ -20,29 +20,13 @@ const scene = sceneOf(elements);
 The root export renders nothing; SVG export is in the Node entry,
 `@wiredown/excalidraw/node`, below.
 
-- **Elements** (`elements`): `screenElements(layout, options?)` takes core's
-  `LayoutResult` (from `layoutScreen` or `layout`) and returns
-  `ScreenElements`:
-  - `elements`: `ExcalidrawElementJson[]`. The first is an invisible
-    frame rectangle that fixes the export's size; then one element per
-    draw op: a rectangle, an ellipse, a line (ops with fewer than two
-    points are skipped) or text in Excalifont at the line height layout
-    measured with. Colours are for the light theme; Excalidraw applies
-    dark mode at export.
-  - `width` and `height`: the exported image's size, padding included,
-    rounded up to whole px.
-  - `boxes`: layout's `Box` for each `#id`, moved into the image's
-    coordinates (0,0 is its top-left), so flow overlays can be placed by
-    scaling them.
+```ts
+import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
 
-  A screen that draws nothing gives no elements, size 0 and no boxes.
-  `ElementOptions` are all optional: `idPrefix` (default `wf`; element ids
-  are `<prefix>-<n>`, so several screens can share a scene), `padding`
-  around the drawing (default 8) and Excalidraw `roughness` (0 architect,
-  1 artist, 2 cartoonist; default 1). Ids and seeds come from each
-  element's position in the list, so the same screen always gives the
-  same elements. `EXCALIFONT_FAMILY` is Excalidraw's font family number for
-  Excalifont (5).
+const flow = parseFlow(text);
+flow.embeds.set(fileId, { path: "screens", blockId: "home", width, height });
+const next = serializeFlow(flow); // writes [[screens#^home|WxH]]
+```
 
 - **Scene** (`scene`): `sceneOf(elements)` wraps elements in the
   `ExcalidrawScene` object Excalidraw's exporters take, with a white
@@ -367,7 +351,7 @@ Deleted elements reserve their numbers too. A frame's label carries an
 `anchor` naming its image element. The label and image share a new
 Excalidraw group, recorded as `group` in the image's
 `customData.wiredown`. Every `customData.wiredown` carries `v`
-(`DATA_VERSION`, now 1); data without `v` is version 1, and data with a
+(now 1); data without `v` is version 1, and data with a
 higher `v` is ignored. New elements also carry `id`, equal to the element's
 id. Data naming a different element belongs to a person's pasted copy and
 is ignored by flow commands, though its F-number stays taken. Existing data
@@ -411,49 +395,48 @@ Flow overlays use exported screen boxes and the image's current geometry:
 `addHighlight(flow, frame, { target, box, screen })` returns an outline id;
 `addMark(flow, frame, { target, box, screen, label })` returns the circle id,
 with its text bound to it. Highlights have a 4px outset; badges are at least
-32px wide and grow to fit their label. A badge's centre is `markCentre(x, y,
-diameter)`: up and left of the component's top-left corner by a third of
-its diameter, so it sits just outside the corner. Neither is bound to the
-image; both join the frame's group. `frameImage(flow, frame)` is a frame's
-image element. Overlays record `{ v: 1, id, role: "highlight" | "mark",
-frame, screen, target, label?, anchor }` in `customData.wiredown`, where
-`anchor` is the frame image's element id and `frame` is for people; bound
-text has the same data (with its own `id`) and role `label`. Duplicate
-highlights or identical mark labels on one component throw; a person's
-copy of an overlay is not one of ours.
+32px wide and grow to fit their label. A badge's centre is up and left of the
+component's top-left corner by a third of its diameter, so it sits just
+outside the corner. Neither is bound to the image; both join the frame's
+group. `frameImage(flow, frame)` is a frame's image element. Overlays record
+`{ v: 1, id, role: "highlight" | "mark", frame, screen, target, label?, anchor
+}` in `customData.wiredown`, where `anchor` is the frame image's element id
+and `frame` is for people; bound text has the same data (with its own `id`)
+and role `label`. Duplicate highlights or identical mark labels on one
+component throw; a person's copy of an overlay is not one of ours.
 
 `lintFlow(flow, screens)` and `refreshFlow(flow, screens)` compare a flow with
-the screens it embeds as they lay out now. `screens({ path, blockId })` is asked
-per embed (the path as written in the link, so two screens files with one block
-id are never confused) and returns `{ width, height, boxes }` from
+the screens it embeds as they lay out now. `screens({ path, blockId })` is
+asked per embed (the path as written in the link, so two screens files with
+one block id are never confused) and returns `{ width, height, boxes }` from
 `screenElements`, or a string saying why there is none. `lintFlow` returns
-findings `{ message, frame?, element? }`: missing screens, stale embed sizes or
-image aspect (a uniformly scaled frame is fine), two nodes claiming one name
-(`claimedNames`), two nodes whose boxes overlap (touching edges do not), a
-person's copies of our elements (`pastedCopies`: one finding per set pasted
-together), stale overlays, ones whose target or frame is gone or that were drawn
-for another screen, notes whose node is gone, notes whose top edge lies inside
-their frame, straight arrows of ours whose ends are more than 1px from where
-`connect` would put them now, dangling arrow or text bindings
-(`bindingFailures(elements)` on its own), images without an `## Embedded Files`
-entry, and data from a newer wiredown. Overlays belong to the frame whose image
-id their `anchor` records. `refreshFlow` updates each frame's link size and
-image size (same top-left and scale), moves its overlays to where `addHighlight`
-and `addMark` would place them, and moves the notes under it (those overlapping
-it sideways with their top below its old top) by the change in its bottom edge,
-or, when the top one overlaps the frame, to 20px under it, keeping their order.
-It then re-routes each two-point arrow of ours whose ends are off with the
-geometry `connect` uses, keeping the arrow's slot, id and bindings' mode, and
-places its label as `connect` does (halfway, or a third along when the pair has
-parallel arrows). Displaced labels and notes return to their places. Bent
-arrows, decisions and hand-drawn elements never move. Frames are not moved
-apart, so a frame that grew may overlap its neighbour. It returns `{ frame,
-kind: "embed", element, link, image }`, `{ frame, kind: "highlight" | "mark",
-element, target, label?, unresolved? }`, `{ frame, kind: "note", element }` and
-`{ frame, kind: "arrow", element, from, to, unresolved? }` changes, where
-`unresolved` says why an overlay, or a bent arrow that no longer meets its
-node, was left in place. It throws, changing nothing, when two nodes claim one
-name. A flow that `lintFlow` finds nothing in is one `refreshFlow` leaves untouched.
+findings `{ message, frame?, element? }`: missing screens, stale embed sizes
+or image aspect (a uniformly scaled frame is fine), two nodes claiming one
+name (`claimedNames`), two nodes whose boxes overlap (touching edges do not),
+a person's copies of our elements (`pastedCopies`: one finding per set pasted
+together), stale overlays, ones whose target or frame is gone or that were
+drawn for another screen, notes whose node is gone, notes whose top edge lies
+inside their frame, straight arrows of ours whose ends are more than 1px from
+where `connect` would put them now, dangling arrow or text bindings, images
+without an `## Embedded Files` entry, and data from a newer wiredown. Overlays
+belong to the frame whose image id their `anchor` records. `refreshFlow`
+updates each frame's link size and image size (same top-left and scale), moves
+its overlays to where `addHighlight` and `addMark` would place them, and moves
+the notes under it (those overlapping it sideways with their top below its old
+top) by the change in its bottom edge, or, when the top one overlaps the
+frame, to 20px under it, keeping their order. It then re-routes each two-point
+arrow of ours whose ends are off with the geometry `connect` uses, keeping the
+arrow's slot, id and bindings' mode, and places its label as `connect` does
+(halfway, or a third along when the pair has parallel arrows). Displaced
+labels and notes return to their places. Bent arrows, decisions and hand-drawn
+elements never move. Frames are not moved apart, so a frame that grew may
+overlap its neighbour. It returns `{ frame, kind: "embed", element, link,
+image }`, `{ frame, kind: "highlight" | "mark", element, target, label?,
+unresolved? }`, `{ frame, kind: "note", element }` and `{ frame, kind:
+"arrow", element, from, to, unresolved? }` changes, where `unresolved` says
+why an overlay, or a bent arrow that no longer meets its node, was left in
+place. It throws, changing nothing, when two nodes claim one name. A flow that
+`lintFlow` finds nothing in is one `refreshFlow` leaves untouched.
 
 `removeFromFlow(flow, targets)` removes as Excalidraw deletes: elements are
 marked `isDeleted` and touched, never spliced out, so numbers stay taken and
