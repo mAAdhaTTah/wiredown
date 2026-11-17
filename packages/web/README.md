@@ -89,9 +89,22 @@ not checked on a live Gitea, is:
   served as `/assets/wiredown/<version>/`;
 - the `<script>` tag above in `$GITEA_CUSTOM/templates/custom/footer.tmpl`.
 
-A Content Security Policy that blocks same-origin module scripts, dynamic
-`import()`, workers or `data:` images would stop it. Gitea's own policy was
-not checked.
+A strict Content Security Policy works if it allows, from the page's own
+origin, scripts (module scripts and dynamic `import()`), `fetch` and workers,
+and allows inline styles and `data:` images and fonts: the renderer adds a
+`<style>` element, and each drawing is an SVG with its font inlined and its
+screens as `data:` images. For example:
+
+```text
+default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+img-src 'self' data:; font-src 'self' data:
+```
+
+It needs no `'unsafe-eval'`. Without it, Excalidraw cannot subset the font
+(its subsetting code compiles with `new Function`): it logs console errors,
+in its worker and then on the page, and inlines the whole font instead, so
+drawings look the same and are larger. Excalidraw has no option to skip
+subsetting. Gitea's own policy was not checked.
 
 ## What it assumes about the page
 
