@@ -5,7 +5,8 @@ draws `wiredown` code blocks and `.excalidraw.md` flows on Gitea's pages with
 Excalidraw, and loads Excalidraw only on pages that have one. It supports
 Gitea only.
 
-**Status: run in headless Chromium 159.0.8154.6 on 2026-11-16 against
+**Status: run in Playwright's headless Chromium (last on 2026-11-17, with
+159.0.8154.6; the smoke check prints the version it runs) against
 Gitea-shaped stand-in pages; never run on a live Gitea.** See "Verify on a
 forge" below.
 
