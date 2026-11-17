@@ -107,7 +107,8 @@ Screens are drawn by Excalidraw, from elements Wiredown lays out. Same look
 in every surface; no second renderer to keep in step.
 
 - **Text measurement.** Layout measures in Excalifont with an advance-width
-  table plus measured kerning pairs, generated from the font. The prototype
+  table regenerated from the font plus retained browser-measured kerning
+  pairs, spot-checked by `check-metrics.mjs`. The prototype
   matched Excalidraw's own `measureText` to 0.01 px mean, 0.96 px max.
   Excalifont is OFL-1.1; Wiredown ships derived metrics, and Excalidraw
   inlines the font.
