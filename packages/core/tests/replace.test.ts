@@ -140,14 +140,14 @@ rows: members
     expect(run("extends: team-members\nreplace: invte\n  button: x").errors).toEqual([
       {
         line: 2,
-        message: 'replace: "team-members" has no component with (id=invte); did you mean "invite"?',
+        message: 'replace: "team-members" has no component #invte; did you mean "invite"?',
       },
     ]);
     expect(run("extends: team-members\nreplace: zzz\n  button: x").errors).toEqual([
       {
         line: 2,
         message:
-          'replace: "team-members" has no component with (id=zzz); its ids are: seats, invite, notice, members',
+          'replace: "team-members" has no component #zzz; its ids are: seats, invite, notice, members',
       },
     ]);
   });
