@@ -288,7 +288,9 @@ if a frame's embed names no screens file (reported as
 <root>`) or a screen a frame embeds is missing or has errors (reported as
 findings in that screens file); the other frames are still refreshed. If
 several files match a frame's embed, refresh reports it, naming them, and
-writes nothing. Each JSON error adds the `file` it is about.
+writes nothing; so it does when two elements claim one node name (the
+error `flow note` gives). Each JSON error adds the `file` it is about. A
+person's copy of our elements is left where it is.
 
 `wiredown flow lint <flow>... [--json]` never writes. It reports, as
 `path: F2: error: message` and a summary line per file:
@@ -296,9 +298,12 @@ writes nothing. Each JSON error adds the `file` it is about.
 - a frame whose embed names no screens file, matches several (naming
   them), points outside the flow's root, or whose screen is missing or has
   errors;
-- two frames or decisions claiming one name, usually a pasted copy of a
-  frame: `F2 is claimed by elements <id> and <id>; delete the copy` (the
-  flow commands refuse that name until then);
+- two frames or decisions claiming one name, a copy pasted before elements
+  recorded their own id: `F2 is claimed by elements <id> and <id>; delete
+the copy` (the flow commands, refresh included, refuse until then);
+- a person's copy of our elements, once per pasted group: `element <id> is
+a copy of F2's frame; flow commands leave copies alone: delete it in the
+drawing` (or of `F2's note`, `F2's highlight`, `arrow F1 -> F2`, …);
 - a stale frame: its link size is not the screen's current size, or its
   image's aspect ratio no longer matches (more than 1%; scaling a frame
   uniformly is fine);

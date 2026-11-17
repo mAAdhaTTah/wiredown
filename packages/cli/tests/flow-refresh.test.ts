@@ -414,3 +414,66 @@ test("flow lint reports unsupported metadata without refusing the file", async (
     stderr: "",
   });
 });
+
+/** Pastes F1's group as Excalidraw does: new ids, one new group, the data verbatim. */
+async function pasteF1(file: string) {
+  const flow = parseFlow(await readFile(file, "utf8"));
+  const group = (flow.elements.find((e) => e.type === "image")!.groupIds as string[])[0];
+  const parts = flow.elements.filter((e) => (e.groupIds as string[]).includes(group));
+  parts.forEach((e, i) =>
+    flow.elements.push({
+      ...structuredClone(e),
+      id: `pasted0${i}`,
+      y: Number(e.y) + 2000,
+      groupIds: ["pasted"],
+    }),
+  );
+  await writeFile(file, serializeFlow(flow));
+  return flow;
+}
+
+test("a pasted frame is a copy: lint names it once, refresh leaves it", async () => {
+  const { file, screens } = await setup();
+  const pasted = await pasteF1(file);
+  const image = pasted.elements.find((e) => e.id.startsWith("pasted") && e.type === "image")!;
+  expect((await run(["flow", "lint", file])).stdout).toBe(
+    `${file}: F1: error: element ${image.id} is a copy of F1's frame; flow commands leave copies alone: delete it in the drawing\n${file}: 1 error\n`,
+  );
+  await writeFile(screens, grow(await readFile(screens, "utf8")));
+  const result = await run(["flow", "refresh", file, "--json"]);
+  expect(result.exitCode).toBe(0);
+  const after = parseFlow(await readFile(file, "utf8"));
+  expect(JSON.parse(result.stdout).changes.map((c: { element: string }) => c.element)).toEqual([
+    after.elements.find((e) => e.type === "image")!.id,
+  ]);
+});
+
+test("refresh refuses a name two elements claim and writes nothing", async () => {
+  const { file, screens } = await setup();
+  const flow = parseFlow(await readFile(file, "utf8"));
+  // data from before elements recorded their own id
+  for (const e of flow.elements) delete (e.customData as { wiredown: { id?: string } }).wiredown.id;
+  await writeFile(file, serializeFlow(flow));
+  await pasteF1(file);
+  await writeFile(screens, grow(await readFile(screens, "utf8")));
+  const before = await readFile(file, "utf8");
+  const [f1, copy] = parseFlow(before).elements.filter((e) => e.type === "image");
+  const message = `F1 is claimed by elements ${f1.id} and ${copy.id}; delete the copy`;
+  expect((await run(["flow", "note", file, "F1", "Which?"])).stderr).toBe(
+    `${file}: error: ${message}\n`,
+  );
+  expect(await run(["flow", "refresh", file])).toEqual({
+    exitCode: 1,
+    stdout: "",
+    stderr: `${file}: error: ${message}\n`,
+  });
+  const json = await run(["flow", "refresh", file, "--json"]);
+  expect(json.exitCode).toBe(1);
+  expect(JSON.parse(json.stdout)).toEqual({
+    flow: file,
+    changes: [],
+    unresolved: [],
+    errors: [{ message }],
+  });
+  expect(await readFile(file, "utf8")).toBe(before);
+});

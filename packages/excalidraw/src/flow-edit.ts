@@ -95,7 +95,41 @@ export function identity(e: ExcalidrawElementJson): Identity | undefined {
   return data && supportedVersion(data) && (data.id === undefined || data.id === e.id)
     ? data
     : undefined;
-
+}
+/**
+ * For a person's copy of one of our elements (its data names another
+ * element), the node it was on and what it copies: `F1's frame`, `arrow
+ * F1 -> F2`. Undefined for anything else.
+ */
+export function copyOf(e: ExcalidrawElementJson): { node?: string; what: string } | undefined {
+  const d = dataOf(e);
+  if (!d || !supportedVersion(d) || d.id === undefined || d.id === e.id) return undefined;
+  const node = d.frame ?? d.node;
+  const arrow = `arrow ${d.from} -> ${d.to}`;
+  if (d.role === "arrow") return { what: arrow };
+  return { node, what: `${node ?? arrow}'s ${d.role === "screen" ? "frame" : d.role}` };
+}
+/**
+ * Live copies, as pasted together: bound text with its container, and the
+ * copies in a group that holds nothing else; any other copy alone. A
+ * node's copy comes first in its set.
+ */
+export function pastedCopies(flow: Flow): ExcalidrawElementJson[][] {
+  const live = flow.elements.filter((e) => !e.isDeleted);
+  const copies = live.filter((e) => copyOf(e));
+  const ids = new Set(copies.map((e) => e.id));
+  const groupsOf = (e: ExcalidrawElementJson) =>
+    Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
+  const key = (e: ExcalidrawElementJson): string => {
+    if (ids.has(String(e.containerId))) return key(copies.find((c) => c.id === e.containerId)!);
+    const group = groupsOf(e)[0];
+    const pasted = group && live.every((o) => ids.has(o.id) || !groupsOf(o).includes(group));
+    return pasted ? group : e.id;
+  };
+  const sets = new Map<string, ExcalidrawElementJson[]>();
+  for (const e of copies) sets.set(key(e), [...(sets.get(key(e)) ?? []), e]);
+  const node = (e: ExcalidrawElementJson) => ["screen", "decision"].includes(dataOf(e)!.role);
+  return [...sets.values()].map((set) => [...set.filter(node), ...set.filter((e) => !node(e))]);
 }
 /**
  * The data version of live elements from a newer wiredown: the highest
@@ -127,14 +161,22 @@ export function flowNodes(flow: Flow): FlowNode[] {
     return [];
   });
 }
+const claimed = (name: string, ids: string[]) =>
+  `${name} is claimed by elements ${ids.join(" and ")}; delete the copy`;
+/** Each name two live nodes claim (data without `id`, or edited by hand), and why it is refused. */
+export function claimedNames(flow: Flow) {
+  const named = new Map<string, string[]>();
+  for (const n of flowNodes(flow)) named.set(n.node, [...(named.get(n.node) ?? []), n.element.id]);
+  return [...named]
+    .filter(([, ids]) => ids.length > 1)
+    .map(([node, ids]) => ({ node, ids, message: claimed(node, ids) }));
+}
 /** The live node named `name`; two nodes claiming one name are an error, not a guess. */
 function findNode(flow: Flow, name: string): FlowNode {
   const nodes = flowNodes(flow);
   const found = nodes.filter((n) => n.node === name);
-  if (found.length > 1)
-    throw new Error(
-      `${name} is claimed by elements ${found.map((n) => n.element.id).join(" and ")}; delete the copy`,
-    );
+  const ids = found.map((n) => n.element.id);
+  if (ids.length > 1) throw new Error(claimed(name, ids));
   if (!found.length)
     throw new Error(
       `unknown node "${name}" (nodes: ${nodes.map((n) => n.node).join(", ") || "none"})`,

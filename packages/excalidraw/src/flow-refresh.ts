@@ -9,6 +9,8 @@ import {
   arrowGeometry,
   arrowsBetween,
   centredOn,
+  claimedNames,
+  copyOf,
   embedSize,
   flowFrames,
   flowNodes,
@@ -18,6 +20,7 @@ import {
   newerDataVersion,
   NOTE_GAP,
   overlayBox,
+  pastedCopies,
   positionArrowLabel,
   touch,
 } from "./flow-edit.js";
@@ -341,15 +344,16 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
         message: `text element "${e.id}" has an id that is not 8 characters; the Excalidraw plugin cannot track it, and flow commands cannot save this drawing until it is renamed`,
       });
   }
-  const named = new Map<string, string[]>();
-  for (const n of flowNodes(flow)) named.set(n.node, [...(named.get(n.node) ?? []), n.element.id]);
-  for (const [node, ids] of named)
-    if (ids.length > 1)
-      out.push({
-        frame: node,
-        element: ids.at(-1)!,
-        message: `${node} is claimed by elements ${ids.join(" and ")}; delete the copy`,
-      });
+  for (const { node, ids, message } of claimedNames(flow))
+    out.push({ frame: node, element: ids.at(-1)!, message });
+  for (const [copy] of pastedCopies(flow)) {
+    const { node, what } = copyOf(copy)!;
+    out.push({
+      ...(node ? { frame: node } : {}),
+      element: copy.id,
+      message: `element ${copy.id} is a copy of ${what}; flow commands leave copies alone: delete it in the drawing`,
+    });
+  }
   const states = frameStates(flow, screens);
   for (const s of states) {
     const at = { frame: s.frame, element: s.image.id };
@@ -457,6 +461,9 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
  * else moves. Returns the changes; none means the flow is untouched.
  */
 export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
+  // which node's overlays and notes to move would be a guess
+  const [claim] = claimedNames(flow);
+  if (claim) throw new Error(claim.message);
   const out: FlowChange[] = [];
   const overlays = liveOverlays(flow);
   const states = frameStates(flow, screens);
