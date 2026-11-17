@@ -22,9 +22,10 @@ export interface AddScreenOptions {
   size: { width: number; height: number };
   place?: { rightOf: string } | { below: string };
 }
-/** The version of `customData.wiredown` this code writes; objects without `v` are version 1. */
-export const LABEL_OFFSET = 48;
+/** A frame's label sits this far above its image. */
+const LABEL_OFFSET = 48;
 
+/** The version of `customData.wiredown` this code writes; objects without `v` are version 1. */
 export const DATA_VERSION = 1;
 /**
  * `customData.wiredown`. A frame's image also records `group`, the Excalidraw
