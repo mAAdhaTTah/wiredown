@@ -249,11 +249,12 @@ there corrects both embed sizing and overlay placement.
 `wiredown flow refresh <flow> [--json]` brings a flow up to date after its
 screens change. Each frame's screen comes from the screens file its embed
 names, so one flow may use several. For each frame whose screen exists it
-sets the `## Embedded Files` link size (writing the link's path as new
-embeds are written, from the root, if it was another form), resizes the
-image to the new screen size at the scale it had (a frame a person scaled
-stays scaled; its top-left stays put), and moves the frame's highlights and marks to where
-`flow highlight` and `flow mark` would put them now. Notes under the frame
+sets the `## Embedded Files` link size, resizes the image to the new screen
+size at the scale it had (a frame a person scaled stays scaled; its
+top-left stays put), and moves the frame's highlights and marks to where
+`flow highlight` and `flow mark` would put them now. Whenever it rewrites a
+frame's link it writes the path from the root, as new embeds are written;
+links it leaves alone keep their form. Notes under the frame
 move with its bottom edge, keeping their order and gaps; a note dragged
 onto the frame goes back under it, with the notes below it. Every straight arrow of ours whose ends
 are not where `flow connect` would put them now, because a frame was
@@ -290,11 +291,12 @@ screen could not be used. A change is
 the node it stopped meeting; unresolved ones add `unresolved`, the reason.
 An overlay belongs to the frame whose image element id it records, whatever
 the frame is now called. Exit 0; 1
-if a frame's embed names no screens file, or several files match it
-(reported as `flow: F2: error: embeds [[ui#^members]], but no ui.md was
-found in <root>`) or a screen a frame embeds is missing or has errors
-(reported as findings in that screens file); the other frames are still
-refreshed. Each JSON error adds the `file` it is about.
+if a frame's embed names no screens file (reported as
+`flow: F2: error: embeds [[ui#^members]], but no ui.md was found in
+<root>`) or a screen a frame embeds is missing or has errors (reported as
+findings in that screens file); the other frames are still refreshed. If
+several files match a frame's embed, refresh reports it, naming them, and
+writes nothing. Each JSON error adds the `file` it is about.
 
 `wiredown flow lint <flow>... [--json]` never writes. It reports, as
 `path: F2: error: message` and a summary line per file:

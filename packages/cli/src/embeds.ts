@@ -108,22 +108,20 @@ export type EmbedResolution =
   | { ok: false; reason: "missing" | "ambiguous" | "outside"; message: string };
 
 /**
- * The screens file `embedPath` names from the flow (`{ ok: true, path, embedPath }`,
- * with the path to write for it now), or why there is none: `missing`
- * (`no ui.md was found in <root>`), `ambiguous` when several files end with
- * the path (`ui matches several files: <a>, <b>; …`), or `outside` for a
- * path that leaves the root, symlinks included (`ui points outside <root>`).
+ * The screens file `embedPath` names from the flow (`{ path, embedPath }`,
+ * with the path to write for it now), or why there is none, as it reads
+ * after `embeds [[…]]`: `but no ui.md was found in <root>`, `but it matches
+ * several files: <a>, <b>; …` (with `ambiguous`) when several files end
+ * with the path, or
+ * `which points outside <root>` for a path that leaves the root, symlinks
+ * included.
  */
 export async function resolveEmbed(
   flowFile: string,
   embedPath: string,
   root: EmbedRoot,
-): Promise<EmbedResolution> {
-  const outside = {
-    ok: false,
-    reason: "outside",
-    message: `${embedPath} points outside ${rootPath(root, flowFile)}`,
-  } as const;
+): Promise<{ path: string; embedPath: string } | { why: string; ambiguous?: true }> {
+  const outside = { why: `which points outside ${rootPath(root, flowFile)}` };
   const candidates = embedCandidates(root.flow, embedPath, root.url);
   if (!candidates) return outside;
   let url: string | undefined = candidates[0];
@@ -140,9 +138,8 @@ export async function resolveEmbed(
         .sort();
       if (matches.length > 1)
         return {
-          ok: false,
-          reason: "ambiguous",
-          message: `${embedPath} matches several files: ${matches.join(", ")}; name one by its path from ${rootPath(root, flowFile)}`,
+          why: `but it matches several files: ${matches.join(", ")}; name one by its path from ${rootPath(root, flowFile)}`,
+          ambiguous: true,
         };
       if (matches.length)
         url = new URL(matches[0].split("/").map(encodeURIComponent).join("/"), root.url).href;
