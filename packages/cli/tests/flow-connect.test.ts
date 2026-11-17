@@ -88,6 +88,32 @@ test("decision, connect and note: output and the written drawing", async () => {
   const human = await run(["flow", "note", file, "D1", "Why?"]);
   expect(human.stdout).toBe(`D1  note ${(await read(file)).elements.at(-1)!.id}\n`);
   expect(arrows(await read(file))).toHaveLength(4);
+  // every element a command made names itself in its data
+  for (const e of (await read(file)).elements)
+    expect(e.customData).toMatchObject({ wiredown: { id: e.id } });
+});
+
+test("a pasted copy of a frame is left alone; an old unnamed one is refused", async () => {
+  const { file } = await twoScreens();
+  const flow = await read(file);
+  const f1 = node(flow, "F1");
+  // Excalidraw pastes with new ids and a new group, and the data verbatim
+  flow.elements.push({ ...structuredClone(f1), id: "pasted01", y: 1000, groupIds: ["pasted"] });
+  await writeFile(file, serializeFlow(flow));
+  expect((await run(["flow", "note", file, "F1", "On the original"])).exitCode).toBe(0);
+  const note = (await read(file)).elements.at(-1)!;
+  expect(note.customData).toMatchObject({ wiredown: { anchor: f1.id } });
+  expect(Number(note.y)).toBeLessThan(1000);
+
+  // data from before elements named themselves: two claimants, so a refusal
+  const old = await read(file);
+  for (const e of old.elements) delete (e.customData as { wiredown: { id?: string } }).wiredown.id;
+  await writeFile(file, serializeFlow(old));
+  const before = await readFile(file, "utf8");
+  expect((await run(["flow", "note", file, "F1", "Which?"])).stderr).toBe(
+    `${file}: error: F1 is claimed by elements ${f1.id} and pasted01; delete the copy\n`,
+  );
+  expect(await readFile(file, "utf8")).toBe(before);
 });
 
 test("no screens file is needed", async () => {

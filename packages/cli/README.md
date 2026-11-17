@@ -162,6 +162,8 @@ relative to the nodes where they are now, so moving them by hand is fine.
   Prints `F1  note <element-id>`; JSON is `{ flow, note: { id, node } }`.
 
 An unknown node (the error lists the nodes that exist), a node name two
-elements claim (a pasted copy of a frame: delete the copy), or connecting a
-node to itself writes nothing. Operational errors exit 1 (JSON adds an `errors`
-array, and the command's key is `null`); usage errors exit 2.
+elements claim (a copy pasted before elements recorded their own id: delete
+the copy), or connecting a node to itself writes nothing. A copy pasted
+since is left alone: commands use the original. Operational errors exit 1
+(JSON adds an `errors` array, and the command's key is `null`); usage
+errors exit 2.

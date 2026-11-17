@@ -187,11 +187,13 @@ Frames (F1, F2, ...) and decisions (D1, D2, ...) are the flow's nodes;
 goes right of the rightmost node. Unknown nodes throw and change nothing.
 Existing elements are never moved or restyled; `connect` only adds the
 arrow to its two nodes' `boundElements`, as Excalidraw's binding requires,
-and a note may add the group to its node. Two live nodes with one name
-(a pasted copy) make every command that takes that name throw, naming both
-element ids. Every element records itself in `customData.wiredown`, with
-`v: 1`: frames as `{ frame, screen, role: "screen" | "label" }` (the image
-adds `group`), decisions as `{ node, role: "decision" | "label" }` (the
+and a note may add the group to its node. A person's pasted copy of a node
+(its data's `id` names another element) is not a node: nothing attaches to
+it, placement ignores it, and its name stays taken. Two live nodes with one
+name (data without `id`, or edited by hand) make every command that takes
+that name throw, naming both element ids. Every element records itself in
+`customData.wiredown`, with `v: 1` and its own `id`: frames as `{ frame,
+screen, role: "screen" | "label" }` (the image adds `group`), decisions as `{ node, role: "decision" | "label" }` (the
 diamond adds `group` once it has one), arrows as `{ role: "arrow", from, to,
 slot? }`, where `slot` is the arrow's place among the arrows between its
 pair, 1 for the first offset one (their labels `role: "label"`), notes as
