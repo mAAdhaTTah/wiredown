@@ -145,6 +145,8 @@ test("refresh with a missing or invalid screen still refreshes the others", asyn
   await writeFile(orphan, await readFile(file, "utf8"));
   const missing = await run(["flow", "refresh", orphan]);
   expect(missing.exitCode).toBe(1);
+  // nothing changed, but it is not up to date either
+  expect(missing.stdout).toBe("");
   const why = `embeds [[screens#^team]], but no screens.md was found in ${lone}`;
   expect(missing.stderr).toContain(`${orphan}: F1: error: ${why}\n`);
   expect((await run(["flow", "lint", orphan])).stdout).toContain(`${orphan}: F1: error: ${why}\n`);

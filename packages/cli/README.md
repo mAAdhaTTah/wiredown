@@ -263,7 +263,8 @@ grew may now overlap its neighbouring frame; lint reports that. An overlay whose
 component is gone is left where it is and reported as unresolved. The file is
 written only if something changed.
 
-Human output is one line per change, or `up to date`:
+Human output is one line per change, or `up to date` when nothing changed and
+every screen was found:
 
 ```text
 F2  embed 548x373 -> 548x413
