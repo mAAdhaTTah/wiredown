@@ -419,8 +419,8 @@ overlaps F1; run "wiredown flow refresh" or move it`;
 and no longer meets F1; straighten or move it in the drawing` (refresh
   leaves it);
 - two of our frames or decisions whose boxes overlap, once per pair on the
-  later one: `F3: overlaps F1; move one of them in the drawing` (touching
-  edges are fine);
+  later one: `F3: overlaps F1; move one of them in the drawing, or run
+"wiredown flow move <flow> F3 --right-of F1"` (touching edges are fine);
 - an image whose `fileId` has no `## Embedded Files` entry;
 - data written by a newer wiredown, once: `this drawing was written by a
 newer wiredown (data version N)`; that data is otherwise ignored.

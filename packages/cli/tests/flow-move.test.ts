@@ -137,3 +137,27 @@ test("refusals write nothing and follow the findings convention", async () => {
   expect(refused.stderr).toContain(`F2 is claimed by elements ${f2.id} and claim001`);
   expect(await readFile(file, "utf8")).toBe(claimed);
 });
+
+test("an overlap lint reports is fixed by the move it suggests", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  const file = join(dir, "f.excalidraw.md");
+  expect((await run(["flow", "new", file, "team", "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "note", file, "F2", "Seats"])).exitCode).toBe(0);
+  // a person drags F2's group onto F1
+  const flow = parseFlow(await readFile(file, "utf8"));
+  const f2 = flowNodes(flow).find((n) => n.node === "F2")!.element;
+  const group = (f2.groupIds as string[])[0];
+  const dx = 50 - Number(f2.x);
+  for (const e of flow.elements.filter((e) => (e.groupIds as string[]).includes(group)))
+    e.x = Number(e.x) + dx;
+  await writeFile(file, serializeFlow(flow));
+  const found = await lint(file);
+  expect(found.stdout).toContain(
+    `${file}: F2: error: overlaps F1; move one of them in the drawing, or run "wiredown flow move <flow> F2 --right-of F1"\n`,
+  );
+  // back where it was, so its arrow already meets it
+  expect((await run(["flow", "move", file, "F2", "--right-of", "F1"])).stdout).toBe(
+    "moved F2 to 696,0 (frame, 1 note)\n",
+  );
+  expect(await lint(file)).toEqual({ exitCode: 0, stdout: `${file}: 0 errors\n`, stderr: "" });
+});

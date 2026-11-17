@@ -183,3 +183,18 @@ test("touching a node is not an overlap", () => {
   moveNode(flow, "F1", { x: Number(f2.x) - Number(f2.width), y: 0 });
   expect(lintFlow(flow, screens).filter((f) => f.message.includes("overlaps"))).toEqual([]);
 });
+
+test("lint reports an overlap, the move it suggests fixes it", () => {
+  const flow = build();
+  const f2 = node(flow, "F2");
+  Object.assign(f2, { x: 50 });
+  const finding = lintFlow(flow, screens).find((f) => f.message.startsWith("overlaps"));
+  expect(finding).toEqual({
+    frame: "F2",
+    element: f2.id,
+    message:
+      'overlaps F1; move one of them in the drawing, or run "wiredown flow move <flow> F2 --right-of F1"',
+  });
+  moveNode(flow, "F2", { rightOf: "F1" });
+  expect(lintFlow(flow, screens).filter((f) => f.message.startsWith("overlaps"))).toEqual([]);
+});
