@@ -1,4 +1,4 @@
-import { RETIRED_OPTIONS, catalogEntry } from "./catalog.js";
+import { RETIRED_OPTIONS, catalogEntry, optionsOf } from "./catalog.js";
 import { gridRows } from "./components/grid.js";
 import { ICON_NAMES, isIcon } from "./icons.js";
 import { fontMeasurer } from "./metrics.js";
@@ -14,6 +14,7 @@ export interface CheckResult extends ParseResult {
 }
 
 const excalifont = fontMeasurer(EXCALIFONT);
+const FIELD_FLAGS = catalogEntry("field")!.flags;
 /** Options before an id, as in "*Reserve (fill) #reserve"; the id ends the line instead. */
 const LATE_ID = /(?<!\\)\(([^()]*)\)\s+(#[a-z][a-z0-9-]*)\s*$/;
 
@@ -41,18 +42,27 @@ function lineWarnings(text: string): string[] {
  * A warning for trailing brackets that stay text on a component's line but
  * look meant as options: they hold a retired option, or an option next to a
  * word that is none, as in "(striped, primry)", or they come before the id.
+ * `type` and `takes` are the component's and the options it takes.
  */
-function bracketWarning(text: string): string | null {
+function bracketWarning(text: string, type: string, takes: readonly string[]): string | null {
   const late = LATE_ID.exec(text);
-  if (late && !staysText(late[1].split(",").map((t) => t.trim()))) {
-    const fixed = text.trim().replace(LATE_ID, "$2 ($1)");
-    return `"(${late[1]})" is drawn as text; write the id before the options: "${fixed}"`;
-  }
-  const m = TRAILING.exec(text);
+  const m = late ?? TRAILING.exec(text);
   if (!m) return null;
   const entries = m[1].split(",").map((t) => t.trim());
+  const brackets = `(${m[1]})`;
+  if (late && !staysText(entries)) {
+    const wrong = entries.filter((e) => {
+      const [k, v] = e.split("=").map((t) => t.trim());
+      return !takes.includes(k.toLowerCase()) || (v !== undefined && isNaN(Number(v)));
+    });
+    if (wrong.length) {
+      const list = takes.length ? `it takes: ${takes.join(", ")}` : "it takes no options";
+      return `"${brackets}" is drawn as text, and ${type} doesn't take ${wrong.map((e) => `"${e}"`).join(", ")} (${list})`;
+    }
+    const fixed = text.trim().replace(LATE_ID, "$2 ($1)");
+    return `"${brackets}" is drawn as text; write the id before the options: "${fixed}"`;
+  }
   if (!staysText(entries)) return null;
-  const brackets = m[0].trim();
   const retired = entries.find((e) => RETIRED_OPTIONS.has(e.toLowerCase()));
   if (retired)
     return `"${brackets}" is drawn as text; ${RETIRED_OPTIONS.get(retired.toLowerCase())}`;
@@ -67,11 +77,15 @@ function bracketWarning(text: string): string | null {
 /** Warnings for the component lines of a block and the rows of its grids. */
 function treeWarnings(lines: string[]): ParseError[] {
   const out: ParseError[] = [];
-  const visit = (node: SpecNode) => {
-    node.children.forEach(visit);
-    if (!node.line || catalogEntry(node.type)?.directive) return;
-    // a field's component shares its line, so the field itself is skipped
-    const brackets = node.type === "field" ? null : bracketWarning(lines[node.line - 1]);
+  const visit = (node: SpecNode, parent: SpecNode) => {
+    node.children.forEach((child) => visit(child, node));
+    const entry = catalogEntry(node.type);
+    if (!node.line || !entry || entry.directive) return;
+    // a field's component shares its line, so the field itself is skipped;
+    // the component also takes the field's options
+    const takes = [...optionsOf(entry), ...(parent.type === "field" ? FIELD_FLAGS : [])];
+    const brackets =
+      node.type === "field" ? null : bracketWarning(lines[node.line - 1], node.type, takes);
     if (brackets) out.push({ line: node.line, message: brackets });
     if (node.type !== "grid") return;
     // the line of each row: the grid's own, then its continuation lines, which skip comments
@@ -90,7 +104,8 @@ function treeWarnings(lines: string[]): ParseError[] {
       }
     }
   };
-  visit(parse(lines.join("\n")).tree);
+  const root = parse(lines.join("\n")).tree;
+  root.children.forEach((child) => visit(child, root));
   return out;
 }
 

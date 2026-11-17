@@ -95,21 +95,56 @@ describe("check", () => {
   });
 
   it("warns about options written before the id", () => {
-    const r = check("button: *Reserve (fill) #reserve\nfield: Name | input: x (w=200) #name");
+    const r = check(
+      "button: *Reserve (fill) #reserve\nfield: Name | input: x (w=200, required) #name",
+    );
     expect(r.errors).toEqual([]);
+    const fixed = [
+      "button: *Reserve #reserve (fill)",
+      "field: Name | input: x #name (w=200, required)",
+    ];
     expect(r.warnings).toEqual([
       {
         line: 1,
-        message:
-          '"(fill)" is drawn as text; write the id before the options: "button: *Reserve #reserve (fill)"',
+        message: `"(fill)" is drawn as text; write the id before the options: "${fixed[0]}"`,
       },
       {
         line: 2,
-        message:
-          '"(w=200)" is drawn as text; write the id before the options: "field: Name | input: x #name (w=200)"',
+        message: `"(w=200, required)" is drawn as text; write the id before the options: "${fixed[1]}"`,
       },
     ]);
+    // the suggested lines are clean
+    for (const line of fixed) expect(check(line)).toMatchObject({ errors: [], warnings: [] });
     expect(check("text: Tag (draft) #urgent\ntext: Tag \\(fill) #urgent").warnings).toEqual([]);
+  });
+
+  it("suggests no order for options before the id that the component doesn't take", () => {
+    const takes = "\\(it takes: [a-z, ]+\\)$";
+    expect(check("button: x (striped) #a\nbutton: y (fit, fill) #b").warnings).toEqual([
+      {
+        line: 1,
+        message: expect.stringMatching(
+          new RegExp(
+            `^"\\(striped\\)" is drawn as text, and button doesn't take "striped" ${takes}`,
+          ),
+        ),
+      },
+      {
+        line: 2,
+        message: expect.stringMatching(
+          new RegExp(`^"\\(fit, fill\\)" is drawn as text, and button doesn't take "fit" ${takes}`),
+        ),
+      },
+    ]);
+  });
+
+  it("gives brackets before an id the warnings they get without it", () => {
+    for (const text of ["button: x (hi)", "button: x (striped, primry)"]) {
+      const without = check(text).warnings;
+      expect(without).toHaveLength(1);
+      expect(check(`${text} #a`).warnings).toEqual(without);
+    }
+    expect(check("button: x \\(hi) #a").warnings).toEqual([]);
   });
 
   it("reports a block with no components", () => {
