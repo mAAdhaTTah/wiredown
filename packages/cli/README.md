@@ -142,6 +142,7 @@ array); usage errors exit 2.
 
 Flow commands refuse to overwrite a drawing or screens file that changed
 while the command was running, and replace files atomically. The check is
-best effort: a save landing in the last instant can still be lost. Close the
-drawing in Obsidian before running flow commands, or retry after a concurrent
-save.
+best effort: a save landing in the last instant can still be lost. If the
+screens file changed, the drawing is left as it was, and `flow new` leaves no
+file behind. Close the drawing in Obsidian before running flow commands, or
+retry after a concurrent save.

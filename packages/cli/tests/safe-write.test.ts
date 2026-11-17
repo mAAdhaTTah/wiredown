@@ -65,3 +65,28 @@ test("keeps the file's mode, writes through a symlink, and reports a deleted fil
   await expect(safeWrite(file, "replacement", "x")).rejects.toThrow(/changed while the command/);
   expect(await readdir(dir)).toEqual(["link.md"]);
 });
+
+test("flow new leaves no drawing behind when the screens file changes", async () => {
+  const dir = await realpath(await fixture({ "screens.md": BASE }));
+  const screens = join(dir, "screens.md");
+  const file = join(dir, "a.excalidraw.md");
+  const read = (await vi.importActual<typeof fs>("node:fs/promises")).readFile;
+  let reads = 0;
+  const spy = vi.spyOn(fs, "readFile").mockImplementation((async (
+    ...args: Parameters<typeof read>
+  ) => {
+    if (args[0] === screens && ++reads === 2) await writeFile(screens, BASE + "\nHuman save\n");
+    return read(...args);
+  }) as typeof read);
+  try {
+    const result = await run(["flow", "new", file, "team"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("changed while the command was running; nothing was written.");
+    expect(await readdir(dir)).toEqual(["screens.md"]);
+    // so running it again works
+    spy.mockRestore();
+    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  } finally {
+    spy.mockRestore();
+  }
+});

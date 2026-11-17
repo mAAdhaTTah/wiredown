@@ -1,6 +1,6 @@
 import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
 import { safeWrite } from "./safe-write.js";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import {
@@ -108,7 +108,11 @@ export async function editFlow(
     if (command === "new") await writeFile(file, output, { flag: "wx" });
     else await safeWrite(file, original, output);
     if (screensPath && styled !== source) {
-      await safeWrite(screensPath, source, styled);
+      // a screens file that changed takes the flow's edit back: nothing was written
+      await safeWrite(screensPath, source, styled).catch(async (error: unknown) => {
+        await (command === "new" ? rm(file) : safeWrite(file, output, original));
+        throw error;
+      });
       screensFileUpdated = true;
     }
     return {
