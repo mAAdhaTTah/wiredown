@@ -121,20 +121,16 @@ test("our arrows are re-routed as connect places them; a bent one is left and re
   const before = structuredClone(bent);
   const moved = moveNode(flow, "F1", { x: 0, y: -1000 });
   expect(moved.arrows).toBe(2);
+  const why = "it was bent by hand and no longer meets F1; straighten or move it in the drawing";
   expect(moved.unresolved).toEqual([
-    {
-      frame: "F1",
-      kind: "arrow",
-      element: bent.id,
-      from: "F2",
-      to: "F1",
-      unresolved: "it was bent by hand; reconnect it by hand",
-    },
+    { frame: "F1", kind: "arrow", element: bent.id, from: "F2", to: "F1", unresolved: why },
   ]);
   expect(bent).toEqual(before);
-  // the straight ones meet their nodes: lint does not report them
+  // the straight ones meet their nodes: lint reports only the bent one, as move did
   const lint = lintFlow(flow, screens);
-  expect(lint.filter((f) => f.message.includes("no longer meets"))).toEqual([]);
+  expect(lint.filter((f) => f.message.includes("no longer meets"))).toEqual([
+    { frame: "F1", element: bent.id, message: `arrow F2 -> F1: ${why}` },
+  ]);
 });
 
 test("a decision moves with its text and notes", () => {
