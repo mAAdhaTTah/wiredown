@@ -23,6 +23,8 @@ export interface AddScreenOptions {
   place?: { rightOf: string } | { below: string };
 }
 /** The version of `customData.wiredown` this code writes; objects without `v` are version 1. */
+export const LABEL_OFFSET = 48;
+
 export const DATA_VERSION = 1;
 /**
  * `customData.wiredown`. A frame's image also records `group`, the Excalidraw
@@ -186,9 +188,16 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
     fontFamily: 5,
   });
   const label = {
-    ...element("text", x, y - 48, measured.w, measured.h, keys[0], { ...data, role: "label" }, [
-      group,
-    ]),
+    ...element(
+      "text",
+      x,
+      y - LABEL_OFFSET,
+      measured.w,
+      measured.h,
+      keys[0],
+      { ...data, role: "label" },
+      [group],
+    ),
     text,
     rawText: text,
     originalText: text,
