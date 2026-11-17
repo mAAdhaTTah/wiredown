@@ -121,6 +121,12 @@ export function check(source: string, options: ResolveOptions = {}): CheckResult
   const lines = source.replace(/\r/g, "").split("\n");
   if (lines.every((l) => !l.trim() || l.trim().startsWith("//"))) {
     errors.push({ line: 1, message: "the block is empty; write at least one component" });
+  } else if (!errors.length && !tree.children.length) {
+    // a variant whose changes remove everything
+    errors.push({
+      line: 1,
+      message: "the screen is empty after its changes; keep at least one component",
+    });
   }
   const warnings = [
     ...treeWarnings(lines),

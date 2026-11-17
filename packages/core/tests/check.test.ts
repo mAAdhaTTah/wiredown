@@ -155,6 +155,13 @@ describe("check", () => {
     }
   });
 
+  it("reports a variant that removes every component", () => {
+    const r = check("extends: base\nremove: win", { lookup: () => "window: T #win\n  text: x" });
+    expect(r.errors).toEqual([
+      { line: 1, message: "the screen is empty after its changes; keep at least one component" },
+    ]);
+  });
+
   it("warns about a retired option drawn as text", () => {
     expect(check("button: Old (hi)").warnings).toEqual([
       { line: 1, message: '"(hi)" is drawn as text; the highlight option is now (focus)' },
