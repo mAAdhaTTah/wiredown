@@ -50,8 +50,8 @@ function identity(e: ExcalidrawElementJson): Identity | undefined {
     : undefined;
 }
 /**
- * The data version of the live elements `identity` ignores: the highest
- * number, else the first value; undefined when none is ignored.
+ * The data version of live elements from a newer wiredown: the highest
+ * number, else the first value; undefined when there are none.
  */
 export function newerDataVersion(flow: Flow): unknown {
   const ignored = flow.elements
@@ -159,8 +159,9 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
       ? bounds.right + GAP
       : 0;
   const y = ref ? Number(ref.y) + (below ? Number(ref.height) + GAP : 0) : (bounds?.top ?? 0);
+  // a person's copy keeps its name taken, so a new frame never shares it
   const numbers = flow.elements.flatMap((e) => {
-    const a = /^F(\d+)$/.exec(identity(e)?.frame ?? "");
+    const a = /^F(\d+)$/.exec(dataOf(e)?.frame ?? "");
     const b = e.type === "text" ? /^F(\d+) ·/.exec(String(e.rawText ?? e.text)) : null;
     return [Number(a?.[1] ?? 0), Number(b?.[1] ?? 0)];
   });

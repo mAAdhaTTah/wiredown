@@ -153,4 +153,7 @@ test("pasted frames are ignored as anchors and do not imply a newer version", ()
   expect(newerDataVersion(flow)).toBeUndefined();
   expect(addScreen(flow, { ...options, place: { rightOf: "F1" } })).toBe("F2");
   expect(flowFrames(flow)[1].element.x).toBe(460);
+  // a copy keeps its name taken, even once its original is gone for good
+  flow.elements = [copy];
+  expect(addScreen(flow, options)).toBe("F2");
 });
