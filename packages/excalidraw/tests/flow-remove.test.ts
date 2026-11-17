@@ -105,7 +105,9 @@ test("a frame takes its label, notes, overlays and arrows; a person's arrow is u
     return d?.anchor === f2.id || (d?.role === "arrow" && [d.from, d.to].includes("F2"));
   });
   const texts = flow.elements.filter((e) => e.text === "Back");
-  expect(deleted(flow).sort()).toEqual([f2, label, ...parts, ...texts].map((e) => e.id).sort());
+  expect(deleted(flow).sort()).toEqual(
+    [...new Set([f2, label, ...parts, ...texts].map((e) => e.id))].sort(),
+  );
   untouchedExcept(flow, before, [f1.id, d1.id, "hand0001"]);
   expect(byId(flow, "hand0001")).toMatchObject({
     startBinding: null,
