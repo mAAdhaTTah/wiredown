@@ -297,9 +297,9 @@ the frame, to 20px under it, keeping their order. It then re-routes each
 two-point arrow of ours whose ends are off with the geometry `connect`
 uses, keeping the arrow's slot, id and bindings' mode, and places its
 label as `connect` does (halfway, or a third along when the pair has
-parallel arrows). Bent arrows, notes moved away,
-decisions and their notes, and hand-drawn elements never move, and frames
-are not moved apart, so a frame that grew may overlap its neighbour. It
+parallel arrows). Displaced labels and notes return to their places. Bent
+arrows, decisions and hand-drawn elements never move. Frames are not moved
+apart, so a frame that grew may overlap its neighbour. It
 returns `{ frame, kind: "embed", element, link, image }`,
 `{ frame, kind: "highlight" | "mark", element, target, label?, unresolved? }`,
 `{ frame, kind: "note", element }` and
