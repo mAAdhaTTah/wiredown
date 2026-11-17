@@ -363,9 +363,20 @@ test("overlays follow their frame's image by id; copies and other screens are re
     "arrow F1 -> F2: F1 no longer exists",
   ]);
   (f1.customData as { wiredown: { frame: string } }).wiredown.frame = "F1";
-  // a pasted copy of F1 claims its name; its overlays still belong to the original
+  // a pasted copy of F1 is a person's element; its overlays still belong to the original
   const copy: ExcalidrawElementJson = { ...structuredClone(f1), id: "copy0001", x: 900 };
   flow.elements.push(copy);
+  expect(lintFlow(flow, screens)).toEqual([
+    {
+      frame: "F1",
+      element: "copy0001",
+      message:
+        "element copy0001 is a copy of F1's frame; flow commands leave copies alone: delete it in the drawing",
+    },
+  ]);
+  expect(refreshFlow(flow, screens)).toEqual([]);
+  // pasted before elements recorded their own id, it claims F1: refresh refuses
+  delete (copy.customData as { wiredown: { id?: string } }).wiredown.id;
   expect(lintFlow(flow, screens)).toEqual([
     {
       frame: "F1",
@@ -373,7 +384,11 @@ test("overlays follow their frame's image by id; copies and other screens are re
       message: `F1 is claimed by elements ${f1.id} and copy0001; delete the copy`,
     },
   ]);
-  expect(refreshFlow(flow, screens)).toEqual([]);
+  const before = serializeFlow(flow);
+  expect(() => refreshFlow(flow, lookup({ home: grown, other }))).toThrow(
+    `F1 is claimed by elements ${f1.id} and copy0001; delete the copy`,
+  );
+  expect(serializeFlow(flow)).toBe(before);
   copy.isDeleted = true;
   // an overlay drawn for another screen than its frame embeds
   (byId(flow, hi).customData as { wiredown: { screen: string } }).wiredown.screen = "other";
@@ -399,6 +414,49 @@ test("overlays follow their frame's image by id; copies and other screens are re
     label: "3",
     unresolved: "F1 no longer exists",
   });
+});
+
+test("a pasted frame with its overlays and note: refresh moves only the original's", () => {
+  const { flow, hi, note } = build();
+  const f1 = image(flow, "F1");
+  const group = (f1.groupIds as string[])[0];
+  // Excalidraw pastes a group's elements with new ids, one new group, and the data verbatim
+  const parts = flow.elements.filter((e) => (e.groupIds as string[] | undefined)?.[0] === group);
+  const ids = new Map(parts.map((e, i) => [e.id, `pasted0${i}`]));
+  for (const e of parts) {
+    const copy = structuredClone(e);
+    copy.id = ids.get(e.id)!;
+    copy.y = Number(e.y) + 2000;
+    copy.groupIds = ["pasted"];
+    if (copy.containerId) copy.containerId = ids.get(String(copy.containerId));
+    if (Array.isArray(copy.boundElements))
+      copy.boundElements = (copy.boundElements as { id: string }[]).map((b) => ({
+        ...b,
+        id: ids.get(b.id) ?? b.id,
+      }));
+    flow.elements.push(copy);
+  }
+  // a person's Alt-dragged copy of the note, retyped, stays in F1's group
+  flow.elements.push({ ...structuredClone(byId(flow, note)), id: "dragged1", text: "Mine now" });
+  const copies = flow.elements.filter((e) => e.id.startsWith("pasted") || e.id === "dragged1");
+  const before = structuredClone(copies);
+  expect(lintFlow(flow, lookup({ home, other }))).toEqual([
+    {
+      frame: "F1",
+      element: ids.get(f1.id),
+      message: `element ${ids.get(f1.id)} is a copy of F1's frame; flow commands leave copies alone: delete it in the drawing`,
+    },
+    {
+      frame: "F1",
+      element: "dragged1",
+      message:
+        "element dragged1 is a copy of F1's note; flow commands leave copies alone: delete it in the drawing",
+    },
+  ]);
+  const changes = refreshFlow(flow, lookup({ home: grown, other }));
+  expect(changes.map((c) => c.element)).toEqual(expect.arrayContaining([f1.id, hi, note]));
+  expect(changes.some((c) => copies.some((e) => e.id === c.element))).toBe(false);
+  expect(copies).toEqual(before);
 });
 
 test("data from a newer wiredown is ignored, with one finding", () => {
