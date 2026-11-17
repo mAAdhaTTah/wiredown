@@ -19,6 +19,7 @@ import {
   markCentre,
   newerDataVersion,
   NOTE_GAP,
+  nodeAttachments,
   overlayBox,
   pastedCopies,
   positionArrowLabel,
@@ -84,7 +85,9 @@ export type FlowChange =
       /** Why the arrow was left as it is; absent when it was re-routed. */
       unresolved?: string;
     }
-  | { frame: string; kind: "note"; element: string };
+  | { frame: string; kind: "note"; element: string }
+  | { frame: string; kind: "label"; element: string }
+  | { frame: string; kind: "group"; element: string };
 
 /** Overlays, frames, arrow ends and notes within this many drawing px of their place are current. */
 const TOLERANCE = 1;
@@ -221,9 +224,20 @@ const bottom = (r: Rect) => r.y + r.height;
  * edge, or, when the top note overlaps the frame, to NOTE_GAP under it.
  */
 function notesUnder(flow: Flow, anchor: string, old: Rect, now: Rect) {
+  const n = flowNodes(flow).find((n) => n.element.id === anchor);
+  const far = new Set(
+    n
+      ? nodeAttachments(flow, {
+          ...n,
+          element: { ...n.element, x: old.x, y: old.y, width: old.width, height: old.height },
+        })
+          .filter((p) => p.far)
+          .map((p) => p.element.id)
+      : [],
+  );
   const notes = flow.elements.filter((e) => {
     const d = identity(e);
-    if (e.isDeleted || d?.role !== "note" || d.anchor !== anchor) return false;
+    if (e.isDeleted || d?.role !== "note" || d.anchor !== anchor || far.has(e.id)) return false;
     const r = rect(e);
     return r.x < old.x + old.width && r.x + r.width > old.x && r.y > old.y;
   });
@@ -371,6 +385,17 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
       });
     }
   }
+  const far = new Set<string>();
+  for (const n of flowNodes(flow))
+    for (const p of nodeAttachments(flow, n).filter((p) => p.far)) {
+      far.add(p.element.id);
+      const what = identity(p.element)!.role === "label" ? "label" : `note ${p.element.id}`;
+      out.push({
+        frame: n.node,
+        element: p.element.id,
+        message: `${what} is ${Math.round(p.distance)} px from its ${n.kind}; move it back, or run "wiredown flow refresh <flow>"`,
+      });
+    }
   // a screen embedded by hand has no frame, but its reference can still break
   const framed = new Set(flowFrames(flow).map((f) => f.element.id));
   for (const image of flow.elements) {
@@ -396,11 +421,12 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
   // as refresh, which moves them, only on frames whose screen exists
   for (const { frame, image, screen } of states)
     for (const e of screen ? notesUnder(flow, image.id, rect(image), rect(image)).overlapping : [])
-      out.push({
-        frame,
-        element: e.id,
-        message: `note "${noteStart(e)}" overlaps ${frame}; run "wiredown flow refresh" or move it`,
-      });
+      if (!far.has(e.id))
+        out.push({
+          frame,
+          element: e.id,
+          message: `note "${noteStart(e)}" overlaps ${frame}; run "wiredown flow refresh" or move it`,
+        });
   for (const o of liveOverlays(flow)) {
     const at = { frame: o.frame, element: o.element.id };
     const s = states.find((s) => s.image.id === o.anchor);
@@ -506,6 +532,36 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
         }
         out.push(change);
       }
+    }
+  }
+  for (const n of flowNodes(flow)) {
+    // Recompute after each repair so displaced notes occupy successive slots.
+    for (const e of flow.elements) {
+      const p = nodeAttachments(flow, n).find((p) => p.element === e && p.far);
+      if (!p) continue;
+      Object.assign(e, { x: p.x, y: p.y });
+      touch(e);
+      out.push({ frame: n.node, kind: identity(e)!.role as "label" | "note", element: e.id });
+    }
+    if (n.kind !== "frame") continue;
+    const group = identity(n.element)!.group;
+    if (!group) continue;
+    const parts = flow.elements.filter((e) => {
+      const d = identity(e);
+      return (
+        !e.isDeleted &&
+        d &&
+        (e === n.element ||
+          d.anchor === n.element.id ||
+          (!d.anchor && d.frame === n.node && d.role === "label" && !e.containerId))
+      );
+    });
+    for (const e of parts) {
+      const groups = (e.groupIds ?? []) as string[];
+      if (groups.includes(group)) continue;
+      e.groupIds = [group, ...groups];
+      touch(e);
+      out.push({ frame: n.node, kind: "group", element: e.id });
     }
   }
   for (const { arrow, start, end, geometry: g, shaped, missed } of arrowRoutes(flow)) {
