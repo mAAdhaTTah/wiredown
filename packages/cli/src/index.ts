@@ -171,13 +171,14 @@ export async function run(argv: string[]): Promise<Result> {
   const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
   if (!command) return usage(`unknown command "${name}"`, USAGE);
   // a subcommand's help is its own: wiredown flow add-screen --help
-  const help = command.subcommands?.get(rest[0] ?? "") ?? command.help;
+  let help = command.subcommands?.get(rest[0] ?? "") ?? command.help;
   try {
     const { values, positionals } = parseArgs({
       args: rest,
       options: { ...command.options, help: { type: "boolean", short: "h" } },
       allowPositionals: true,
     });
+    help = command.subcommands?.get(positionals[0] ?? "") ?? command.help;
     if (values.help) return ok(help);
     return await command.run(values, positionals);
   } catch (error) {

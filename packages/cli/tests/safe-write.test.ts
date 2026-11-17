@@ -90,3 +90,44 @@ test("flow new leaves no drawing behind when the screens file changes", async ()
     spy.mockRestore();
   }
 });
+
+for (const command of ["new", "add-screen"]) {
+  test(`${command} preserves a concurrent flow save during screens rollback`, async () => {
+    const dir = await realpath(await fixture({ "screens.md": BASE }));
+    const screens = join(dir, "screens.md");
+    const file = join(dir, "a.excalidraw.md");
+    if (command === "add-screen")
+      expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    await writeFile(screens, BASE);
+    const read = (await vi.importActual<typeof fs>("node:fs/promises")).readFile;
+    let reads = 0;
+    const newer = "Concurrent flow save";
+    const spy = vi.spyOn(fs, "readFile").mockImplementation((async (
+      ...args: Parameters<typeof read>
+    ) => {
+      if (args[0] === screens && ++reads === 2) {
+        await writeFile(screens, BASE + "\nHuman save\n");
+        await writeFile(file, newer);
+      }
+      return read(...args);
+    }) as typeof read);
+    try {
+      const result = await run(["flow", command, file, "team"]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        "flow file was changed by another program and was left in place",
+      );
+      expect(result.stderr).not.toContain("nothing was written");
+      expect(await read(file, "utf8")).toBe(newer);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+}
+
+test("options before a flow subcommand select its help", async () => {
+  const result = await run(["flow", "--json", "new"]);
+  const expected = await run(["flow", "new", "--help"]);
+  expect(result.exitCode).toBe(2);
+  expect(result.stderr).toContain(expected.stdout);
+});

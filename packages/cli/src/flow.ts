@@ -108,9 +108,18 @@ export async function editFlow(
     if (command === "new") await writeFile(file, output, { flag: "wx" });
     else await safeWrite(file, original, output);
     if (screensPath && styled !== source) {
-      // a screens file that changed takes the flow's edit back: nothing was written
+      // Roll back only while the flow still contains our output.
       await safeWrite(screensPath, source, styled).catch(async (error: unknown) => {
-        await (command === "new" ? rm(file) : safeWrite(file, output, original));
+        try {
+          if (command === "new") {
+            if (!(await readFile(file)).equals(Buffer.from(output))) throw new Error("changed");
+            await rm(file);
+          } else await safeWrite(file, output, original);
+        } catch {
+          throw new Error(
+            "The screens update failed; the flow file was changed by another program and was left in place.",
+          );
+        }
         throw error;
       });
       screensFileUpdated = true;
