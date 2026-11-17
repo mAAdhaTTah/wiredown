@@ -462,8 +462,9 @@ export function connect(flow: Flow, from: string, to: string, options: ConnectOp
   return arrow.id;
 }
 
-/** Place bound text along its arrow, measured from the start. */
+/** Place the bound text of an arrow of ours along it, measured from the start. */
 export function positionArrowLabel(flow: Flow, arrow: ExcalidrawElementJson, fraction: number) {
+  if (!identity(arrow)) return; // a person's arrow keeps its label where they put it
   const end = (arrow.points as number[][])[1];
   for (const label of flow.elements.filter((e) => !e.isDeleted && e.containerId === arrow.id)) {
     const x = Number(arrow.x) + end[0] * fraction - Number(label.width) / 2;
