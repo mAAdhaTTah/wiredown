@@ -357,7 +357,11 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
       exitCode,
       stdout:
         (decompressed ? "rewrote compressed-json drawing as JSON\n" : "") +
-        (all.length ? all.map(changeLine).join("") : decompressed || guess ? "" : "up to date\n"),
+        (all.length
+          ? all.map(changeLine).join("")
+          : decompressed || guess || exitCode
+            ? ""
+            : "up to date\n"),
       stderr: reports.map((r) => formatFindings(r.file, r.findings, [])).join(""),
     };
   } catch (error) {
