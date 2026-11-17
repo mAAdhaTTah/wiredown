@@ -281,8 +281,9 @@ from `screenElements`, or a string saying why there is none. `lintFlow`
 returns findings `{ message, frame?, element? }`: missing screens, stale
 embed sizes or image aspect (a uniformly scaled frame is fine), two nodes
 claiming one name (`claimedNames`), a person's copies of our elements
-(`pastedCopies`: one finding per set pasted together), stale overlays, ones whose target or frame is gone or
-that were drawn for another screen, notes whose node is gone, notes whose
+(`pastedCopies`: one finding per set pasted together), stale overlays,
+ones whose target or frame is gone or that were drawn for another screen,
+notes whose node is gone, notes whose
 top edge lies inside their frame, straight arrows of ours whose ends are
 more than 1px from where `connect` would put them now, dangling arrow or
 text bindings (`bindingFailures(elements)` on its own), images without an
