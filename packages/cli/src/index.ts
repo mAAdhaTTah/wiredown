@@ -125,6 +125,23 @@ example:
   wiredown flow remove flows/invite.excalidraw.md 'F1->F2' 'F2#invite'`,
   ],
   [
+    "move <flow.excalidraw.md> <node> (--right-of F2 | --below F2 | --to <x>,<y>) [--json]",
+    `Moves a node with its label, notes and overlays, and re-routes its arrows,
+to where add-screen would place it next to another node, or to a top-left.
+It refuses a place that overlaps another node. What a person drew stays
+where it is.
+
+options:
+  --right-of <node>  place it right of this node
+  --below <node>     place it below this node
+  --to <x>,<y>       its top-left in drawing coordinates (--to=-200,0 for a
+                     negative x)
+  --json             print one JSON document instead
+
+example:
+  wiredown flow move flows/invite.excalidraw.md F3 --below F2`,
+  ],
+  [
     "refresh <flow.excalidraw.md> [--json]",
     `Brings the drawing up to date after its screens change: embed sizes,
 overlays, notes and our straight arrows. Writes only if something changed.
@@ -138,7 +155,7 @@ example:
   [
     "lint <flow.excalidraw.md>... [--json]",
     `Reports what refresh would fix, and what a person must: missing screens,
-stale sizes and overlays, dangling arrows. Never writes; exits 1 on any
+stale sizes and overlays, overlapping nodes, dangling arrows. Never writes; exits 1 on any
 finding.
 
 options:
@@ -156,9 +173,11 @@ const COMMANDS: Record<string, Command> = {
     help: `${FLOW.map(([usage], i) => `${i ? "      " : "usage:"} wiredown flow ${usage}`).join("\n")}
 
 Nodes are frames (F1, F2, ...) and decisions (D1, D2, ...). new connects
-its screens in a row; placement is relative to a node, never coordinates.
+its screens in a row; add-screen and decision place relative to a node,
+never by coordinates.
 refresh updates embed sizes and overlays after screens change; lint reports
-missing screens, stale sizes and overlays, and dangling arrows.
+missing screens, stale sizes and overlays, overlapping nodes and dangling
+arrows.
 --screens picks the screens file new and add-screen embed from; every other
 command follows each frame's embed to its screens file.
 
@@ -174,6 +193,7 @@ Run "wiredown flow <command> --help" for its options and an example.
       screens: { type: "string" },
       "right-of": { type: "string" },
       below: { type: "string" },
+      to: { type: "string" },
       title: { type: "string" },
       json: { type: "boolean" },
     },
