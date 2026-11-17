@@ -234,9 +234,9 @@ test("notes stack under a frame or decision, wrapped to its width", () => {
   for (const line of lines) expect(measure(line).w).toBeLessThanOrEqual(120);
   expect(first.width).toBe(measure(String(first.text)).w);
   // a person moves the first note down; the next goes under it
-  first.y = 400;
+  first.y = 245;
   const second = byId(flow, addNote(flow, "F1", "Second"));
-  expect(second).toMatchObject({ x: 0, y: 400 + Number(first.height) + 20, text: "Second" });
+  expect(second).toMatchObject({ x: 0, y: 245 + Number(first.height) + 20, text: "Second" });
   addDecision(flow, { text: "Ok?" });
   const third = byId(flow, addNote(flow, "D1", "Why"));
   // beside the diamond, below the height its rightward arrow leaves at
@@ -414,4 +414,14 @@ test("a new arrow takes the slot a deleted one freed, not a taken one", () => {
   const live = [ids[0], ids[2], again.id].map((id) => byId(flow, id));
   expect(new Set(live.map((e) => e.y)).size).toBe(3);
   expect(again.y).toBe(byId(flow, ids[1]).y);
+});
+
+test("new notes ignore a note dragged out of the stack", () => {
+  const flow = newFlow();
+  addScreen(flow, small);
+  const first = byId(flow, addNote(flow, "F1", "First"));
+  first.y = Number(first.y) + 260;
+  const next = byId(flow, addNote(flow, "F1", "Next"));
+  const image = node(flow, "F1");
+  expect(next.y).toBe(Number(image.y) + Number(image.height) + 20);
 });
