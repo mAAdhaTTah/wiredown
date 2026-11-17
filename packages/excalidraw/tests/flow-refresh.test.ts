@@ -409,6 +409,14 @@ test("data from a newer wiredown is ignored, with one finding", () => {
     { message: "this drawing was written by a newer wiredown (data version 3)" },
   ]);
   expect(flowFrames(flow)).toEqual([]);
+  // a version that is not a number is ignored and reported the same way
+  (flow.elements.find((e) => e.customData)!.customData as { wiredown: object }).wiredown = {
+    v: "x",
+  };
+  expect(lintFlow(flow, lookup({ home, other }))[0].message).toContain("(data version 3)");
+  for (const e of flow.elements.filter((e) => e.customData))
+    (e.customData as { wiredown: object }).wiredown = { v: "x" };
+  expect(lintFlow(flow, lookup({ home, other }))[0].message).toContain('(data version "x")');
 });
 
 test("a note whose frame or decision is gone is reported", () => {
