@@ -14,6 +14,8 @@ export interface CheckResult extends ParseResult {
 }
 
 const excalifont = fontMeasurer(EXCALIFONT);
+/** Options before an id, as in "*Reserve (fill) #reserve"; the id ends the line instead. */
+const LATE_ID = /(?<!\\)\(([^()]*)\)\s+(#[a-z][a-z0-9-]*)\s*$/;
 
 /** Warnings for one source line. */
 function lineWarnings(text: string): string[] {
@@ -38,9 +40,14 @@ function lineWarnings(text: string): string[] {
 /**
  * A warning for trailing brackets that stay text on a component's line but
  * look meant as options: they hold a retired option, or an option next to a
- * word that is none, as in "(striped, primry)".
+ * word that is none, as in "(striped, primry)", or they come before the id.
  */
 function bracketWarning(text: string): string | null {
+  const late = LATE_ID.exec(text);
+  if (late && !staysText(late[1].split(",").map((t) => t.trim()))) {
+    const fixed = text.trim().replace(LATE_ID, "$2 ($1)");
+    return `"(${late[1]})" is drawn as text; write the id before the options: "${fixed}"`;
+  }
   const m = TRAILING.exec(text);
   if (!m) return null;
   const entries = m[1].split(",").map((t) => t.trim());
@@ -90,8 +97,8 @@ function treeWarnings(lines: string[]): ParseError[] {
 /**
  * Resolves a block as resolve() does, and also warns about what draws but
  * is probably a mistake: a misspelt {icon}, characters Excalifont lacks,
- * brackets that look like options but are drawn as text, and grid rows
- * longer than their header.
+ * brackets that look like options but are drawn as text (options before an
+ * id, too), and grid rows longer than their header.
  */
 export function check(source: string, options: ResolveOptions = {}): CheckResult {
   const { tree, errors } = resolve(source, options);

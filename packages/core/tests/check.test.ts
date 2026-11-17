@@ -94,6 +94,24 @@ describe("check", () => {
     }
   });
 
+  it("warns about options written before the id", () => {
+    const r = check("button: *Reserve (fill) #reserve\nfield: Name | input: x (w=200) #name");
+    expect(r.errors).toEqual([]);
+    expect(r.warnings).toEqual([
+      {
+        line: 1,
+        message:
+          '"(fill)" is drawn as text; write the id before the options: "button: *Reserve #reserve (fill)"',
+      },
+      {
+        line: 2,
+        message:
+          '"(w=200)" is drawn as text; write the id before the options: "field: Name | input: x #name (w=200)"',
+      },
+    ]);
+    expect(check("text: Tag (draft) #urgent\ntext: Tag \\(fill) #urgent").warnings).toEqual([]);
+  });
+
   it("warns about a retired option drawn as text", () => {
     expect(check("button: Old (hi)").warnings).toEqual([
       { line: 1, message: '"(hi)" is drawn as text; the highlight option is now (focus)' },
