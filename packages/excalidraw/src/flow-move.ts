@@ -16,6 +16,7 @@ import type { FlowChange } from "./flow-refresh.js";
 export type MoveTo = Place | { x: number; y: number };
 /** What `moveNode` did. */
 export interface Moved {
+  unchanged?: boolean;
   node: string;
   kind: "frame" | "decision";
   /** The node's new top-left. */
@@ -49,7 +50,7 @@ export function moveNode(flow: Flow, name: string, to: MoveTo): Moved {
   const where = `${at.x},${at.y}`;
   const now = { ...box, x: at.x, y: at.y };
   const hit = flowNodes(flow).filter((o) => o.element !== e && intersects(rect(o.element), now));
-  if (hit.length)
+  if (hit.length && (at.x !== box.x || at.y !== box.y))
     throw new Error(
       `${name} at ${where} would overlap ${hit.map((o) => o.node).join(" and ")}; pick another place`,
     );
@@ -68,6 +69,7 @@ export function moveNode(flow: Flow, name: string, to: MoveTo): Moved {
   const count = (...roles: string[]) =>
     parts.filter((p) => !p.containerId && roles.includes(identity(p)!.role)).length;
   return {
+    ...(!dx && !dy && !straight.length ? { unchanged: true } : {}),
     node: n.node,
     kind: n.kind,
     x: at.x,

@@ -800,7 +800,7 @@ test("lint reports each pair of overlapping nodes once, on the later one", () =>
     {
       frame: "F3",
       element: f3.id,
-      message: `overlaps F1; move one of them in the drawing, or run "wiredown flow move <flow> F3 --right-of F1"`,
+      message: `overlaps F1; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> F3 --below F1"`,
     },
   ]);
   // the decision overlapping F2 by a pixel is reported; refresh moves no node
@@ -814,12 +814,12 @@ test("lint reports each pair of overlapping nodes once, on the later one", () =>
     {
       frame: "F3",
       element: f3.id,
-      message: `overlaps F1; move one of them in the drawing, or run "wiredown flow move <flow> F3 --right-of F1"`,
+      message: `overlaps F1; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> F3 --below F1"`,
     },
     {
       frame: "D1",
       element: d1.id,
-      message: `overlaps F2; move one of them in the drawing, or run "wiredown flow move <flow> D1 --right-of F2"`,
+      message: `overlaps F2; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> D1 --below F2"`,
     },
   ]);
 });

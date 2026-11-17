@@ -184,17 +184,28 @@ test("touching a node is not an overlap", () => {
   expect(lintFlow(flow, screens).filter((f) => f.message.includes("overlaps"))).toEqual([]);
 });
 
-test("lint reports an overlap, the move it suggests fixes it", () => {
+test("lint offers a below example when the space right of F1 is occupied", () => {
   const flow = build();
   const f2 = node(flow, "F2");
+  const f1 = node(flow, "F1");
+  Object.assign(node(flow, "D1"), { x: -2000 });
+  addScreen(flow, {
+    screenId: "home",
+    title: "Third",
+    path: "screens",
+    size: { width: 100, height: 200 },
+  });
+  Object.assign(node(flow, "F3"), { x: f2.x, y: f2.y });
   Object.assign(f2, { x: 50 });
   const finding = lintFlow(flow, screens).find((f) => f.message.startsWith("overlaps"));
   expect(finding).toEqual({
     frame: "F2",
     element: f2.id,
     message:
-      'overlaps F1; move one of them in the drawing, or run "wiredown flow move <flow> F2 --right-of F1"',
+      'overlaps F1; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> F2 --below F1"',
   });
-  moveNode(flow, "F2", { rightOf: "F1" });
+  expect(() => moveNode(flow, "F2", { rightOf: "F1" })).toThrow("would overlap F3");
+  moveNode(flow, "F2", { below: "F1" });
+  expect(Number(f2.y)).toBe(Number(f1.height) + 340);
   expect(lintFlow(flow, screens).filter((f) => f.message.startsWith("overlaps"))).toEqual([]);
 });
