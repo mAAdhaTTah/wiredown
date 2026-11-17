@@ -105,7 +105,10 @@ test("identities, distinct embeds, and appended indices", () => {
     for (const [offset, role] of ["label", "screen"].entries()) {
       const e = flow.elements[i * 2 + offset];
       expect(e.id).toHaveLength(8);
-      const group = role === "screen" ? { group: (e.groupIds as string[])[0] } : {};
+      const group =
+        role === "screen"
+          ? { group: (e.groupIds as string[])[0] }
+          : { anchor: flow.elements[i * 2 + 1].id };
       expect(e.customData).toEqual({
         wiredown: { v: 1, id: e.id, frame, role, screen: "home", ...group },
       });
@@ -121,6 +124,7 @@ test("a frame's image and label share a group; the image records it", () => {
   const [label, image] = flow.elements;
   const group = (image.customData as { wiredown: { group: string } }).wiredown.group;
   expect(group).toMatch(/^.{8}$/);
+  expect((label.customData as { wiredown: { anchor: string } }).wiredown.anchor).toBe(image.id);
   expect(label.groupIds).toEqual([group]);
   expect(image.groupIds).toEqual([group]);
   addScreen(flow, options);

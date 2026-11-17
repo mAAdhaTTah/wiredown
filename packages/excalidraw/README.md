@@ -113,7 +113,8 @@ and image and returns its F-number; `size` is the rendered screen size.
 finds live images with Wiredown customData. Legacy labels reserve numbers,
 but legacy images are not placement targets. Deleted elements reserve their
 numbers too. Existing elements are never changed. A frame's label and image
-share a new Excalidraw group, recorded as `group` in the image's
+carry an `anchor` naming the image element and share a new Excalidraw
+group, recorded as `group` in the image's
 `customData.wiredown`. Every `customData.wiredown` carries `v`
 (`DATA_VERSION`, now 1); data without `v` is version 1, and data with a
 higher `v` is ignored. New elements also carry `id`, equal to the element's

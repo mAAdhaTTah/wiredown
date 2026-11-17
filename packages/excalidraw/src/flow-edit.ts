@@ -35,6 +35,8 @@ interface Identity {
   role: string;
   screen: string;
   group?: string;
+  /** The image element this label belongs to. */
+  anchor?: string;
 }
 function dataOf(e: ExcalidrawElementJson): Identity | undefined {
   return (e.customData as { wiredown?: Identity } | undefined)?.wiredown;
@@ -222,6 +224,7 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
     scale: [1, 1],
     crop: null,
   };
+  identity(label)!.anchor = image.id;
   flow.elements.push(label, image);
   flow.embeds.set(fileId, { path: options.path, ...size.link, blockId: options.screenId });
   return frame;
