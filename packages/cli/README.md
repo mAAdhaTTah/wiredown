@@ -336,7 +336,10 @@ Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"
 in the Excalidraw plugin's Saving settings. `flow lint` reports compressed
 drawings; `flow refresh` rewrites them as JSON even when already up to date.
 
-Lint reports our labels and notes more than 60 px from their command
-positions above or below/beside their node. Refresh moves those elements
-back, re-stacks displaced notes, and restores the frame group on its own
-parts. Small hand nudges and personal copies stay where they are.
+Lint reports labels more than 60 px from their place above the frame.
+Notes stay in the stack within 60 px horizontally and with a vertical gap
+of at most 200 px from the node or previous in-place note, leaving room for
+a deleted note. They may overlap that edge by up to 60 px. Refresh returns
+displaced notes after the retained stack in vertical order, under a frame
+or beside a decision. It restores groups only on parts with no group;
+personal groups and small hand nudges stay untouched.

@@ -358,7 +358,7 @@ test("refresh moves the arrow and the note after a screen grows", async () => {
   expect(result).toEqual({
     exitCode: 0,
     stdout: expect.stringMatching(
-      /^F1 {2}embed \d+x\d+ -> \d+x\d+\nF1 {2}note moved\nF1 {2}arrow F1 -> F2 re-routed\n$/,
+      /^F1 {2}embed \d+x\d+ -> \d+x\d+\nF1 {2}note \S+ moved\nF1 {2}arrow F1 -> F2 re-routed\n$/,
     ),
     stderr: "",
   });
@@ -396,7 +396,7 @@ test("lint reports an arrow and a note an older refresh left behind", async () =
   await writeFile(file, serializeFlow(flow));
   const lint = await run(["flow", "lint", file]);
   expect(lint.stdout).toContain(
-    `${file}: F1: error: note ${flow.elements.find((e) => (e.customData as { wiredown?: { role: string } })?.wiredown?.role === "note")!.id} is 100 px from its frame; move it back, or run "wiredown flow refresh <flow>"\n`,
+    `${file}: F1: error: note ${flow.elements.find((e) => (e.customData as { wiredown?: { role: string } })?.wiredown?.role === "note")!.id} is 100 px from its place under F1; run "wiredown flow refresh"\n`,
   );
   expect(lint.stdout).toContain(
     `${file}: F1: error: arrow F1 -> F2 no longer meets F1; run "wiredown flow refresh"\n`,

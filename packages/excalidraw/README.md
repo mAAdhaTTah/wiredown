@@ -331,7 +331,10 @@ for the first candidate that `exists` (a fetch in the browser),
 matches a path not found from the root against the end of every `.md`
 file's path and refuses more than one match.
 
-Lint reports our labels and notes more than 60 px from their command
-positions above or below/beside their node. Refresh moves those elements
-back, re-stacks displaced notes, and restores the frame group on its own
-parts. Small hand nudges and personal copies stay where they are.
+Lint reports labels more than 60 px from their place above the frame.
+Notes stay in the stack within 60 px horizontally and with a vertical gap
+of at most 200 px from the node or previous in-place note, leaving room for
+a deleted note. They may overlap that edge by up to 60 px. Refresh returns
+displaced notes after the retained stack in vertical order, under a frame
+or beside a decision. It restores groups only on parts with no group;
+personal groups and small hand nudges stay untouched.
