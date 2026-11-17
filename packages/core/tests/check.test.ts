@@ -112,6 +112,14 @@ describe("check", () => {
     expect(check("text: Tag (draft) #urgent\ntext: Tag \\(fill) #urgent").warnings).toEqual([]);
   });
 
+  it("reports a block with no components", () => {
+    for (const source of ["", "  \n", "// just a comment"]) {
+      expect(check(source).errors).toEqual([
+        { line: 1, message: "the block is empty; write at least one component" },
+      ]);
+    }
+  });
+
   it("warns about a retired option drawn as text", () => {
     expect(check("button: Old (hi)").warnings).toEqual([
       { line: 1, message: '"(hi)" is drawn as text; the highlight option is now (focus)' },

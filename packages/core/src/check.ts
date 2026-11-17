@@ -95,14 +95,18 @@ function treeWarnings(lines: string[]): ParseError[] {
 }
 
 /**
- * Resolves a block as resolve() does, and also warns about what draws but
- * is probably a mistake: a misspelt {icon}, characters Excalifont lacks,
- * brackets that look like options but are drawn as text (options before an
- * id, too), and grid rows longer than their header.
+ * Resolves a block as resolve() does, reports a block with nothing to draw,
+ * and also warns about what draws but is probably a mistake: a misspelt
+ * {icon}, characters Excalifont lacks, brackets that look like options but
+ * are drawn as text (options before an id, too), and grid rows longer than
+ * their header.
  */
 export function check(source: string, options: ResolveOptions = {}): CheckResult {
   const { tree, errors } = resolve(source, options);
   const lines = source.replace(/\r/g, "").split("\n");
+  if (lines.every((l) => !l.trim() || l.trim().startsWith("//"))) {
+    errors.push({ line: 1, message: "the block is empty; write at least one component" });
+  }
   const warnings = [
     ...treeWarnings(lines),
     ...lines.flatMap((text, i) =>
