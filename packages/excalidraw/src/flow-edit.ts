@@ -23,6 +23,9 @@ const NOTE_GAP = 20,
   NOTE_COLOR = "#495057",
   FONT_SIZE = 16,
   LABEL_WIDTH = 200;
+// Allow hand nudges of 60px, and 200px gaps left by a deleted note.
+const HAND_NUDGE = 60,
+  NOTE_STACK_GAP = 200;
 const measurer = fontMeasurer(EXCALIFONT);
 
 export function embedSize(screenWidth: number, screenHeight: number) {
@@ -574,10 +577,6 @@ export function addNote(flow: Flow, node: string, text: string): string {
   return note.id;
 }
 
-// Allow hand nudges of 60px, and 200px gaps left by a deleted note.
-const HAND_NUDGE = 60,
-  NOTE_STACK_GAP = 200;
-
 /** Command positions for our own unambiguous attachments. */
 export function nodeAttachments(flow: Flow, n: FlowNode) {
   const b = boxOf(n);
@@ -604,6 +603,12 @@ export function nodeAttachments(flow: Flow, n: FlowNode) {
       )
         return [];
       if (!d.anchor && !d.id && legacy.length > 1) return [];
+      if (
+        (e.groupIds as string[] | undefined)?.some(
+          (g) => !(n.element.groupIds as string[] | undefined)?.includes(g),
+        )
+      )
+        return [];
       const label = d.role === "label";
       const want = label ? { x: b.x, y: b.y - LABEL_OFFSET } : { x, y };
       const distance = Math.hypot(Number(e.x) - want.x, Number(e.y) - want.y);
