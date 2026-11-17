@@ -455,7 +455,7 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
     out.push({
       ...(node ? { frame: node } : {}),
       element: copy.id,
-      message: `element ${copy.id} is a copy of ${what}; flow commands leave copies alone: delete it in the drawing`,
+      message: `element ${copy.id} is a copy of ${what}; flow commands leave copies alone: delete it in the drawing, or run "wiredown flow remove <flow> ${copy.id}"`,
     });
   }
   const states = frameStates(flow, screens);
