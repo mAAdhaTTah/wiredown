@@ -142,12 +142,18 @@ test("a grown screen: lint reports it, refresh fixes it, lint is clean", () => {
 
 test("a uniformly scaled frame is not stale; refresh keeps its scale", () => {
   const { flow, hi, mark, arrow } = build();
+  const label = flow.elements.find((e) => identity(e)?.role === "label")!;
   const img = image(flow, "F1");
   Object.assign(img, { x: 50, y: 70, width: 60, height: 102.5 });
   const screens = lookup({ home, other });
   // the overlays and arrow were placed on the unscaled frame, so only they are stale
-  expect(lintFlow(flow, screens).map((f) => f.element)).toEqual([hi, mark, arrow]);
-  expect(refreshFlow(flow, screens).map((c) => c.kind)).toEqual(["highlight", "mark", "arrow"]);
+  expect(lintFlow(flow, screens).map((f) => f.element)).toEqual([label.id, hi, mark, arrow]);
+  expect(refreshFlow(flow, screens).map((c) => c.kind)).toEqual([
+    "highlight",
+    "mark",
+    "label",
+    "arrow",
+  ]);
   expect(img).toMatchObject({ x: 50, y: 70, width: 60, height: 102.5 });
   const b = overlayBox(img, home, box);
   expect(byId(flow, hi)).toMatchObject({
@@ -632,7 +638,7 @@ test("a bent arrow is left alone and reported; a hand-drawn one is untouched", (
   expect(refreshFlow(flow, lookup({ home: grown, other }))).toEqual([]);
 });
 
-test("stacked notes move together in order; a note moved away stays", () => {
+test("stacked notes move together in order; a note moved away is restored", () => {
   const { flow, note } = build();
   const second = addNote(flow, "F1", "Second");
   const away = addNote(flow, "F1", "Moved away");
@@ -640,7 +646,7 @@ test("stacked notes move together in order; a note moved away stays", () => {
   const ys = [note, second].map((id) => Number(byId(flow, id).y));
   settles(flow, lookup({ home: grown, other }));
   expect([note, second].map((id) => byId(flow, id).y)).toEqual(ys.map((y) => y + 60));
-  expect(byId(flow, away)).toMatchObject({ x: -300, y: 600, version: 1 });
+  expect(byId(flow, away)).toMatchObject({ x: 0, y: 365, version: 2 });
 });
 
 test("a note dragged onto its frame is reported, and refresh puts it under", () => {
@@ -652,13 +658,13 @@ test("a note dragged onto its frame is reported, and refresh puts it under", () 
     {
       frame: "F1",
       element: second,
-      message: `note "Second note with more…" overlaps F1; run "wiredown flow refresh" or move it`,
+      message: `note ${second} is 165 px from its frame; move it back, or run "wiredown flow refresh <flow>"`,
     },
   ]);
   settles(flow, screens);
-  // the stack keeps its order: the dragged note was on top, so it leads
-  expect(byId(flow, second).y).toBe(205 + 20);
-  expect(Number(byId(flow, note).y)).toBe(225 + 125);
+  // The note still in the stack stays; the displaced note follows it.
+  expect(byId(flow, note).y).toBe(225);
+  expect(byId(flow, second).y).toBe(225 + Number(byId(flow, note).height) + 20);
 });
 
 test.each([
@@ -691,7 +697,10 @@ test("freshly built flows of every shape lint clean", () => {
     const flow = newFlow();
     add(flow, "home", home);
     add(flow, "grown", grown);
-    Object.assign(image(flow, "F2"), { x, y });
+    const img = image(flow, "F2");
+    const label = flow.elements.find((e) => identity(e)?.anchor === img.id)!;
+    Object.assign(label, { x, y: y - 48 });
+    Object.assign(img, { x, y });
     connect(flow, "F1", "F2", { label: "One" });
     connect(flow, "F2", "F1");
     connect(flow, "F1", "F2", { label: "Three" });
@@ -713,4 +722,41 @@ test("freshly built flows of every shape lint clean", () => {
   connect(flow, "F3", "D1");
   expect(lintFlow(flow, screens)).toEqual([]);
   expect(refreshFlow(flow, screens)).toEqual([]);
+});
+
+test("refresh repairs detached labels, notes and groups, preserving nudges and copies", () => {
+  const flow = newFlow();
+  addScreen(flow, { screenId: "home", title: "Home", path: "screens", size: home });
+  const frame = image(flow, "F1");
+  const label = flow.elements.find((e) => identity(e)?.role === "label")!;
+  delete identity(label)!.anchor; // older files still find their label
+  const a = byId(flow, addNote(flow, "F1", "First"));
+  const b = byId(flow, addNote(flow, "F1", "Second"));
+  frame.x = Number(frame.x) + 448;
+  for (const e of flow.elements) e.groupIds = [];
+  const copy = { ...structuredClone(a), id: "copynote", x: 9000 };
+  flow.elements.push(copy);
+  const copyBefore = structuredClone(copy);
+  const screens = lookup({ home });
+  const findings = lintFlow(flow, screens).filter((f) => f.message.includes("px from"));
+  expect(findings).toHaveLength(3);
+  expect(findings.find((f) => f.element === label.id)?.message).toBe(
+    'label is 448 px from its frame; move it back, or run "wiredown flow refresh <flow>"',
+  );
+  for (const note of [a, b]) expect(findings.filter((f) => f.element === note.id)).toHaveLength(1);
+  const changes = refreshFlow(flow, screens);
+  expect(changes.filter((c) => c.kind === "label")).toHaveLength(1);
+  expect(changes.filter((c) => c.kind === "note")).toHaveLength(2);
+  expect(changes.filter((c) => c.kind === "group")).toHaveLength(4);
+  expect(label.x).toBe(frame.x);
+  expect(a.y).toBe(Number(frame.y) + Number(frame.height) + 20);
+  expect(b.y).toBe(Number(a.y) + Number(a.height) + 20);
+  expect(copy).toEqual(copyBefore);
+  expect(lintFlow(flow, screens).filter((f) => f.message.includes("px from"))).toEqual([]);
+  a.x = Number(a.x) + 20;
+  a.y = Number(a.y) + 20;
+  const before = structuredClone(a);
+  expect(refreshFlow(flow, screens)).toEqual([]);
+  expect(a).toEqual(before);
+  expect(lintFlow(flow, screens).filter((f) => f.message.includes("px from"))).toEqual([]);
 });

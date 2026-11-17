@@ -396,7 +396,7 @@ test("lint reports an arrow and a note an older refresh left behind", async () =
   await writeFile(file, serializeFlow(flow));
   const lint = await run(["flow", "lint", file]);
   expect(lint.stdout).toContain(
-    `${file}: F1: error: note "Shows the members of…" overlaps F1; run "wiredown flow refresh" or move it\n`,
+    `${file}: F1: error: note ${flow.elements.find((e) => (e.customData as { wiredown?: { role: string } })?.wiredown?.role === "note")!.id} is 100 px from its frame; move it back, or run "wiredown flow refresh <flow>"\n`,
   );
   expect(lint.stdout).toContain(
     `${file}: F1: error: arrow F1 -> F2 no longer meets F1; run "wiredown flow refresh"\n`,

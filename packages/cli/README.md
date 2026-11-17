@@ -340,3 +340,8 @@ finding being `{ message, frame?, element? }` (`element` is the element id).
 Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"
 in the Excalidraw plugin's Saving settings. `flow lint` reports compressed
 drawings; `flow refresh` rewrites them as JSON even when already up to date.
+
+Lint reports our labels and notes more than 60 px from their command
+positions above or below/beside their node. Refresh moves those elements
+back, re-stacks displaced notes, and restores the frame group on its own
+parts. Small hand nudges and personal copies stay where they are.
