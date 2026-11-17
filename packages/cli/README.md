@@ -452,6 +452,35 @@ target?, label?, notes?, overlays?, arrows?, copy?, labelLeft?, of? }], unbound:
 every element removed. Errors exit 1 with `removed` and
 `unbound` empty and an `errors` array.
 
+`wiredown flow move <flow> <node> (--right-of N | --below N | --to <x>,<y>)
+[--json]` moves a frame or decision when lint reports that it overlaps
+another, or when the layout should change. `--right-of` and `--below` place
+it where `flow add-screen` and `flow decision` would put a new node next to
+`N` (placement ignores hand-drawn elements); `--to` gives its top-left in
+drawing coordinates (write `--to=-200,0` for a negative x). What of ours
+belongs to the node moves with it by the same distance: its label or text,
+its notes, its highlights and marks, as `flow remove` would take them. Our
+straight arrows bound to it are re-routed as `flow refresh` re-routes them,
+labels included; one a person bent is left and reported as `unresolved`.
+A person's arrows, copies and drawing never move, even inside the node's
+group.
+
+It refuses, writing nothing, an unknown node, a name two nodes claim, a
+drawing from a newer wiredown, and a place where the node would overlap
+another of ours: `F3 at 760,0 would overlap F2; pick another place`.
+Touching edges are not an overlap. Output is one line, then one per bent
+arrow, as refresh prints it:
+
+```text
+moved F3 to 760,0 (frame, 1 note, 2 overlays, 2 arrows)
+F3  arrow F2 -> F3 unresolved: it was bent by hand; reconnect it by hand
+```
+
+The counts are the notes and overlays that moved and the arrows re-routed.
+JSON is `{ flow, moved: { node, kind, x, y, notes, overlays, arrows },
+unresolved: [...] }`, `unresolved` holding refresh's arrow changes; errors
+exit 1 with `moved: null` and an `errors` array.
+
 Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"
 in the Excalidraw plugin's Saving settings. `flow lint` reports compressed
 drawings; `flow refresh` rewrites them as JSON even when already up to date.
