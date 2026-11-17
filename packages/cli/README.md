@@ -256,8 +256,8 @@ straight arrow of ours whose ends are not where `flow connect` would put them
 now, because a frame was resized or a person moved a node, is re-routed that
 way, keeping its place among parallel arrows, its label (placed along it as
 `flow connect` places it) and its id. An arrow a person bent (more than two
-points) is left alone and reported as unresolved when one of its frames was
-resized. Displaced labels and notes return to their places; decisions and hand-
+points) is left alone, and reported as unresolved while an end no longer meets
+its node (a frame grew under it, or moved away). Displaced labels and notes return to their places; decisions and hand-
 drawn arrows stay where they are. Frames are never moved apart, so a frame that
 grew may now overlap its neighbouring frame; lint reports that. An overlay whose
 component is gone is left where it is and reported as unresolved. The file is
@@ -272,7 +272,7 @@ F2  note moved
 F2  highlight #invite moved
 F2  mark 3 #members unresolved: ^team-members has no #members any more
 F2  arrow F2 -> F3 re-routed
-F2  arrow F1 -> F2 unresolved: it was bent by hand; reconnect it by hand
+F2  arrow F1 -> F2 unresolved: it was bent by hand and no longer meets F2; straighten or move it in the drawing
 ```
 
 (`F2  image WxH -> WxH` when only the image's aspect was off.) JSON is
@@ -323,6 +323,10 @@ overlaps F1; run "wiredown flow refresh" or move it`;
 - a straight arrow of ours whose end is more than 1px from where
   `flow connect` would put it now: `arrow F1 -> F2 no longer meets F1; run
 "wiredown flow refresh"`;
+- an arrow of ours a person bent whose end no longer meets its node (more
+  than 12px off it, or inside a frame): `arrow F1 -> F2: it was bent by hand
+and no longer meets F1; straighten or move it in the drawing` (refresh
+  leaves it);
 - two of our frames or decisions whose boxes overlap, once per pair on the
   later one: `F3: overlaps F1; move one of them in the drawing` (touching
   edges are fine);
@@ -330,7 +334,8 @@ overlaps F1; run "wiredown flow refresh" or move it`;
 - data written by a newer wiredown, once: `this drawing was written by a
 newer wiredown (data version N)`; that data is otherwise ignored.
 
-Style, bent arrows and working hand-drawn elements are never reported;
+Style, bent arrows that meet their nodes and working hand-drawn elements are
+never reported;
 when lint finds nothing, refresh has nothing to do. Exit 1 if any file has
 findings. JSON is `{ files: [{ file, findings }] }`, a
 finding being `{ message, frame?, element? }` (`element` is the element id).

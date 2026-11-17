@@ -12,6 +12,7 @@ import {
   claimedNames,
   copyOf,
   embedSize,
+  END_GAP,
   flowFrames,
   flowNodes,
   highlightBounds,
@@ -338,6 +339,34 @@ function arrowRoutes(flow: Flow): Route[] {
 }
 
 /**
+ * The nodes an end of an arrow a person bent no longer meets: it is further
+ * off the node's box than `connect` or Excalidraw would leave it, or inside a
+ * frame's (a frame that grew under it).
+ */
+function unmet({ arrow, start, end }: Route): string[] {
+  const points = arrow.points as number[][];
+  const ends: [FlowNode, number[]][] = [
+    [start, points[0]],
+    [end, points.at(-1)!],
+  ];
+  return ends
+    .filter(([n, [px, py]]) => {
+      const [x, y] = [num(arrow.x) + px, num(arrow.y) + py];
+      const { x: left, y: top, width, height } = rect(n.element);
+      const off = Math.hypot(
+        Math.max(left - x, 0, x - left - width),
+        Math.max(top - y, 0, y - top - height),
+      );
+      const inside = Math.min(x - left, left + width - x, y - top, top + height - y);
+      return off > 2 * END_GAP || (n.kind === "frame" && inside > TOLERANCE);
+    })
+    .map(([n]) => n.node);
+}
+/** Why refresh and move leave an arrow a person bent that no longer meets `node`, and lint reports it. */
+export const bentArrow = (node: string) =>
+  `it was bent by hand and no longer meets ${node}; straighten or move it in the drawing`;
+
+/**
  * Bound arrows and bound text whose other end is missing, deleted, or does
  * not list them in `boundElements`, as Excalidraw's binding requires.
  */
@@ -376,7 +405,7 @@ export function bindingFailures(elements: ExcalidrawElementJson[]): FlowFinding[
  * What is broken in a flow given its screens now: frames whose screen is
  * missing or whose embed size or aspect is stale, two nodes claiming one
  * name, two nodes whose boxes overlap, overlays that are stale, lost their
- * target or frame, or were drawn for another screen, dangling arrows, images without an `## Embedded Files`
+ * target or frame, or were drawn for another screen, dangling arrows, bent arrows that no longer meet their node, images without an `## Embedded Files`
  * entry, and data from a newer wiredown. Never reports style or hand-drawn
  * elements that work.
  */
@@ -513,7 +542,15 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
         out.push({ element: a.id, message: `arrow ${d.from} -> ${d.to}: ${n} no longer exists` });
   }
   for (const r of arrowRoutes(flow)) {
-    if (r.shaped || !r.missed.length || bindings.some((f) => f.element === r.arrow.id)) continue;
+    if (!r.missed.length || bindings.some((f) => f.element === r.arrow.id)) continue;
+    const [off] = r.shaped ? unmet(r) : [];
+    if (off)
+      out.push({
+        frame: off,
+        element: r.arrow.id,
+        message: `arrow ${r.start.node} -> ${r.end.node}: ${bentArrow(off)}`,
+      });
+    if (r.shaped) continue;
     out.push({
       frame: r.missed[0],
       element: r.arrow.id,
@@ -540,8 +577,8 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
  * (moved by the change in its bottom edge, or out from under it), and its
  * overlays. Then re-routes each two-point arrow of ours whose ends are not
  * where `connect` would put them now, in its slot, label included. An
- * overlay whose target or frame is gone, or a bent arrow on a frame that
- * was resized, is left in place and returned with `unresolved`. Nothing
+ * overlay whose target or frame is gone, or a bent arrow that no longer
+ * meets its node, is left in place and returned with `unresolved`. Nothing
  * else moves. Returns the changes; none means the flow is untouched.
  */
 export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
@@ -558,7 +595,6 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
   };
   const overlays = liveOverlays(flow);
   const states = frameStates(flow, screens);
-  const resized = new Set<string>();
   for (const s of states) {
     if (!s.screen) continue;
     const old = rect(s.image);
@@ -570,7 +606,6 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       flow.embeds.set(String(s.image.fileId), { ...s.embed, ...s.stale.link });
       Object.assign(s.image, s.stale.image);
       touchOnce(s.image);
-      resized.add(s.image.id);
       out.push({
         frame: s.frame,
         kind: "embed",
@@ -613,7 +648,8 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
     }
   }
 
-  for (const { arrow, start, end, geometry: g, shaped, missed } of arrowRoutes(flow)) {
+  for (const route of arrowRoutes(flow)) {
+    const { arrow, start, end, geometry: g, shaped, missed } = route;
     if (!missed.length) continue;
     const change = {
       frame: missed[0],
@@ -623,8 +659,8 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       to: end.node,
     };
     if (shaped) {
-      if (resized.has(start.element.id) || resized.has(end.element.id))
-        out.push({ ...change, unresolved: "it was bent by hand; reconnect it by hand" });
+      const [off] = unmet(route);
+      if (off) out.push({ ...change, frame: off, unresolved: bentArrow(off) });
       continue;
     }
     Object.assign(arrow, { x: g.x, y: g.y, width: g.width, height: g.height, points: g.points });

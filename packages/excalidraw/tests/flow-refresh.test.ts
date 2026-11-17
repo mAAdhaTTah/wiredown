@@ -601,11 +601,8 @@ test("arrows between a frame and a decision follow; the decision's notes stay", 
 test("a bent arrow is left alone and reported; a hand-drawn one is untouched", () => {
   const { flow, arrow } = build();
   const bent = byId(flow, arrow);
-  bent.points = [
-    [0, 0],
-    [100, -40],
-    [214, 0],
-  ];
+  // a person drags its middle: its ends stay where they meet the frames
+  bent.points = [[0, 0], [100, -40], (bent.points as number[][])[1]];
   const f1 = image(flow, "F1");
   const drawn = {
     ...{ id: "drawnArw", type: "arrow", x: 126, y: 50, width: 214, height: 0 },
@@ -623,19 +620,18 @@ test("a bent arrow is left alone and reported; a hand-drawn one is untouched", (
   expect(lintFlow(flow, screens)).toEqual([]);
   const before = [bent, drawn].map((e) => structuredClone(e));
   const changes = refreshFlow(flow, lookup({ home: grown, other }));
-  expect(changes.filter((c) => c.kind === "arrow")).toEqual([
-    {
-      frame: "F1",
-      kind: "arrow",
-      element: arrow,
-      from: "F1",
-      to: "F2",
-      unresolved: "it was bent by hand; reconnect it by hand",
-    },
+  const why = "it was bent by hand and no longer meets F1; straighten or move it in the drawing";
+  const unresolved = { frame: "F1", kind: "arrow", element: arrow, from: "F1", to: "F2" };
+  expect(changes.filter((c) => c.kind === "arrow")).toEqual([{ ...unresolved, unresolved: why }]);
+  expect([byId(flow, arrow), byId(flow, "drawnArw")]).toEqual(before);
+  // F1 grew under its start: lint reports it every time, and refresh leaves it
+  expect(lintFlow(flow, lookup({ home: grown, other }))).toEqual([
+    { frame: "F1", element: arrow, message: `arrow F1 -> F2: ${why}` },
+  ]);
+  expect(refreshFlow(flow, lookup({ home: grown, other }))).toEqual([
+    { ...unresolved, unresolved: why },
   ]);
   expect([byId(flow, arrow), byId(flow, "drawnArw")]).toEqual(before);
-  expect(lintFlow(flow, lookup({ home: grown, other }))).toEqual([]);
-  expect(refreshFlow(flow, lookup({ home: grown, other }))).toEqual([]);
 });
 
 test("stacked notes move together in order; a note moved away is restored", () => {
