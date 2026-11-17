@@ -242,4 +242,7 @@ directory printed at the end; the generated site is always cleaned up.
 
 This is a manual script, outside `pnpm test` and CI. Its Gitea-shaped HTML
 stands in for the assumptions in `src/gitea.ts`; it does not verify live
-Gitea selectors, custom templates or CSP.
+Gitea selectors, custom templates or Gitea's own CSP. One page is served
+with a strict policy (the example in "On Gitea", on every response): it must
+draw, with its fonts and styles applied, and only Excalidraw's known font
+subsetting errors are allowed in its console.

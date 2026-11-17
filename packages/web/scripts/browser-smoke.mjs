@@ -26,6 +26,18 @@ const types = {
   ".woff2": "font/woff2",
   ".md": "text/plain; charset=utf-8",
 };
+// A strict site-wide policy, sent with every response as a forge would: no
+// 'unsafe-eval' (see the README's "On Gitea").
+const CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:";
+let strict = false;
+// Under it Excalidraw cannot subset the font: its worker fails, then the page
+// does, and it inlines the whole font. These errors, and only these, are allowed.
+const SUBSETTING = [
+  /^pageerror: Evaluating a string as JavaScript violates the following Content Security Policy directive because 'unsafe-eval' is not an allowed source of script/,
+  /^console error: Failed to use workers for subsetting, falling back to the main thread\./,
+  /^console error: Skipped glyph subsetting EvalError: Evaluating a string as JavaScript violates the following Content Security Policy directive because 'unsafe-eval' is not an allowed source of script/,
+];
 const esc = (s) => s.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
 function renderMd(md) {
   const lines = md.split("\n"),
@@ -48,6 +60,7 @@ function html(theme, body, fonts) {
 }
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
+  if (strict) res.setHeader("content-security-policy", CSP);
   try {
     if (url.pathname.startsWith("/assets/wiredown/")) {
       const path = url.pathname.slice("/assets/wiredown/".length);
@@ -323,13 +336,26 @@ try {
         );
       } else if (kind === "screens" || kind === "plain")
         assert.equal(await page.locator(".wiredown-notice, .wiredown-error").count(), 0);
-      assert.deepEqual(errors, [], `${name}: browser errors`);
+      if (strict) {
+        // the policy blocks styles and fonts silently: check they applied
+        assert(
+          await page.evaluate(() => [...document.fonts].every((f) => f.status === "loaded")),
+          "fonts load under the policy",
+        );
+        assert.equal(
+          await page.locator(".wiredown-svg").evaluate((svg) => getComputedStyle(svg).display),
+          "block",
+          "the renderer's styles apply under the policy",
+        );
+      }
+      const unexpected = errors.filter((e) => !(strict && SUBSETTING.some((m) => m.test(e))));
+      assert.deepEqual(unexpected, [], `${name}: browser errors`);
       await page.screenshot({ path: join(out, `${name}.png`), fullPage: true });
       console.log(
         `FONT ${name}: ${assets.filter((p) => p.includes("/fonts/")).join(", ") || "none"}`,
       );
       console.log(
-        `PASS ${name}: ${assets.length} asset requests; no unexpected errors, failed requests or external requests`,
+        `PASS ${name}: ${assets.length} asset requests; no unexpected errors, failed requests or external requests${strict ? `; ${errors.length} font subsetting errors allowed` : ""}`,
       );
       return await page
         .locator(".wiredown-block svg")
@@ -348,6 +374,9 @@ try {
     const dark = await visit(`${kind}-dark`, `${path}?theme=gitea-dark`, kind);
     assert.notEqual(dark, light, `${kind}: dark SVG must differ from light`);
   }
+  strict = true;
+  await visit("flow-csp", "/me/app/src/branch/main/flows/f.excalidraw.md", "flow");
+  strict = false;
   await visit("flow-virgil", "/me/app/src/branch/main/flows/f.excalidraw.md?fonts=Virgil", "flow");
   await visit("raw-failure", "/me/app/src/branch/main/flows/f.excalidraw.md?failRaw=1", "failure");
   console.log(`PASS browser smoke. Screenshots: ${out}`);
