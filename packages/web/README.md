@@ -5,7 +5,8 @@ A browser script for Markdown hosts that allow custom JavaScript. It draws
 and loads Excalidraw only on pages that have one. Gitea is the only host it
 knows.
 
-**Status: run in headless Chromium 159.0.8154.6 on 2026-11-16 against
+**Status: run in Playwright's headless Chromium (last on 2026-11-17, with
+159.0.8154.6; the smoke check prints the version it runs) against
 Gitea-shaped stand-in pages; never run on a live Gitea.** See "Verify on a
 forge" below.
 
