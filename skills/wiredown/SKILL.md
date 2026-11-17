@@ -142,6 +142,7 @@ alone, and `flow lint` reports it until they delete it. In a drawing from
 before wiredown recorded element ids, a pasted copy of a frame claims its
 F-number instead, so commands, refresh included, refuse that name and
 `flow lint` reports both element ids until the copy is deleted.
+Lint also reports far labels and notes; refresh restores them and frame groups.
 
 Each frame's embed names its screens file by its path from the repository
 root (else the Obsidian vault root): `[[docs/checkout/screens#^cart]]`.
