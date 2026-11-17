@@ -250,24 +250,92 @@ test("several targets are all or nothing", () => {
   sound(flow);
 });
 
-/** A pasted copy of F2's image and label, in a group of their own, as Excalidraw pastes. */
-function paste(flow: Flow, grouped = true) {
+/**
+ * A pasted copy of F2's image and label, in a group of their own, as
+ * Excalidraw pastes; `legacy` strips the data's `id`, as data written before
+ * elements recorded it.
+ */
+function paste(flow: Flow, { grouped = true, legacy = false } = {}) {
   const image = node(flow, "F2");
   const label = flow.elements.find((e) => e.text === "F2 · b")!;
-  const copies = [label, image].map((e, i) => ({
+  const copies = [label, image].map((e, i): ExcalidrawElementJson => ({
     ...structuredClone(e),
     id: `copy000${i}`,
     x: Number(e.x) + 2000,
     boundElements: null,
     groupIds: grouped ? ["pasted01"] : [],
   }));
+  if (legacy)
+    for (const e of [label, image, ...copies])
+      delete (e.customData as { wiredown: { id?: string } }).wiredown.id;
   flow.elements.push(...copies);
   return copies;
 }
 
-test("a pasted copy is removed by its image's id, with the label in its group", () => {
+test("a pasted copy is a person's: lint names it once, its id removes the paste", () => {
   const flow = build();
   const [label, image] = paste(flow);
+  const before = structuredClone(flow.elements);
+  expect(lintFlow(flow, screens)).toEqual([
+    {
+      frame: "F2",
+      element: image.id,
+      message: `element ${image.id} is a copy of F2's frame; flow commands leave copies alone: delete it in the drawing, or run "wiredown flow remove <flow> ${image.id}"`,
+    },
+  ]);
+  expect(removeFromFlow(flow, [label.id]).removed).toEqual([
+    {
+      kind: "copy",
+      element: label.id,
+      elements: [label.id, image.id],
+      node: "F2",
+      of: "F2's label",
+    },
+  ]);
+  untouchedExcept(flow, before, []);
+  sound(flow);
+});
+
+test("copies of a note, a highlight and an arrow survive their node's removal", () => {
+  const flow = build();
+  const f2 = node(flow, "F2");
+  const group = (f2.groupIds as string[])[0];
+  const note = role(flow, "note", (e) => e.text === "First")[0];
+  const [highlight] = role(flow, "highlight");
+  const arrow = role(flow, "arrow", (e) => identity(e)!.from === "F2")[0];
+  // Alt-dragged inside F2's group, retyped and recoloured; the arrow pasted bound to F2
+  const copies: ExcalidrawElementJson[] = [
+    { ...structuredClone(note), id: "copynote", text: "Mine", rawText: "Mine" },
+    { ...structuredClone(highlight), id: "copyhigh", strokeColor: "#ff0000" },
+    { ...structuredClone(arrow), id: "copyarro", boundElements: null, groupIds: [] },
+  ];
+  flow.elements.push(...copies);
+  for (const n of [f2, node(flow, "F1")])
+    (n.boundElements as unknown[]).push({ id: "copyarro", type: "arrow" });
+  expect(lintFlow(flow, screens).map((f) => [f.element, f.message.split(";")[0]])).toEqual([
+    ["copynote", "element copynote is a copy of F2's note"],
+    ["copyhigh", "element copyhigh is a copy of F2's highlight"],
+    ["copyarro", "element copyarro is a copy of arrow F2 -> F1"],
+  ]);
+  expect(copies[0].groupIds).toEqual([group]);
+  const { removed, unbound } = removeFromFlow(flow, ["F2"]);
+  expect(removed[0]).toMatchObject({ notes: 2, overlays: 2, arrows: 3 });
+  expect(unbound).toEqual([
+    { element: "hand0001", from: "F2" },
+    { element: "copyarro", from: "F2" },
+  ]);
+  expect(copies.map((e) => e.isDeleted)).toEqual([false, false, false]);
+  expect(byId(flow, "copyarro")).toMatchObject({ startBinding: null });
+  removeFromFlow(
+    flow,
+    copies.map((e) => e.id),
+  );
+  sound(flow);
+});
+
+test("a copy from before elements recorded their id: removed by its image's id", () => {
+  const flow = build();
+  const [label, image] = paste(flow, { legacy: true });
   const before = structuredClone(flow.elements);
   const original = node(flow, "F2");
   const claimed = `F2 is claimed by elements ${original.id} and copy0001; remove the copy with "wiredown flow remove <flow> <id>"`;
@@ -290,9 +358,9 @@ test("a pasted copy is removed by its image's id, with the label in its group", 
   sound(flow);
 });
 
-test("a pasted copy without a group of its own leaves the labels and says so", () => {
+test("such a copy without a group of its own leaves the labels and says so", () => {
   const flow = build();
-  const [label, image] = paste(flow, false);
+  const [label, image] = paste(flow, { grouped: false, legacy: true });
   const { removed } = removeFromFlow(flow, [image.id]);
   expect(removed[0]).toMatchObject({ elements: [image.id], copy: true, labelLeft: true });
   // the stray label is ours, so it goes by its id

@@ -162,7 +162,7 @@ export function flowNodes(flow: Flow): FlowNode[] {
   });
 }
 /** How a duplicate-name message ends; `<flow>` and `<id>` are for the reader to fill in. */
-export const REMOVE_COPY = 'remove the copy with "wiredown flow remove <flow> <id>"';
+const REMOVE_COPY = 'remove the copy with "wiredown flow remove <flow> <id>"';
 const claimed = (name: string, ids: string[]) =>
   `${name} is claimed by elements ${ids.join(" and ")}; ${REMOVE_COPY}`;
 /** Each name two live nodes claim (data without `id`, or edited by hand), and why it is refused. */
@@ -817,7 +817,7 @@ export function addMark(
 
 /** One thing `removeFromFlow` removed, as its target named it. */
 export interface Removed {
-  kind: "frame" | "decision" | "arrow" | "highlight" | "mark" | "note" | "label";
+  kind: "frame" | "decision" | "arrow" | "highlight" | "mark" | "note" | "label" | "copy";
   /** The element the target named; for an arrow target, its first arrow. */
   element: string;
   /** Every element it marked deleted, `element` first. */
@@ -836,6 +836,8 @@ export interface Removed {
   copy?: true;
   /** A copy whose label could not be told from the other claimant's: the label stays. */
   labelLeft?: true;
+  /** What a person's copy (kind `copy`) copies, as `copyOf` names it: `F2's frame`. */
+  of?: string;
 }
 /** An arrow a person drew whose end was bound to a removed element; that binding is now null. */
 export interface Unbound {
@@ -858,7 +860,8 @@ const TARGETS =
  * an arrow or mark takes its bound text. Arrows a person drew lose their
  * binding to a removed element and are returned as `unbound`; live elements
  * drop removed ids from `boundElements`. Elements without wiredown data are
- * never removed. Every target is checked before anything changes, so an
+ * never removed. A person's copy of ours is removed only by its element id,
+ * with the copies pasted with it. Every target is checked before anything changes, so an
  * unknown target throws with the drawing untouched.
  */
 export function removeFromFlow(
@@ -1011,6 +1014,17 @@ export function removeFromFlow(
       return removeNode(findNode(flow, target));
     const e = byId.get(target);
     if (!e) throw new Error(`no element "${target}"; name ${TARGETS}`);
+    const copy = copyOf(e);
+    if (copy) {
+      const pasted = pastedCopies(flow).find((set) => set.includes(e))!;
+      return {
+        kind: "copy",
+        element: e.id,
+        elements: [e, ...pasted.filter((c) => c !== e)].map((c) => c.id),
+        ...(copy.node ? { node: copy.node } : {}),
+        of: copy.what,
+      };
+    }
     if (!identity(e))
       throw new Error(
         `element ${target} has no wiredown data, so a person drew it; flow remove only removes what flow commands made`,

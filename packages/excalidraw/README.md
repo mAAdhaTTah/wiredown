@@ -439,7 +439,9 @@ marked `isDeleted` and touched, never spliced out, so numbers stay taken and
 (`F2`, with its label or text, notes, overlays and our arrows bound to it),
 an arrow (`F1->F2`: every arrow of ours that way), a highlight (`F2#id`), a
 mark (`F2#id:label`), notes (`F2:note`, or `F2:note:2` counting from the
-top) or an element id of ours. An arrow or mark takes its bound text. An
+top) or an element id of ours. An arrow or mark takes its bound text. A
+person's copy of ours is never removed with a node; its element id removes
+it and the copies pasted with it (`kind: "copy"`, `of: "F2's frame"`). An
 element id of one of two nodes claiming a name removes that one, with our
 elements in its innermost group (a pasted copy's label), or leaves the
 label (`labelLeft`) when no label is in that group. A person's arrow bound
@@ -447,8 +449,8 @@ to a removed element gets that binding set to `null`; live elements drop
 removed ids from `boundElements`. Elements without wiredown data are never
 removed. Every target is checked first, so an unknown one throws with the
 flow untouched. It returns `{ removed: [{ kind, element, elements, node?,
-from?, to?, target?, label?, notes?, overlays?, arrows?, copy?, labelLeft?
-}], unbound: [{ element, from }] }`; lint findings about orphaned notes,
+from?, to?, target?, label?, notes?, overlays?, arrows?, copy?, labelLeft?,
+of? }], unbound: [{ element, from }] }`; lint findings about orphaned notes,
 overlays and arrows, lost overlay targets and pasted copies name the target
 to remove.
 

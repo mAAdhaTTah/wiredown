@@ -529,6 +529,10 @@ function removedLine(r: Removed): string {
             : "")
       : `removed ${r.node} (${parts})\n`;
   }
+  if (r.kind === "copy") {
+    const more = r.elements.length - 1;
+    return `removed ${r.element}, a copy of ${r.of}${more ? `, and ${plural(more, "element")} pasted with it` : ""}\n`;
+  }
   if (r.kind === "arrow")
     return `removed ${r.arrows && r.arrows > 1 ? `${r.arrows} arrows` : "arrow"} ${r.from} -> ${r.to}\n`;
   if (r.kind === "highlight") return `removed highlight ${r.node} #${r.target}\n`;

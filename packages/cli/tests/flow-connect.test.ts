@@ -111,7 +111,7 @@ test("a pasted copy of a frame is left alone; an old unnamed one is refused", as
   await writeFile(file, serializeFlow(old));
   const before = await readFile(file, "utf8");
   expect((await run(["flow", "note", file, "F1", "Which?"])).stderr).toBe(
-    `${file}: error: F1 is claimed by elements ${f1.id} and pasted01; delete the copy\n`,
+    `${file}: error: F1 is claimed by elements ${f1.id} and pasted01; remove the copy with "wiredown flow remove <flow> <id>"\n`,
   );
   expect(await readFile(file, "utf8")).toBe(before);
 });

@@ -129,12 +129,14 @@ test("lint, remove, lint: a highlight whose component left the screen", async ()
   expect(await lint(file)).toMatchObject({ exitCode: 0, stdout: `${file}: 0 errors\n` });
 });
 
-test("lint, remove, lint: a pasted copy of a frame", async () => {
-  const { file } = await setup();
+/** Pastes F1's image and label as Excalidraw does: new ids, a new group, the data verbatim. */
+async function pasteF1(file: string, { legacy = false } = {}) {
   const flow = parseFlow(await readFile(file, "utf8"));
   const f1 = flow.elements.filter((e) => e.text === "F1 · Team members" || e.x === 0);
-  const [image] = f1.filter((e) => e.type === "image");
-  // Excalidraw pastes a group's elements with new ids and a new group
+  // data from before elements recorded their own id
+  if (legacy)
+    for (const e of flow.elements)
+      delete (e.customData as { wiredown: { id?: string } }).wiredown.id;
   for (const e of f1)
     flow.elements.push({
       ...structuredClone(e),
@@ -144,6 +146,26 @@ test("lint, remove, lint: a pasted copy of a frame", async () => {
       groupIds: ["newgroup"],
     });
   await writeFile(file, serializeFlow(flow));
+  return f1.find((e) => e.type === "image")!;
+}
+
+test("lint, remove, lint: a pasted copy of a frame", async () => {
+  const { file } = await setup();
+  await pasteF1(file);
+  expect((await lint(file)).stdout).toBe(
+    `${file}: F1: error: element pasted01 is a copy of F1's frame; flow commands leave copies alone: delete it in the drawing, or run "wiredown flow remove <flow> pasted01"\n${file}: 1 error\n`,
+  );
+  expect((await run(["flow", "remove", file, "pasted01"])).stdout).toBe(
+    "removed pasted01, a copy of F1's frame, and 1 element pasted with it\n",
+  );
+  const after = parseFlow(await readFile(file, "utf8")).elements.filter((e) => e.isDeleted);
+  expect(after.map((e) => e.id).sort()).toEqual(["pasted01", "pasted02"]);
+  expect(await lint(file)).toMatchObject({ exitCode: 0, stdout: `${file}: 0 errors\n` });
+});
+
+test("lint, remove, lint: a copy pasted before elements recorded their id", async () => {
+  const { file } = await setup();
+  const image = await pasteF1(file, { legacy: true });
   const claimed = `F1 is claimed by elements ${image.id} and pasted01; remove the copy with "wiredown flow remove <flow> <id>"`;
   expect((await lint(file)).stdout).toBe(`${file}: F1: error: ${claimed}\n${file}: 1 error\n`);
   expect((await run(["flow", "remove", file, "F1"])).stderr).toBe(`${file}: error: ${claimed}\n`);

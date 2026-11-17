@@ -73,8 +73,9 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    ```
 
    When lint reports an overlay whose component is gone, a note or overlay
-   whose node is gone, or a pasted copy of a frame, run the `flow remove`
-   its finding names. Remove a wrong arrow (`'F1->F2'`), note (`F2:note:1`)
+   whose node is gone, or two elements claiming one name, run the
+   `flow remove` its finding names. A copy a person pasted is theirs: ask
+   them before removing it. Remove a wrong arrow (`'F1->F2'`), note (`F2:note:1`)
    or mark the same way, then add the right one. Never hand-edit the JSON.
 
    ```sh
@@ -152,11 +153,11 @@ A flow is a drawing a person also edits: never regenerate an
 existing flow. Use the commands, which preserve their edits. A frame's parts
 (image, label, notes, overlays) are grouped and move together. A copy a
 person pastes (a frame, a note, an overlay) is theirs: commands leave it
-alone, and `flow lint` reports it until they delete it. In a drawing from
-before wiredown recorded element ids, a pasted copy of a frame claims its
-F-number instead, so commands, refresh included, refuse that name and
-`flow lint` reports both element ids until `flow remove` removes the copy
-by its id.
+alone, and `flow lint` reports it until they delete it or agree to
+`flow remove` it by its id. In a drawing from before wiredown recorded
+element ids, a pasted copy of a frame claims its F-number instead, so
+commands, refresh included, refuse that name and `flow lint` reports both
+element ids until `flow remove` removes the copy by its id.
 Lint also reports far labels and notes; refresh restores them and frame groups.
 
 Each frame's embed names its screens file by its path from the repository

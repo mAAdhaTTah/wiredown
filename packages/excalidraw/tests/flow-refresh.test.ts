@@ -380,7 +380,7 @@ test("overlays follow their frame's image by id; copies and other screens are re
       frame: "F1",
       element: "copy0001",
       message:
-        "element copy0001 is a copy of F1's frame; flow commands leave copies alone: delete it in the drawing",
+        'element copy0001 is a copy of F1\'s frame; flow commands leave copies alone: delete it in the drawing, or run "wiredown flow remove <flow> copy0001"',
     },
   ]);
   expect(refreshFlow(flow, screens)).toEqual([]);
@@ -453,13 +453,13 @@ test("a pasted frame with its overlays and note: refresh moves only the original
     {
       frame: "F1",
       element: ids.get(f1.id),
-      message: `element ${ids.get(f1.id)} is a copy of F1's frame; flow commands leave copies alone: delete it in the drawing`,
+      message: `element ${ids.get(f1.id)} is a copy of F1's frame; flow commands leave copies alone: delete it in the drawing, or run "wiredown flow remove <flow> ${ids.get(f1.id)}"`,
     },
     {
       frame: "F1",
       element: "dragged1",
       message:
-        "element dragged1 is a copy of F1's note; flow commands leave copies alone: delete it in the drawing",
+        'element dragged1 is a copy of F1\'s note; flow commands leave copies alone: delete it in the drawing, or run "wiredown flow remove <flow> dragged1"',
     },
   ]);
   const changes = refreshFlow(flow, lookup({ home: grown, other }));

@@ -159,7 +159,8 @@ is the source of truth for the flow; the agent and the person both edit it.
 - **Element provenance.** New `customData.wiredown` records carry `v: 1`
   and `id`, equal to their element's id. A different `id` identifies a
   person's pasted copy, which flow commands leave alone and `flow lint`
-  reports; existing data without `id` keeps its previous behaviour.
+  reports; only `flow remove` of its element id removes it. Existing data
+  without `id` keeps its previous behaviour.
 - **Frame labels** (F1, F2, …) let review comments in the forge refer to
   steps.
 
