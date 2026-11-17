@@ -136,9 +136,12 @@ use supported text or icons instead of glyphs that may render as empty boxes.
 Never hand-compute coordinates. Use `--right-of` and `--below` relative to
 existing nodes. A flow is a drawing a person also edits: never regenerate an
 existing flow. Use the commands, which preserve their edits. A frame's parts
-(image, label, notes, overlays) are grouped and move together; a pasted copy
-of a frame claims its F-number, so commands refuse that name and `flow lint`
-reports it until the copy is deleted.
+(image, label, notes, overlays) are grouped and move together. A copy a
+person pastes (a frame, a note, an overlay) is theirs: commands leave it
+alone, and `flow lint` reports it until they delete it. In a drawing from
+before wiredown recorded element ids, a pasted copy of a frame claims its
+F-number instead, so commands, refresh included, refuse that name and
+`flow lint` reports both element ids until the copy is deleted.
 
 Each frame's embed names its screens file by its path from the repository
 root (else the Obsidian vault root): `[[docs/checkout/screens#^cart]]`.
