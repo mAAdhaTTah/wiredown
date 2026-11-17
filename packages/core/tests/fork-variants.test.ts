@@ -248,6 +248,19 @@ describe("rows", () => {
     expect(plain.tree.children[0].body).toEqual(["Cara | c@x"]);
   });
 
+  it("rejects a row changed twice in one patch", () => {
+    const base = "grid #g\n[ ] | Name | Role\n[ ] | Anna | Member\n[ ] | Erik | Member";
+    const r = run(
+      "extends: base\nrows: g\n  Anna | Admin\n  Anna | Owner\n  remove Erik\n  remove Erik",
+      { base },
+    );
+    expect(r.errors).toEqual([
+      { line: 4, message: 'rows: "Anna" is changed twice; first on line 3' },
+      { line: 6, message: 'rows: "Erik" is changed twice; first on line 5' },
+    ]);
+    expect(r.tree.children[0].body).toEqual(["[ ] | Anna | Admin"]);
+  });
+
   it("counts a patch's width after lining it up", () => {
     // "Anna" in the checkbox column was the old reading of this patch
     const base = "grid #g\n[ ] | Name | Role\n[ ] | Anna | Member";

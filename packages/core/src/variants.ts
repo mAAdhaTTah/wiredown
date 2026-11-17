@@ -116,25 +116,38 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
     }
     return hits.length === 1 ? hits[0] : hits.length ? null : -1;
   };
+  /** The line that changed each row; a second change is an error, as only one would count. */
+  const changed = new Map<string, number>();
+  const twice = (key: string, line: number) => {
+    const first = changed.get(key);
+    if (first !== undefined) {
+      errors.push({ line, message: `rows: "${key}" is changed twice; first on line ${first}` });
+    }
+    return first !== undefined;
+  };
   op.body.forEach((patch, i) => {
     const line = (op.line ?? 0) + 1 + i;
     const removal = /^remove\s+(.+)$/i.exec(patch);
     if (removal && !patch.includes(pipe ? "|" : ",")) {
-      const at = find(removal[1].trim(), line);
-      if (at === null) return;
+      const key = removal[1].trim();
+      const at = find(key, line);
+      if (at === null || twice(key, line)) return;
       if (at < 0) {
         errors.push({
           line,
-          message: `no row "${removal[1].trim()}" in the grid "${grid.id}"; its rows are: ${keys().join(", ")}`,
+          message: `no row "${key}" in the grid "${grid.id}"; its rows are: ${keys().join(", ")}`,
         });
-      } else rows.splice(at, 1);
+      } else {
+        rows.splice(at, 1);
+        changed.set(key, line);
+      }
       return;
     }
     const marks = (MARKS.exec(patch) ?? [""])[0].replace(/\s/g, "");
     let cells = split(patch.replace(MARKS, ""), pipe);
     const key = cells.find((c) => c && c !== "=" && !parseCheck(c)) ?? "";
     const at = find(key, line);
-    if (at === null) return;
+    if (at === null || twice(key, line)) return;
     // a patch that leaves out the checkbox starts at the key column: of the
     // row it changes or, for a row it adds, of the last row
     const like = rows[at > 0 ? at : rows.length - 1];
@@ -161,6 +174,7 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
         return;
       }
       rows.push(marks + cells.join(sep));
+      changed.set(key, line);
       return;
     }
     const base = split(rows[at].replace(MARKS, ""), pipe);
@@ -168,6 +182,7 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
       ci >= cells.length || cells[ci] === "=" ? cell : cells[ci],
     );
     rows[at] = marks + merged.concat(cells.slice(base.length)).join(sep);
+    changed.set(key, line);
   });
   grid.text = rows[0] ?? "";
   grid.body = rows.slice(1);
