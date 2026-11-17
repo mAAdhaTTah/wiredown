@@ -13,3 +13,4 @@ export {
   isRelativeEmbed,
   resolveEmbedPath,
 } from "./screens-path.js";
+export { newerDataVersion } from "./flow-edit.js";

@@ -40,6 +40,19 @@ function identity(e: ExcalidrawElementJson): Identity | undefined {
   const data = (e.customData as { wiredown?: Identity } | undefined)?.wiredown;
   return data && (data.v ?? 1) <= DATA_VERSION ? data : undefined;
 }
+/**
+ * The data version of the live elements `identity` ignores: the highest
+ * number, else the first value; undefined when none is ignored.
+ */
+export function newerDataVersion(flow: Flow): unknown {
+  const ignored = flow.elements
+    .filter((e) => !e.isDeleted && !identity(e))
+    .map((e) => (e.customData as { wiredown?: { v?: unknown } } | undefined)?.wiredown)
+    .filter((data) => data)
+    .map((data) => data!.v);
+  const numbers = ignored.filter((v) => typeof v === "number");
+  return numbers.length ? Math.max(...numbers) : ignored[0];
+}
 export function flowFrames(flow: Flow) {
   return flow.elements
     .filter((e) => e.type === "image" && !e.isDeleted && identity(e)?.role === "screen")
