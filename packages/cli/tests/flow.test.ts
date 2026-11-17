@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
@@ -512,4 +512,22 @@ test("add-screen ignores deleted newer metadata", async () => {
   });
   await writeFile(file, serializeFlow(flow));
   expect((await run(["flow", "add-screen", file, "team"])).exitCode).toBe(0);
+});
+
+test("paths found from a relative flow path print relative to the working directory", async () => {
+  const dir = await realpath(
+    await fixture({ "screens.md": "# Bad\n\n```wiredown\nnonsense: bad\n```\n^bad" }),
+  );
+  const cwd = process.cwd();
+  process.chdir(dir);
+  try {
+    const result = await run(["flow", "new", "flows/a.excalidraw.md", "bad"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/^screens\.md:4: \^bad: error: /);
+    // a path given absolute stays absolute
+    const absolute = await run(["flow", "new", join(dir, "flows/a.excalidraw.md"), "bad"]);
+    expect(absolute.stderr).toMatch(new RegExp(`^${join(dir, "screens.md")}:4: `));
+  } finally {
+    process.chdir(cwd);
+  }
 });

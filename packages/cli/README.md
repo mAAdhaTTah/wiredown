@@ -124,6 +124,10 @@ or leads outside the root (a symlink included) is rejected:
 `embeds [[../outside#^members]], which points outside <root>`. One flow can
 embed screens from several files.
 
+A screens file or root found from the flow is printed relative to the
+working directory when the flow's path was given relative, and absolute when
+it was given absolute. Paths given on the command line print as given.
+
 `--screens` takes any `.md` file inside the root; one outside it is an
 error (`the screens file <file> points outside <root>`). Without it, the
 screens file is the `screens.md` in the parent of the flow's directory,

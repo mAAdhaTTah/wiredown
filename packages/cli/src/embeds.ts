@@ -3,7 +3,7 @@
 // so a path that is not found from the root is matched against the end of
 // every Markdown file's path, and more than one match is an error.
 import { readdir, realpath, stat } from "node:fs/promises";
-import { basename, dirname, join, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   embedCandidates,
@@ -67,8 +67,16 @@ export async function embedRoot(file: string): Promise<EmbedRoot> {
   };
 }
 
+/**
+ * A path found from the flow, as output prints it: relative to the working
+ * directory when the flow's path was given relative, else absolute.
+ */
+const shown = (flowFile: string, path: string) =>
+  isAbsolute(flowFile) ? path : relative(process.cwd(), path) || ".";
+
 /** A root as a path for messages, without its trailing separator. */
-const rootPath = (root: EmbedRoot) => fileURLToPath(root.url).replace(/(.)[\\/]$/, "$1");
+const rootPath = (root: EmbedRoot, flowFile: string) =>
+  shown(flowFile, fileURLToPath(root.url).replace(/(.)[\\/]$/, "$1"));
 
 /** Whether `path`, symlinks followed, is inside `root`. */
 async function inside(path: string, root: EmbedRoot) {
@@ -110,7 +118,7 @@ export async function resolveEmbed(
   embedPath: string,
   root: EmbedRoot,
 ): Promise<{ path: string; embedPath: string } | { why: string }> {
-  const outside = { why: `which points outside ${rootPath(root)}` };
+  const outside = { why: `which points outside ${rootPath(root, flowFile)}` };
   const candidates = embedCandidates(root.flow, embedPath, root.url);
   if (!candidates) return outside;
   let url: string | undefined = candidates[0];
@@ -127,7 +135,7 @@ export async function resolveEmbed(
         .sort();
       if (matches.length > 1)
         return {
-          why: `but it matches several files: ${matches.join(", ")}; name one by its path from ${rootPath(root)}`,
+          why: `but it matches several files: ${matches.join(", ")}; name one by its path from ${rootPath(root, flowFile)}`,
         };
       if (matches.length)
         url = new URL(matches[0].split("/").map(encodeURIComponent).join("/"), root.url).href;
@@ -135,10 +143,12 @@ export async function resolveEmbed(
   }
   if (!url)
     return {
-      why: `but ${embedNotFound(embedPath, dirname(flowFile), rootPath(root))}`,
+      why: `but ${embedNotFound(embedPath, dirname(flowFile), rootPath(root, flowFile))}`,
     };
   const path = fileURLToPath(url);
-  return (await inside(path, root)) ? { path, embedPath: embedPathFor(url, root.url)! } : outside;
+  return (await inside(path, root))
+    ? { path: shown(flowFile, path), embedPath: embedPathFor(url, root.url)! }
+    : outside;
 }
 
 /**
@@ -155,7 +165,7 @@ async function defaultScreens(flowFile: string, root: EmbedRoot) {
   if (dirs.length > 1) dirs.unshift(...dirs.splice(1, 1));
   for (const dir of dirs) {
     const path = fileURLToPath(new URL("screens.md", dir));
-    if (await isFile(path)) return path;
+    if (await isFile(path)) return shown(flowFile, path);
   }
   throw new Error(`no screens.md was found from ${dirname(flowFile)} upward`);
 }
@@ -174,7 +184,7 @@ export async function screensToEmbed(flowFile: string, screens: string | undefin
   let url = pathToFileURL(resolve(path)).href;
   if (!url.startsWith(root.url)) url = pathToFileURL(await realpath(path)).href;
   if (!url.startsWith(root.url) || !(await inside(path, root)))
-    throw new Error(`the screens file ${path} points outside ${rootPath(root)}`);
+    throw new Error(`the screens file ${path} points outside ${rootPath(root, flowFile)}`);
   const embedPath = embedPathFor(url, root.url)!;
   // parseEmbed ends the path at # or |, and the link at ]
   if (/[#|\]]/.test(embedPath))
