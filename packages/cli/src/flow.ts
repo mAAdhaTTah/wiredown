@@ -637,6 +637,16 @@ export async function moveFlowNode(
     const original = await readFile(file, "utf8");
     const flow = parseEditableFlow(original);
     const moved = moveNode(flow, node, to);
+    if (moved.unchanged) {
+      const message = `${node} is already at ${moved.x},${moved.y}`;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: options.json
+          ? json({ flow: file, moved: null, unresolved: [], message })
+          : `${message}\n`,
+      };
+    }
     await safeWrite(file, original, serializeFlow(flow));
     const { unresolved, ...value } = moved;
     return {

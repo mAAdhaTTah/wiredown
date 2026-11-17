@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { flowNodes, parseFlow, serializeFlow } from "@wiredown/excalidraw";
@@ -153,11 +153,33 @@ test("an overlap lint reports is fixed by the move it suggests", async () => {
   await writeFile(file, serializeFlow(flow));
   const found = await lint(file);
   expect(found.stdout).toContain(
-    `${file}: F2: error: overlaps F1; move one of them in the drawing, or run "wiredown flow move <flow> F2 --right-of F1"\n`,
+    `${file}: F2: error: overlaps F1; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> F2 --below F1"\n`,
   );
   // back where it was, so its arrow already meets it
   expect((await run(["flow", "move", file, "F2", "--right-of", "F1"])).stdout).toBe(
     "moved F2 to 696,0 (frame, 1 note)\n",
   );
   expect(await lint(file)).toEqual({ exitCode: 0, stdout: `${file}: 0 errors\n`, stderr: "" });
+});
+
+test("moving to the current coordinates or placement writes nothing", async () => {
+  const { file } = await setup();
+  const before = await readFile(file, "utf8");
+  const modified = (await stat(file)).mtimeMs;
+  expect(await run(["flow", "move", file, "F1", "--to", "0,0"])).toEqual({
+    exitCode: 0,
+    stderr: "",
+    stdout: "F1 is already at 0,0\n",
+  });
+  const f2 = flowNodes(parseFlow(before)).find((n) => n.node === "F2")!.element;
+  const result = await run(["flow", "move", file, "F2", "--right-of", "F1", "--json"]);
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.stdout)).toEqual({
+    flow: file,
+    moved: null,
+    unresolved: [],
+    message: `F2 is already at ${f2.x},${f2.y}`,
+  });
+  expect(await readFile(file, "utf8")).toBe(before);
+  expect((await stat(file)).mtimeMs).toBe(modified);
 });
