@@ -579,16 +579,30 @@ export function nodeAttachments(flow: Flow, n: FlowNode) {
   const b = boxOf(n);
   let y = n.kind === "decision" ? b.y + b.h / 2 + NOTE_GAP : b.y + b.h + NOTE_GAP;
   const x = n.kind === "decision" ? b.x + b.w + NOTE_GAP : b.x;
-  return flow.elements.flatMap((e) => {
-    const d = identity(e);
-    if (e.isDeleted || !d || !["label", "note"].includes(d.role) || e.containerId) return [];
-    if (d.anchor ? d.anchor !== n.element.id : d.role !== "label" || (d.frame ?? d.node) !== n.node)
-      return [];
-    const label = d.role === "label";
-    const want = label ? { x: b.x, y: b.y - 48 } : { x, y };
-    const distance = Math.hypot(Number(e.x) - want.x, Number(e.y) - want.y);
-    const far = distance > 3 * NOTE_GAP;
-    if (!label && !far) y = Number(e.y) + Number(e.height) + NOTE_GAP;
-    return [{ element: e, ...want, distance, far }];
+  const plans = [...flow.elements]
+    .sort((a, b) => Number(a.y) - Number(b.y))
+    .flatMap((e) => {
+      const d = identity(e);
+      if (e.isDeleted || !d || !["label", "note"].includes(d.role) || e.containerId) return [];
+      if (
+        d.anchor ? d.anchor !== n.element.id : d.role !== "label" || (d.frame ?? d.node) !== n.node
+      )
+        return [];
+      const label = d.role === "label";
+      const want = label ? { x: b.x, y: b.y - 48 } : { x, y };
+      const distance = Math.hypot(Number(e.x) - want.x, Number(e.y) - want.y);
+      const far = distance > 3 * NOTE_GAP;
+      if (!label && !far) y = Number(e.y) + Number(e.height) + NOTE_GAP;
+      return [{ element: e, ...want, distance, far }];
+    });
+  return plans.map((p) => {
+    if (!p.far || identity(p.element)?.role !== "note") return p;
+    const want = {
+      ...p,
+      y,
+      distance: Math.hypot(Number(p.element.x) - x, Number(p.element.y) - y),
+    };
+    y += Number(p.element.height) + NOTE_GAP;
+    return want;
   });
 }
