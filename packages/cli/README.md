@@ -349,7 +349,9 @@ do. `--screen` is only for screens files.
 Missing or invalid screens, and embeds that name no screens file (one
 finding per frame), leave placeholders; the SVG is still written, findings
 are reported, and the command exits 1. Flow JSON is
-`{ file, flow: { svg, width, height }, errors, warnings }`.
+`{ file, flow: { svg, width, height }, errors, warnings }`. The size is
+rounded to whole pixels, as a screen's is; the SVG keeps Excalidraw's exact
+size.
 
 Flow embeds include their own Excalifont copy, since nested SVG images cannot
 use the outer SVG's fonts. Each distinct screen is rendered once. This adds

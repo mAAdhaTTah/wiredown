@@ -62,6 +62,25 @@ it("writes human output, theme/font variants, and preserves the flow bytes", asy
   expect(await readFile(file)).toEqual(before);
 }, 30000);
 
+it("reports a flow's size rounded, as screens report theirs", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  const file = join(dir, "flows", "f.excalidraw.md");
+  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "note", file, "F1", "A note"])).exitCode).toBe(0);
+  // a person dragged the note: the drawing's height has a fraction
+  const flow = parseFlow(await readFile(file, "utf8"));
+  const note = flow.elements.find((e) => e.type === "text" && e.text === "A note")!;
+  note.y = Number(note.y) + 0.1932247560471;
+  await writeFile(file, serializeFlow(flow));
+  const args = ["render", file, "--out", dir];
+  const { flow: output } = JSON.parse((await run([...args, "--json"])).stdout);
+  expect(await readFile(join(dir, "f.svg"), "utf8")).toMatch(/^<svg [^>]*height="\d+\.\d+"/);
+  expect(Number.isInteger(output.width) && Number.isInteger(output.height)).toBe(true);
+  expect((await run(args)).stdout).toBe(
+    `${join(dir, "f.svg")}  ${output.width}x${output.height}\n`,
+  );
+}, 30000);
+
 it("reports each frame whose embed names no file, and still writes the SVG", async () => {
   const dir = await fixture({ "screens.md": BASE, "ui.md": BASE });
   const file = join(dir, "flows", "f.excalidraw.md");
