@@ -174,7 +174,7 @@ export function claimedNames(flow: Flow) {
     .map(([node, ids]) => ({ node, ids, message: claimed(node, ids) }));
 }
 /** The live node named `name`; two nodes claiming one name are an error, not a guess. */
-function findNode(flow: Flow, name: string): FlowNode {
+export function findNode(flow: Flow, name: string): FlowNode {
   const nodes = flowNodes(flow);
   const found = nodes.filter((n) => n.node === name);
   const ids = found.map((n) => n.element.id);
@@ -337,7 +337,13 @@ function portY(b: Box) {
  * Frames line up by their tops and left edges; a decision lines up its centre
  * with the other node's arrow port, so the arrow between them is straight.
  */
-function placeNode(flow: Flow, place: Place | undefined, w: number, h: number, decision: boolean) {
+export function placeNode(
+  flow: Flow,
+  place: Place | undefined,
+  w: number,
+  h: number,
+  decision: boolean,
+) {
   const refName = place && ("rightOf" in place ? place.rightOf : place.below);
   const ref = refName
     ? boxOf(findNode(flow, refName))
@@ -850,6 +856,35 @@ const groupsOf = (e: ExcalidrawElementJson) =>
   Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
 const bindingOf = (e: ExcalidrawElementJson, end: "startBinding" | "endBinding") =>
   (e[end] as { elementId?: string } | null | undefined)?.elementId;
+/**
+ * What of ours belongs to node `n` besides arrows: its label, notes and
+ * overlays, with our text bound to any of them or to the node. Of two
+ * claimants (a pasted copy, which Excalidraw gives a new group), only
+ * those anchored to it or in its own group, never those in the other's.
+ * A person's copies and hand-drawn elements never belong.
+ */
+export function nodeParts(flow: Flow, n: FlowNode): ExcalidrawElementJson[] {
+  const live = flow.elements.filter((e) => !e.isDeleted);
+  const claimants = flowNodes(flow).filter((o) => o.node === n.node);
+  const others = new Set(
+    claimants
+      .filter((o) => o.element !== n.element)
+      .flatMap((o) => groupsOf(o.element).slice(0, 1)),
+  );
+  const group = groupsOf(n.element)[0];
+  const parts = live.filter((e) => {
+    const d = identity(e);
+    // bound text comes with its container
+    if (!d || d.from || e.containerId || ["screen", "decision", "arrow"].includes(d.role))
+      return false;
+    const mine = d.anchor === n.element.id;
+    if (!mine && (d.frame ?? d.node) !== n.node) return false;
+    if (groupsOf(e).some((g) => others.has(g))) return false;
+    return claimants.length === 1 || mine || groupsOf(e).includes(group);
+  });
+  const ids = new Set([n.element, ...parts].map((e) => e.id));
+  return [...parts, ...live.filter((e) => identity(e) && ids.has(String(e.containerId)))];
+}
 const TARGETS =
   "a node (F2, D1), an arrow (F1->F2), an overlay (F2#id, or F2#id:label for a mark), notes (F2:note, F2:note:2) or an element id";
 
@@ -882,25 +917,7 @@ export function removeFromFlow(
 
   const removeNode = (n: FlowNode): Removed => {
     const claimants = flowNodes(flow).filter((o) => o.node === n.node);
-    const others = new Set(
-      claimants
-        .filter((o) => o.element !== n.element)
-        .flatMap((o) => groupsOf(o.element).slice(0, 1)),
-    );
-    const group = groupsOf(n.element)[0];
-    // its label, notes and overlays; of two claimants (a pasted copy, which
-    // Excalidraw gives a new group), only those anchored to it or in its
-    // own group, never those in the other's
-    const parts = live.filter((e) => {
-      const d = identity(e);
-      // bound text comes with its container
-      if (!d || d.from || e.containerId || ["screen", "decision", "arrow"].includes(d.role))
-        return false;
-      const mine = d.anchor === n.element.id;
-      if (!mine && (d.frame ?? d.node) !== n.node) return false;
-      if (groupsOf(e).some((g) => others.has(g))) return false;
-      return claimants.length === 1 || mine || groupsOf(e).includes(group);
-    });
+    const parts = nodeParts(flow, n).filter((e) => !e.containerId);
     const arrows = live.filter(
       (e) =>
         identity(e)?.role === "arrow" &&
