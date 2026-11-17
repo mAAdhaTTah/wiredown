@@ -9,13 +9,13 @@ import {
   arrowGeometry,
   arrowsBetween,
   centredOn,
-  DATA_VERSION,
   embedSize,
   flowFrames,
   flowNodes,
   highlightBounds,
   identity,
   markCentre,
+  newerDataVersion,
   NOTE_GAP,
   overlayBox,
   positionArrowLabel,
@@ -324,15 +324,11 @@ export function bindingFailures(elements: ExcalidrawElementJson[]): FlowFinding[
  */
 export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
   const out: FlowFinding[] = [];
-  const newer = Math.max(
-    ...flow.elements.map((e) => {
-      const v = (e.customData as { wiredown?: { v?: unknown } } | undefined)?.wiredown?.v;
-      return e.isDeleted ? 0 : Number(v ?? 0);
-    }),
-    0,
-  );
-  if (newer > DATA_VERSION)
-    out.push({ message: `this drawing was written by a newer wiredown (data version ${newer})` });
+  const newer = newerDataVersion(flow);
+  if (newer !== undefined)
+    out.push({
+      message: `this drawing was written by a newer wiredown (data version ${JSON.stringify(newer)})`,
+    });
   if (flow.compressed)
     out.push({
       message:
