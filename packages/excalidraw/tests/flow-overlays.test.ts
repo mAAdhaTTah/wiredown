@@ -14,6 +14,7 @@ import {
   parseFlow,
   serializeFlow,
 } from "../src/index.js";
+import type { ExcalidrawElementJson } from "../src/index.js";
 import { bindingFailures, pluginFailures } from "./plugin-checks.js";
 
 const screen = { width: 100, height: 200 };
@@ -47,7 +48,14 @@ test("overlays preserve existing elements, bind labels and survive serialization
     strokeColor: DEFAULT_THEME.colors.highlight,
     backgroundColor: "transparent",
     customData: {
-      wiredown: { role: "highlight", frame: "F1", screen: "home", target: "invite", anchor },
+      wiredown: {
+        role: "highlight",
+        frame: "F1",
+        screen: "home",
+        target: "invite",
+        anchor,
+        id: hi,
+      },
     },
     groupIds: [group],
   });
@@ -69,6 +77,7 @@ test("overlays preserve existing elements, bind labels and survive serialization
         target: "invite",
         label: "3",
         anchor,
+        id: e.id,
       },
     });
   }
@@ -157,10 +166,27 @@ test("overlays find their frame by element id, not by name", () => {
   const image = flowFrames(flow)[0].element;
   (image.customData as { wiredown: { frame: string } }).wiredown.frame = "F7";
   expect(() => addHighlight(flow, "F7", options)).toThrow("F7 already highlights #invite");
-  flow.elements.push({ ...structuredClone(image), id: "copy0001" });
+  // a person's pasted copy is not a frame; one pasted before elements
+  // recorded their own id claims the name
+  const copy: ExcalidrawElementJson = { ...structuredClone(image), id: "copy0001" };
+  flow.elements.push(copy);
+  expect(() => addHighlight(flow, "F7", options)).toThrow("F7 already highlights #invite");
+  delete (copy.customData as { wiredown: { id?: string } }).wiredown.id;
   expect(() => addHighlight(flow, "F7", options)).toThrow(
     `F7 is claimed by elements ${image.id} and copy0001; delete the copy`,
   );
+});
+
+test("a person's copy of a highlight is not ours", () => {
+  const flow = newFlow();
+  addScreen(flow, { screenId: "home", title: "Home", path: "screens", size: screen });
+  const options = { target: "invite", box, screen };
+  addHighlight(flow, "F1", options);
+  const original = flow.elements.at(-1)!;
+  flow.elements.push({ ...structuredClone(original), id: "copy0001", strokeColor: "#ff0000" });
+  original.isDeleted = true;
+  const again = addHighlight(flow, "F1", options);
+  expect(flow.elements.at(-1)!.customData).toMatchObject({ wiredown: { id: again } });
 });
 
 test("overlays on a frame inside a person's groups stay inside them", () => {
