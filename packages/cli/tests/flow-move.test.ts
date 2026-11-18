@@ -2,8 +2,8 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { flowNodes, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
-import { run } from "../src/index.js";
-import { BASE, fixture } from "./helpers.js";
+import { run } from "../src/index";
+import { BASE, fixture } from "./helpers";
 
 /**
  * F1 -> F2 -> D1 in a row, a note, a highlight and a mark on F2; in F2's

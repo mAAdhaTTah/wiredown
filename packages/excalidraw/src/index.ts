@@ -27,10 +27,10 @@ export type {
   Place,
   Removed,
   Unbound,
-} from "./flow-edit.js";
-export { lintFlow, refreshFlow } from "./flow-refresh.js";
-export { moveNode } from "./flow-move.js";
-export type { Moved, MoveTo } from "./flow-move.js";
+} from "./flow-edit";
+export { lintFlow, refreshFlow } from "./flow-refresh";
+export { moveNode } from "./flow-move";
+export type { Moved, MoveTo } from "./flow-move";
 export type {
   FlowChange,
   FlowFinding,

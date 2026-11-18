@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { identity } from "../src/flow-edit.js";
+import { identity } from "../src/flow-edit";
 import {
   addDecision,
   addHighlight,
@@ -13,9 +13,9 @@ import {
   newFlow,
   parseFlow,
   serializeFlow,
-} from "../src/index.js";
-import type { ExcalidrawElementJson, Flow, ScreenState } from "../src/index.js";
-import { bindingFailures, pluginFailures } from "./plugin-checks.js";
+} from "../src/index";
+import type { ExcalidrawElementJson, Flow, ScreenState } from "../src/index";
+import { bindingFailures, pluginFailures } from "./plugin-checks";
 
 const box = { x: 20, y: 30, w: 40, h: 50 };
 const home: ScreenState = { width: 100, height: 200, boxes: { invite: box } };
