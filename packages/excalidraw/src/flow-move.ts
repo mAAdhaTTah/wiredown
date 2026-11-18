@@ -1,4 +1,3 @@
-import type { Flow } from "./flow.js";
 import type { Place } from "./flow-edit.js";
 import {
   claimedNames,
@@ -11,6 +10,7 @@ import {
 } from "./flow-edit.js";
 import { arrowRoutes, bentArrow, intersects, rect, reroute, unmet } from "./flow-refresh.js";
 import type { FlowChange } from "./flow-refresh.js";
+import type { Flow } from "./flow.js";
 
 /** Where `moveNode` puts a node: next to another node, as add-screen places, or at a top-left. */
 export type MoveTo = Place | { x: number; y: number };

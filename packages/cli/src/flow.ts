@@ -20,7 +20,6 @@ import {
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
-import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds.js";
 import type {
   Flow,
   FlowChange,
@@ -30,6 +29,7 @@ import type {
   ScreenRef,
   ScreenState,
 } from "@wiredown/excalidraw";
+import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds.js";
 import { formatFindings, json, plural, readSource, unknownScreen, UsageError } from "./output.js";
 import type { Finding, Result } from "./output.js";
 import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
