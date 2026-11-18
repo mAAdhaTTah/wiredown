@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionsConfig } from "node:util";
-import { check } from "./check.js";
-import { flowCommand } from "./flow.js";
-import { UsageError } from "./output.js";
-import type { Result } from "./output.js";
-import { render } from "./render.js";
+import { check } from "./check";
+import { flowCommand } from "./flow";
+import { UsageError } from "./output";
+import type { Result } from "./output";
+import { render } from "./render";
 
 export { check, render, UsageError };
 export type { CheckOptions, CheckedFile } from "./check";

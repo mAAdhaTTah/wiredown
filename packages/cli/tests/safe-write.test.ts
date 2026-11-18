@@ -2,9 +2,9 @@ import { readdir, readFile, realpath, writeFile } from "node:fs/promises";
 import * as fs from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test, vi } from "vitest";
-import { run } from "../src/index.js";
-import { safeWrite } from "../src/safe-write.js";
-import { BASE, fixture } from "./helpers.js";
+import { run } from "../src/index";
+import { safeWrite } from "../src/safe-write";
+import { BASE, fixture } from "./helpers";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof fs>();

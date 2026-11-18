@@ -9,9 +9,9 @@ import {
   newFlow,
   parseFlow,
   serializeFlow,
-} from "../src/index.js";
-import type { ExcalidrawElementJson } from "../src/index.js";
-import { pluginFailures } from "./plugin-checks.js";
+} from "../src/index";
+import type { ExcalidrawElementJson } from "../src/index";
+import { pluginFailures } from "./plugin-checks";
 
 const options = {
   screenId: "home",

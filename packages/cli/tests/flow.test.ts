@@ -2,8 +2,8 @@ import { mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promi
 import { join } from "node:path";
 import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
-import { run } from "../src/index.js";
-import { BASE, fixture, VARIANT } from "./helpers.js";
+import { run } from "../src/index";
+import { BASE, fixture, VARIANT } from "./helpers";
 
 test("new, add, styling idempotence and hand edits", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
@@ -78,7 +78,7 @@ test("discovery, explicit path, errors, and empty drawings", async () => {
 });
 
 test("empty frontmatter is filled without adding a second block", async () => {
-  const { styleScreens } = await import("../src/flow.js");
+  const { styleScreens } = await import("../src/flow");
   const source = "---\n---\n" + BASE;
   expect(styleScreens(source).match(/^---$/gm)).toHaveLength(2);
 });
@@ -92,7 +92,7 @@ test.each([
   ["both", "---\nexcalidraw-font: Custom\nexcalidraw-css: custom\n---\n", false],
   ["crlf", "---\r\ntags: [example]\r\n---\r\n", true],
 ])("frontmatter: %s", async (_name, prefix, changed) => {
-  const { styleScreens } = await import("../src/flow.js");
+  const { styleScreens } = await import("../src/flow");
   const nl = String(prefix).includes("\r\n") ? "\r\n" : "\n";
   const source = prefix + BASE.replace(/\n/g, nl);
   const styled = styleScreens(source);
@@ -342,7 +342,7 @@ test("a flow folder linked into a repository: the repository is the root", async
   expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
   expect(await embedPaths(file)).toEqual(["spec/screens"]);
   // and from the repository's side of the link
-  const { embedRoot } = await import("../src/embeds.js");
+  const { embedRoot } = await import("../src/embeds");
   expect(await embedRoot(join(repo, "spec/flows/x.excalidraw.md"))).toEqual(await embedRoot(file));
 });
 
@@ -396,7 +396,7 @@ test("--screens must be a .md file inside the root", async () => {
 });
 
 test("reading an embed: ./ and ../, the path from the root, then a unique suffix", async () => {
-  const { embedRoot, resolveEmbed } = await import("../src/embeds.js");
+  const { embedRoot, resolveEmbed } = await import("../src/embeds");
   const dir = await fixture({});
   await writeFile(join(dir, ".git"), "");
   for (const path of [

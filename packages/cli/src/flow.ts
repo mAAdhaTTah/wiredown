@@ -9,11 +9,11 @@ import {
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
-import { screensToEmbed } from "./embeds.js";
-import { formatFindings, json, unknownScreen, UsageError } from "./output.js";
-import type { Finding, Result } from "./output.js";
-import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
-import { safeWrite } from "./safe-write.js";
+import { screensToEmbed } from "./embeds";
+import { formatFindings, json, unknownScreen, UsageError } from "./output";
+import type { Finding, Result } from "./output";
+import { NewerFlowError, parseEditableFlow } from "./read-flow";
+import { safeWrite } from "./safe-write";
 
 export interface FlowOptions {
   screens?: string;

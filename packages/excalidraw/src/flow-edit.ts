@@ -1,7 +1,7 @@
 import { EXCALIFONT, fontMeasurer } from "@wiredown/core";
 import { generateNKeysBetween } from "fractional-indexing";
-import type { ExcalidrawElementJson } from "./elements.js";
-import type { Flow } from "./flow.js";
+import type { ExcalidrawElementJson } from "./elements";
+import type { Flow } from "./flow";
 
 // Confirmed gen-flow.mjs / Excalidraw plugin DEFAULT_MD_EMBED_CSS:
 // host has 10px horizontal padding; footer has 5px height.

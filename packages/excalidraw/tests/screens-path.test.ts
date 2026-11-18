@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { embedCandidates, embedNotFound, embedPathFor, resolveEmbedPath } from "../src/index.js";
+import { embedCandidates, embedNotFound, embedPathFor, resolveEmbedPath } from "../src/index";
 
 const flow = "file:///work/specs/invites/flows/a.excalidraw.md";
 const root = "file:///work/";
