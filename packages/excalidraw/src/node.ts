@@ -1,15 +1,15 @@
-import { nodeDependency } from "./node-dependency.js";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { layoutScreen } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
-import { screenElements } from "./elements";
-import type { ExcalidrawElementJson, ScreenElements } from "./elements";
-import type { Flow } from "./flow";
-import type { ScreenRef } from "./flow-refresh";
-import { FLOW_MARGIN, flowScene, svgSize } from "./flow-render";
-import { sceneOf } from "./scene";
+import { screenElements } from "./elements.js";
+import type { ExcalidrawElementJson, ScreenElements } from "./elements.js";
+import type { ScreenRef } from "./flow-refresh.js";
+import { FLOW_MARGIN, flowScene, svgSize } from "./flow-render.js";
+import type { Flow } from "./flow.js";
+import { nodeDependency } from "./node-dependency.js";
+import { sceneOf } from "./scene.js";
 
 export { FLOW_MARGIN };
 

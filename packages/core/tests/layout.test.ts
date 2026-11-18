@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_THEME, FONT_SIZE } from "../src/theme.js";
 import { layout } from "../src/layout.js";
 import { parse } from "../src/parse.js";
+import { DEFAULT_THEME, FONT_SIZE } from "../src/theme.js";
 import type { DrawOp, LineOp, RectOp, TextOp, TextStyle } from "../src/types.js";
 import { EXAMPLE, NEW_USER } from "./fixtures/specs.js";
 import { CHAR_W, fakeMeasure, LINE_H } from "./helpers/fakeMeasure.js";
