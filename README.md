@@ -42,9 +42,9 @@ run and needs Linux x64. CI runs it too.
 TypeScript 6 is used because typescript-eslint does not yet support
 TypeScript 7.
 
-Packages extend `tsconfig.base.json` and compile with `tsc` to `dist/`.
-The Obsidian plugin and `@wiredown/web` bundle with esbuild; the plugin's
-dist folder is installable.
+Packages extend `tsconfig.base.json` and build with Vite to `dist/`.
+The Obsidian plugin and `@wiredown/web` are bundles; the plugin's dist
+folder is installable.
 
 The design and syntax proposal live in `docs/prds/initial-implementation/`.
 

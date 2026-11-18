@@ -2,9 +2,9 @@ import { checkScreens, layoutScreen } from "@wiredown/core";
 import { addScreen, embedSize, newFlow, screenElements, serializeFlow } from "@wiredown/excalidraw";
 import type { ExcalidrawElementJson } from "@wiredown/excalidraw";
 import { afterEach, expect, it, vi } from "vitest";
-import type { Block, Host } from "../src/host.js";
-import { fetchText, render, resolveBlocks } from "../src/render.js";
-import type { ExportSvg } from "../src/render.js";
+import type { Block, Host } from "../src/host";
+import { fetchText, render, resolveBlocks } from "../src/render";
+import type { ExportSvg } from "../src/render";
 
 const SVG = "http://www.w3.org/2000/svg";
 const fence = (s: string, id?: string) => `\`\`\`wiredown\n${s}\n\`\`\`\n${id ? `^${id}\n` : ""}`;

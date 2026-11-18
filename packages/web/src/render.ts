@@ -14,9 +14,9 @@ import {
   screenElements,
 } from "@wiredown/excalidraw";
 import type { ExcalidrawElementJson } from "@wiredown/excalidraw";
-import type { Block, FlowTarget, Host, Theme } from "./host.js";
-import { notice } from "./loader.js";
-import type { Targets } from "./loader.js";
+import type { Block, FlowTarget, Host, Theme } from "./host";
+import { notice } from "./loader";
+import type { Targets } from "./loader";
 
 /** Excalidraw 0.18.1's font family ids, by their folder under fonts/. */
 const FAMILIES: Record<string, number> = {
