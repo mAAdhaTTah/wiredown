@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { EXCALIFONT, FONT_SIZE, LIGHT_INK, layoutScreen, parse } from "@wiredown/core";
+import { EXCALIFONT, FONT_SIZE, layoutScreen, LIGHT_INK, parse } from "@wiredown/core";
 import type { DrawOp, LayoutResult } from "@wiredown/core";
+import { describe, expect, it } from "vitest";
 import { EXCALIFONT_FAMILY, sceneOf, screenElements } from "../src/index.js";
 
 const SPEC = [
