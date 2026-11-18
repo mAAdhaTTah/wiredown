@@ -3,8 +3,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { flowFrames, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, it } from "vitest";
-import { run } from "../src/index.js";
-import { BASE, fixture, VARIANT } from "./helpers.js";
+import { run } from "../src/index";
+import { BASE, fixture, VARIANT } from "./helpers";
 
 it("renders each embed's screens, rejecting --screen and --screens and retaining invalid embeds", async () => {
   const dir = await fixture({ "screens.md": `${BASE}\n${VARIANT}` });

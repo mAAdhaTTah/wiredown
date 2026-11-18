@@ -4,10 +4,10 @@ import { checkScreens, layoutScreen } from "@wiredown/core";
 import type { Box, CheckedScreen } from "@wiredown/core";
 import { flowFrames, screenElements } from "@wiredown/excalidraw";
 import { renderFlowSvg, renderScreenSvg } from "@wiredown/excalidraw/node";
-import { embeddedScreens } from "./flow.js";
-import { formatFindings, json, readSource, unknownScreen, UsageError } from "./output.js";
-import type { Finding, Result } from "./output.js";
-import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
+import { embeddedScreens } from "./flow";
+import { formatFindings, json, readSource, unknownScreen, UsageError } from "./output";
+import type { Finding, Result } from "./output";
+import { NewerFlowError, parseEditableFlow } from "./read-flow";
 
 export interface RenderOptions {
   /** Only these screen ids; all screens with an id when empty. */
