@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { labelAtoms } from "../src/components/label.js";
 import { FONT_SIZE, layout, parse } from "../src/index.js";
 import type { LineOp, TextOp } from "../src/index.js";
-import { labelAtoms } from "../src/components/label.js";
-import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure.js";
+import { CHAR_W, fakeMeasure, LINE_H } from "./helpers/fakeMeasure.js";
 
 const style = { fontSize: FONT_SIZE, fontFamily: 5 };
 const draw = (source: string, maxWidth?: number) =>

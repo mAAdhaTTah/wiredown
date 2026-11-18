@@ -9,7 +9,7 @@ operations, and text measuring is injected by the host.
 This package is a fork of the core of
 [Sketchdown](https://github.com/magnushaggren/sketchdown) by Magnus Haggren,
 at commit `e790382`, used under the MIT licence. The upstream copyright
-notice is preserved in the repository's [LICENSE](../../LICENSE).
+notice is preserved in this package's [LICENSE](LICENSE).
 
 `tests/fixtures/prototype/Sketchdown.md` is Sketchdown's original
 single-script prototype, kept unchanged because the compatibility test runs

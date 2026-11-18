@@ -9,7 +9,6 @@ import { details } from "./details.js";
 import { dropdown } from "./dropdown.js";
 import { alert, image, placeholder, progress, tooltip } from "./feedback.js";
 import { field, form } from "./form.js";
-import { section } from "./section.js";
 import { browser, buttons, dialog, phone, windowFrame } from "./frames.js";
 import { grid } from "./grid.js";
 import { heading } from "./heading.js";
@@ -20,6 +19,7 @@ import { nav } from "./nav.js";
 import { breadcrumb, menu, pagination, tree } from "./navigation.js";
 import { paragraph } from "./paragraph.js";
 import { row } from "./row.js";
+import { section } from "./section.js";
 import { tabs } from "./tabs.js";
 import { text } from "./text.js";
 

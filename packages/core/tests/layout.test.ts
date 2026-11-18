@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_THEME, FONT_SIZE, layout, parse } from "../src/index.js";
 import type { DrawOp, LineOp, RectOp, TextOp, TextStyle } from "../src/index.js";
 import { EXAMPLE, NEW_USER } from "./fixtures/specs.js";
-import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure.js";
+import { CHAR_W, fakeMeasure, LINE_H } from "./helpers/fakeMeasure.js";
 
 const style: TextStyle = { fontSize: FONT_SIZE, fontFamily: 5 };
 const draw = (source: string, x = 0, y = 0) =>

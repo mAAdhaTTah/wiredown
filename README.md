@@ -43,4 +43,4 @@ The design and syntax proposal live in `docs/prds/initial-implementation/`.
 Wiredown's core (`packages/core`) is forked from
 [Sketchdown](https://github.com/magnushaggren/sketchdown) at commit `e790382`,
 by Magnus Haggren. Wiredown is MIT licensed; the upstream copyright notice
-will be kept with the core package when it lands.
+is preserved in [packages/core/LICENSE](packages/core/LICENSE).

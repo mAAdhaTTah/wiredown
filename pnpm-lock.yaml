@@ -203,8 +203,6 @@ importers:
         specifier: ^26.6.6
         version: 26.6.6
 
-  packages/placeholder: {}
-
 packages:
 
   '@babel/code-frame@7.29.7':
