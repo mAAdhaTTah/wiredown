@@ -1,4 +1,4 @@
-import { EXCALIFONT_FAMILY, EXCALIFONT, FONT_SIZE, INK, LIGHT_INK } from "@wiredown/core";
+import { EXCALIFONT, EXCALIFONT_FAMILY, FONT_SIZE, INK, LIGHT_INK } from "@wiredown/core";
 import type { Box, DrawOp, LayoutResult } from "@wiredown/core";
 
 // Turns layout ops into plain Excalidraw element JSON, with no Excalidraw

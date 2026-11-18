@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "vitest";
-
 // The generator is plain Node ESM, usable without building core first.
 // @ts-expect-error The build script deliberately has no declaration file.
 import { fontPath, generate } from "../scripts/metrics.mjs";

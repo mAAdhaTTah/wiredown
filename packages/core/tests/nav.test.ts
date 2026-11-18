@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_THEME, FONT_SIZE } from "../src/theme.js";
 import { layout } from "../src/layout.js";
 import { parse } from "../src/parse.js";
+import { DEFAULT_THEME, FONT_SIZE } from "../src/theme.js";
 import type { DrawOp, EllipseOp, LineOp, RectOp, Style, TextOp } from "../src/types.js";
-import { LINE_H, fakeMeasure } from "./helpers/fakeMeasure.js";
+import { fakeMeasure, LINE_H } from "./helpers/fakeMeasure.js";
 
 const style: Style = { stroke: "#1e1e1e", fontFamily: 5, roughness: 1, fontSize: FONT_SIZE };
 const draw = (source: string) =>

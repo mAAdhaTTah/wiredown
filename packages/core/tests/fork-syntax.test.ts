@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_THEME, FONT_SIZE } from "../src/theme.js";
 import { layout } from "../src/layout.js";
 import { parse } from "../src/parse.js";
+import { DEFAULT_THEME, FONT_SIZE } from "../src/theme.js";
 import type { RectOp } from "../src/types.js";
 import { fakeMeasure } from "./helpers/fakeMeasure.js";
 

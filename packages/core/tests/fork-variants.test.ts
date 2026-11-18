@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { extendsId, resolve } from "../src/variants.js";
 import { parse } from "../src/parse.js";
 import type { SpecNode } from "../src/types.js";
+import { extendsId, resolve } from "../src/variants.js";
 
 const BASE = [
   "window: Review (id=win)",

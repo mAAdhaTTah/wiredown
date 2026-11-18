@@ -1,10 +1,10 @@
 import { expect, it } from "vitest";
-import { DEFAULT_THEME, FONT_SIZE } from "../src/theme.js";
+import { layout } from "../src/layout.js";
 import { EXCALIFONT } from "../src/metrics-excalifont.js";
 import { fontMeasurer } from "../src/metrics.js";
-import { layout } from "../src/layout.js";
-import { layoutScreen } from "../src/screen.js";
 import { parse } from "../src/parse.js";
+import { layoutScreen } from "../src/screen.js";
+import { DEFAULT_THEME, FONT_SIZE } from "../src/theme.js";
 
 it("uses deterministic Excalifont layout with kerning and shared defaults", () => {
   const tree = parse("window: Team\n  button: AVATAR #invite").tree;

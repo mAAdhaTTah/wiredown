@@ -1,8 +1,8 @@
-import { checkScreensInternal } from "../src/internal.js";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkScreens, parseScreens } from "../src/screens.js";
+import { checkScreensInternal } from "../src/internal.js";
 import { layoutScreen } from "../src/screen.js";
+import { checkScreens, parseScreens } from "../src/screens.js";
 
 const block = (source: string, id = "base") => `\`\`\`wiredown\n${source}\n\`\`\`\n^${id}`;
 
