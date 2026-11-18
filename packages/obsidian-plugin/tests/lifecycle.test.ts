@@ -1,7 +1,7 @@
 import { TFile } from "obsidian";
 import type { MarkdownPostProcessorContext } from "obsidian";
 import { afterEach, expect, it, vi } from "vitest";
-import WiredownPlugin, { Block } from "../src/main.js";
+import WiredownPlugin, { Block } from "../src/main";
 
 afterEach(() => vi.useRealTimers());
 it.each(["success", "export failure", "read failure", "superseded", "unload"])(
