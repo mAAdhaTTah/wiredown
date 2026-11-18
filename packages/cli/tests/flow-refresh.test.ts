@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import type { ExcalidrawElementJson } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
-import { run } from "../src/index.js";
-import { BASE, fixture } from "./helpers.js";
+import { run } from "../src/index";
+import { BASE, fixture } from "./helpers";
 
 const TEAM = [
   "# Team members",

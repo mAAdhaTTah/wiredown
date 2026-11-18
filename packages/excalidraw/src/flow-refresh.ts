@@ -3,7 +3,8 @@
 // up by the embed (its path and block id), so two screens files with the
 // same block id are never confused.
 import type { Box } from "@wiredown/core";
-import type { ExcalidrawElementJson } from "./elements.js";
+import type { ExcalidrawElementJson } from "./elements";
+import type { EmbedLink, Flow } from "./flow";
 import {
   arrowGeometry,
   arrowsBetween,
@@ -24,9 +25,8 @@ import {
   pastedCopies,
   positionArrowLabel,
   touch,
-} from "./flow-edit.js";
-import type { FlowNode } from "./flow-edit.js";
-import type { EmbedLink, Flow } from "./flow.js";
+} from "./flow-edit";
+import type { FlowNode } from "./flow-edit";
 
 /** A screen as it renders now: its export size and the box of each `#id`. */
 export interface ScreenState {

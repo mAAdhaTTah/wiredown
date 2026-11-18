@@ -1,8 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { run } from "../src/index.js";
-import { BASE, fixture } from "./helpers.js";
+import { run } from "../src/index";
+import { BASE, fixture } from "./helpers";
 
 const BAD = "# Bad\n\n```wiredown\nnonsense: bad\n```\n^bad\n";
 const grow = (s: string) => s.replace("```\n^team", "  text: One more line\n```\n^team");

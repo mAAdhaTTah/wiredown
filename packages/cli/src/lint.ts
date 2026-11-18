@@ -1,11 +1,11 @@
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { checkSource, formatChecked } from "./check.js";
-import type { CheckedFile } from "./check.js";
-import { formatLinted, lintFlowFile } from "./flow.js";
-import type { LintedFlow } from "./flow.js";
-import { json, readSource, UsageError } from "./output.js";
-import type { Result } from "./output.js";
+import { checkSource, formatChecked } from "./check";
+import type { CheckedFile } from "./check";
+import { formatLinted, lintFlowFile } from "./flow";
+import type { LintedFlow } from "./flow";
+import { json, readSource, UsageError } from "./output";
+import type { Result } from "./output";
 
 export interface LintOptions {
   json?: boolean;
