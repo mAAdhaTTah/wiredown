@@ -10,6 +10,7 @@
 - Design documents live in `docs/prds/initial-implementation/`; read the
   design and syntax proposal before changing product behavior.
 - Hard-wrap prose Markdown at about 80 columns.
+- Prettier sorts imports; run `pnpm format` rather than ordering by hand.
 
 ## Commands
 
