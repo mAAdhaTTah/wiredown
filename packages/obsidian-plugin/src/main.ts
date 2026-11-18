@@ -1,6 +1,6 @@
+import { FENCE_KEYWORD } from "@wiredown/core";
 import { MarkdownRenderChild, Plugin, TFile } from "obsidian";
 import type { MarkdownPostProcessorContext } from "obsidian";
-import { FENCE_KEYWORD } from "@wiredown/core";
 import { isVariant, keepBusy, renderBlock, showError } from "./render.js";
 import type { Automate } from "./render.js";
 
