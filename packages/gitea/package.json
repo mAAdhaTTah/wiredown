@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "node build.mjs",
+    "build": "vite build",
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/browser-smoke.mjs"
   },
