@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { identity } from "../src/flow-edit.js";
 import {
   addDecision,
   addHighlight,
@@ -14,7 +15,6 @@ import {
   serializeFlow,
 } from "../src/index.js";
 import type { ExcalidrawElementJson, Flow, ScreenState } from "../src/index.js";
-import { identity } from "../src/flow-edit.js";
 import { bindingFailures, pluginFailures } from "./plugin-checks.js";
 
 const box = { x: 20, y: 30, w: 40, h: 50 };

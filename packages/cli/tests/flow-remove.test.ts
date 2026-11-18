@@ -1,9 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { expect, test } from "vitest";
 import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
+import { expect, test } from "vitest";
 import { run } from "../src/index.js";
-import { BASE, VARIANT, fixture } from "./helpers.js";
+import { BASE, fixture, VARIANT } from "./helpers.js";
 
 /** F1 (team) -> F2 (team-after) -> D1, a note, a highlight and a mark on F2. */
 async function setup() {
