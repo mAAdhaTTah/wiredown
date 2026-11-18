@@ -4,7 +4,6 @@
 // same block id are never confused.
 import type { Box } from "@wiredown/core";
 import type { ExcalidrawElementJson } from "./elements.js";
-import type { EmbedLink, Flow } from "./flow.js";
 import {
   arrowGeometry,
   arrowsBetween,
@@ -19,14 +18,15 @@ import {
   identity,
   markCentre,
   newerDataVersion,
-  NOTE_GAP,
   nodeAttachments,
+  NOTE_GAP,
   overlayBox,
   pastedCopies,
   positionArrowLabel,
   touch,
 } from "./flow-edit.js";
 import type { FlowNode } from "./flow-edit.js";
+import type { EmbedLink, Flow } from "./flow.js";
 
 /** A screen as it renders now: its export size and the box of each `#id`. */
 export interface ScreenState {
