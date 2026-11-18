@@ -1,5 +1,5 @@
 {
-  "name": "wiredown-monorepo",
+  "name": "wiredown",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.20.0",
