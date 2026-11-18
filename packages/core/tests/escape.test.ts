@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parse } from "../src/parse.js";
-import { resolve } from "../src/variants.js";
+import { parse } from "../src/parse";
+import { resolve } from "../src/variants";
 
 const first = (source: string) => parse(source).tree.children[0];
 

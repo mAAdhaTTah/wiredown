@@ -1,4 +1,4 @@
-import type { MeasureText } from "./types.js";
+import type { MeasureText } from "./types";
 
 /** A font as layout needs it: advance widths, vertical metrics and the host's line height. */
 export interface FontMetrics {

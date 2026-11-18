@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { labelAtoms } from "../src/components/label.js";
-import { layout } from "../src/layout.js";
-import { parse } from "../src/parse.js";
-import { FONT_SIZE } from "../src/theme.js";
-import type { LineOp, TextOp } from "../src/types.js";
-import { CHAR_W, fakeMeasure, LINE_H } from "./helpers/fakeMeasure.js";
+import { labelAtoms } from "../src/components/label";
+import { layout } from "../src/layout";
+import { parse } from "../src/parse";
+import { FONT_SIZE } from "../src/theme";
+import type { LineOp, TextOp } from "../src/types";
+import { CHAR_W, fakeMeasure, LINE_H } from "./helpers/fakeMeasure";
 
 const style = { fontSize: FONT_SIZE, fontFamily: 5 };
 const draw = (source: string, maxWidth?: number) =>

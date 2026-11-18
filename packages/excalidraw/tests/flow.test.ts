@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import LZString from "lz-string";
 import { describe, expect, it } from "vitest";
-import { formatEmbed, parseEmbed } from "../src/flow.js";
+import { formatEmbed, parseEmbed } from "../src/flow";
 import {
   newFlow,
   parseFlow,

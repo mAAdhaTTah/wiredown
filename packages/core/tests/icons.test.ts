@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ICON_NAMES } from "../src/icons.js";
-import { layout } from "../src/layout.js";
-import { parse } from "../src/parse.js";
-import { FONT_SIZE, INK } from "../src/theme.js";
-import type { DrawOp, EllipseOp, RectOp, Style, TextOp } from "../src/types.js";
-import { fakeMeasure, LINE_H } from "./helpers/fakeMeasure.js";
+import { ICON_NAMES } from "../src/icons";
+import { layout } from "../src/layout";
+import { parse } from "../src/parse";
+import { FONT_SIZE, INK } from "../src/theme";
+import type { DrawOp, EllipseOp, RectOp, Style, TextOp } from "../src/types";
+import { fakeMeasure, LINE_H } from "./helpers/fakeMeasure";
 
 const style: Style = { stroke: "#1e1e1e", fontFamily: 5, roughness: 1, fontSize: FONT_SIZE };
 const draw = (source: string) =>

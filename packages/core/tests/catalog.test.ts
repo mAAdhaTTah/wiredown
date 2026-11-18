@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { CATALOG, catalogEntry, COMMON_FLAGS, optionsOf } from "../src/catalog.js";
-import { COMPONENTS } from "../src/components/index.js";
-import { FLAGS, parse } from "../src/parse.js";
-import type { SpecNode } from "../src/types.js";
-import { resolve } from "../src/variants.js";
+import { CATALOG, catalogEntry, COMMON_FLAGS, optionsOf } from "../src/catalog";
+import { COMPONENTS } from "../src/components/index";
+import { FLAGS, parse } from "../src/parse";
+import type { SpecNode } from "../src/types";
+import { resolve } from "../src/variants";
 
 const first = (source: string): SpecNode => parse(source).tree.children[0];
 const components = CATALOG.filter((e) => !e.directive);

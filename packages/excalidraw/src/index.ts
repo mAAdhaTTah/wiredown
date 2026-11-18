@@ -1,9 +1,9 @@
-export { EXCALIFONT_FAMILY, screenElements } from "./elements.js";
-export type { ElementOptions, ExcalidrawElementJson, ScreenElements } from "./elements.js";
-export { sceneOf } from "./scene.js";
-export type { ExcalidrawScene } from "./scene.js";
-export { newFlow, parseFlow, serializeFlow } from "./flow.js";
-export type { EmbedLink, Flow, FlowSource } from "./flow.js";
+export { EXCALIFONT_FAMILY, screenElements } from "./elements";
+export type { ElementOptions, ExcalidrawElementJson, ScreenElements } from "./elements";
+export { sceneOf } from "./scene";
+export type { ExcalidrawScene } from "./scene";
+export { newFlow, parseFlow, serializeFlow } from "./flow";
+export type { EmbedLink, Flow, FlowSource } from "./flow";
 export {
   addHighlight,
   addMark,
@@ -27,8 +27,8 @@ export type {
   Place,
   Removed,
   Unbound,
-} from "./flow-edit.js";
-export { lintFlow, refreshFlow } from "./flow-refresh.js";
+} from "./flow-edit";
+export { lintFlow, refreshFlow } from "./flow-refresh";
 export type {
   FlowChange,
   FlowFinding,
@@ -36,9 +36,9 @@ export type {
   ScreenRef,
   ScreenState,
   Size,
-} from "./flow-refresh.js";
-export { FLOW_MARGIN, flowScene } from "./flow-render.js";
-export type { FlowScene } from "./flow-render.js";
+} from "./flow-refresh";
+export { FLOW_MARGIN, flowScene } from "./flow-render";
+export type { FlowScene } from "./flow-render";
 export {
   embedCandidates,
   embedNotFound,
