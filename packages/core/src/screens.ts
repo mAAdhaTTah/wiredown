@@ -1,9 +1,9 @@
-import { check } from "./check.js";
-import type { CheckResult } from "./check.js";
-import { closingFence, FENCE_KEYWORD } from "./detect.js";
-import type { SpecNode } from "./types.js";
-import { BLOCK_ID } from "./variants.js";
-import type { ResolveOptions } from "./variants.js";
+import { check } from "./check";
+import type { CheckResult } from "./check";
+import { closingFence, FENCE_KEYWORD } from "./detect";
+import type { SpecNode } from "./types";
+import { BLOCK_ID } from "./variants";
+import type { ResolveOptions } from "./variants";
 
 const ID = new RegExp(`^${BLOCK_ID.source}$`);
 

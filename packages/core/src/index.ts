@@ -15,21 +15,21 @@ export {
   tableMeasure,
   unmeasured,
   fontMeasurer,
-} from "./metrics.js";
-export type { FontMetrics } from "./metrics.js";
-export { layout } from "./layout.js";
-export type { Box, LayoutResult, LayoutEnv } from "./layout.js";
-export { DARK_COLORS, DARK_INK, DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme.js";
-export { ICON_NAMES, isIcon } from "./icons.js";
-export type * from "./types.js";
-export { EXCALIFONT } from "./metrics-excalifont.js";
-export { layoutScreen } from "./screen.js";
-export type { LayoutScreenOptions } from "./screen.js";
-export { parseScreens, checkScreens } from "./screens.js";
+} from "./metrics";
+export type { FontMetrics } from "./metrics";
+export { layout } from "./layout";
+export type { Box, LayoutResult, LayoutEnv } from "./layout";
+export { DARK_COLORS, DARK_INK, DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme";
+export { ICON_NAMES, isIcon } from "./icons";
+export type * from "./types";
+export { EXCALIFONT } from "./metrics-excalifont";
+export { layoutScreen } from "./screen";
+export type { LayoutScreenOptions } from "./screen";
+export { parseScreens, checkScreens } from "./screens";
 export type {
   BlockCheck,
   Screen,
   CheckedScreen,
   ScreenDiagnostic,
   CheckScreensResult,
-} from "./screens.js";
+} from "./screens";
