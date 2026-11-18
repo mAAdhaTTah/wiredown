@@ -2,7 +2,7 @@
 // the prototype's validate-embeds.mjs, which took them from the plugin at
 // 2.29.0), cross-checked against the scene. Returns the failures.
 import LZString from "lz-string";
-import { bindingFailures as checkBindings } from "../src/index.js";
+import { bindingFailures as checkBindings } from "../src/index";
 
 type El = Record<string, unknown> & { id: string; type: string };
 
