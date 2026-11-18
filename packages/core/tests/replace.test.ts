@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { SpecNode } from "../src/types.js";
-import { resolve } from "../src/variants.js";
+import type { SpecNode } from "../src/types";
+import { resolve } from "../src/variants";
 
 // the running example of the syntax proposal
 const TEAM_MEMBERS = `window: Team settings

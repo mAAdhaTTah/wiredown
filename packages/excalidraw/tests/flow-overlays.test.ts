@@ -1,6 +1,6 @@
 import { DEFAULT_THEME, layoutScreen, parse, resolve } from "@wiredown/core";
 import { expect, test } from "vitest";
-import { markCentre } from "../src/flow-edit.js";
+import { markCentre } from "../src/flow-edit";
 import {
   addDecision,
   addHighlight,

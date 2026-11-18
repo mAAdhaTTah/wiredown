@@ -1,6 +1,6 @@
-import { parseCheck } from "./components/shared.js";
-import { nearest, parse } from "./parse.js";
-import type { ParseError, ParseResult, SpecNode } from "./types.js";
+import { parseCheck } from "./components/shared";
+import { nearest, parse } from "./parse";
+import type { ParseError, ParseResult, SpecNode } from "./types";
 
 // A variant block draws another screen with a few changes:
 //

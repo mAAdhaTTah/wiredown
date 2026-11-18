@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parse } from "../src/parse.js";
-import { resolve } from "../src/variants.js";
+import { parse } from "../src/parse";
+import { resolve } from "../src/variants";
 
 describe("#id shorthand", () => {
   it("is equivalent to the long form, including options", () => {

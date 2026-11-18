@@ -1,2 +1,2 @@
 /** Unstable eval support; no compatibility guarantee. */
-export { checkScreensInternal } from "./screens.js";
+export { checkScreensInternal } from "./screens";

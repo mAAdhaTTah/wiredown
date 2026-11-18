@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
-import { layout } from "../src/layout.js";
-import { parse } from "../src/parse.js";
-import { resolve } from "../src/variants.js";
-import { fakeMeasure } from "./helpers/fakeMeasure.js";
+import { layout } from "../src/layout";
+import { parse } from "../src/parse";
+import { resolve } from "../src/variants";
+import { fakeMeasure } from "./helpers/fakeMeasure";
 
 it("records real nested boxes, including the whole field, at the drawing origin", () => {
   const tree = parse(
