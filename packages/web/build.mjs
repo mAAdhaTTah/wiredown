@@ -4,9 +4,9 @@
 // - dist/wiredown-renderer.js: ESM with code splitting, as the prototype
 //   built it, so Excalidraw's on-demand chunks (locales, font subsetting)
 //   stay out of the first download; they land in dist/chunks/.
-import { build } from "esbuild";
 import { cp, readFile, rm } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
+import { build } from "esbuild";
 
 const started = Date.now();
 await rm("dist", { recursive: true, force: true });

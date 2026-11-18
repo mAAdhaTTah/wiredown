@@ -1,11 +1,11 @@
 // Draws the loader's targets in place. Host-neutral: page knowledge comes
 // from the Host, and Excalidraw's exporter is passed in.
-import { FENCE_KEYWORD, checkScreens, layoutScreen } from "@wiredown/core";
-import type { CheckScreensResult, CheckedScreen, ScreenDiagnostic } from "@wiredown/core";
+import { checkScreens, FENCE_KEYWORD, layoutScreen } from "@wiredown/core";
+import type { CheckedScreen, CheckScreensResult, ScreenDiagnostic } from "@wiredown/core";
 import {
-  FLOW_MARGIN,
   embedNotFound,
   embedSize,
+  FLOW_MARGIN,
   flowFrames,
   flowScene,
   parseFlow,

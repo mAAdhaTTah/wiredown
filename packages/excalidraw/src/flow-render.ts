@@ -3,8 +3,8 @@
 // supply the screen SVGs and run Excalidraw's exporter themselves.
 import type { ExcalidrawElementJson } from "./elements.js";
 import { embedSize } from "./flow-edit.js";
-import type { Flow } from "./flow.js";
 import type { ScreenRef } from "./flow-refresh.js";
+import type { Flow } from "./flow.js";
 
 /** Space around a whole flow, so labels at its edge aren't cut. A screen pads itself. */
 export const FLOW_MARGIN = 16;
