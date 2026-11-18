@@ -1,4 +1,4 @@
-export { EXCALIFONT_FAMILY, screenElements } from "./elements.js";
-export type { ElementOptions, ExcalidrawElementJson, ScreenElements } from "./elements.js";
-export { sceneOf } from "./scene.js";
-export type { ExcalidrawScene } from "./scene.js";
+export { EXCALIFONT_FAMILY, screenElements } from "./elements";
+export type { ElementOptions, ExcalidrawElementJson, ScreenElements } from "./elements";
+export { sceneOf } from "./scene";
+export type { ExcalidrawScene } from "./scene";

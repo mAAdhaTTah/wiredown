@@ -1,4 +1,4 @@
-import type { ExcalidrawElementJson } from "./elements.js";
+import type { ExcalidrawElementJson } from "./elements";
 
 export interface ExcalidrawScene {
   type: "excalidraw";
