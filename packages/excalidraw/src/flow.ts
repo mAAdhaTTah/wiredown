@@ -2,7 +2,7 @@
 // that the agent and a person both edit. parseFlow reads one; serializeFlow
 // regenerates the parts derived from the scene and keeps the rest verbatim.
 import LZString from "lz-string";
-import type { ExcalidrawElementJson } from "./elements.js";
+import type { ExcalidrawElementJson } from "./elements";
 
 /** A parsed `[[link]]` from `## Embedded Files`, in the plugin's link grammar. */
 export interface EmbedLink {

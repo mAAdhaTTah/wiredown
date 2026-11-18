@@ -9,8 +9,8 @@ import {
   serializeFlow,
   type ExcalidrawElementJson,
   type Flow,
-} from "../src/index.js";
-import { pluginFailures, pluginFiles } from "./plugin-checks.js";
+} from "../src/index";
+import { pluginFailures, pluginFiles } from "./plugin-checks";
 
 const FIXTURE = readFileSync(
   new URL("./fixtures/review-and-apply.excalidraw.md", import.meta.url),
