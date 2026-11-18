@@ -9,11 +9,11 @@ import type { Result } from "./output";
 import { render } from "./render";
 
 export { check, lint, render, UsageError };
-export type { CheckOptions, CheckedFile } from "./check.js";
-export type { LintedFlow } from "./flow.js";
-export type { LintOptions } from "./lint.js";
-export type { Output, RenderOptions, RenderedScreen } from "./render.js";
-export type { Finding, Result } from "./output.js";
+export type { CheckOptions, CheckedFile } from "./check";
+export type { LintedFlow } from "./flow";
+export type { LintOptions } from "./lint";
+export type { Output, RenderOptions, RenderedScreen } from "./render";
+export type { Finding, Result } from "./output";
 
 type Values = Record<string, string | boolean | string[] | undefined>;
 
