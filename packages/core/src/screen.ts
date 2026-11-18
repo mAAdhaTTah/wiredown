@@ -1,9 +1,9 @@
-import { layout } from "./layout.js";
-import type { LayoutResult } from "./layout.js";
-import { EXCALIFONT } from "./metrics-excalifont.js";
-import { fontMeasurer } from "./metrics.js";
-import { FONT_SIZE } from "./theme.js";
-import type { SpecNode, Theme } from "./types.js";
+import { layout } from "./layout";
+import type { LayoutResult } from "./layout";
+import { EXCALIFONT } from "./metrics-excalifont";
+import { fontMeasurer } from "./metrics";
+import { FONT_SIZE } from "./theme";
+import type { SpecNode, Theme } from "./types";
 
 export interface LayoutScreenOptions {
   maxWidth?: number;

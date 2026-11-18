@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkScreens, layoutScreen, parseScreens } from "../src/index.js";
+import { checkScreens, layoutScreen, parseScreens } from "../src/index";
 
 const block = (source: string, id = "base") => `\`\`\`wiredown\n${source}\n\`\`\`\n^${id}`;
 

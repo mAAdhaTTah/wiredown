@@ -7,7 +7,7 @@ import {
   layout,
   layoutScreen,
   parse,
-} from "../src/index.js";
+} from "../src/index";
 
 it("uses deterministic Excalifont layout with kerning and shared defaults", () => {
   const tree = parse("window: Team\n  button: AVATAR #invite").tree;
