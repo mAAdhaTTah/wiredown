@@ -5,9 +5,8 @@ import { layoutScreen } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
 import { screenElements } from "./elements.js";
 import type { ExcalidrawElementJson, ScreenElements } from "./elements.js";
-import { FLOW_MARGIN, flowScene, svgSize } from "./flow-render.js";
-import type { Flow } from "./flow.js";
 import type { ScreenRef } from "./flow-refresh.js";
+import { FLOW_MARGIN, flowScene, svgSize } from "./flow-render.js";
 import type { Flow } from "./flow.js";
 import { sceneOf } from "./scene.js";
 
