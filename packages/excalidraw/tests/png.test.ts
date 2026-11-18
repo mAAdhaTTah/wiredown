@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { layoutScreen, parse } from "@wiredown/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { addScreen, embedSize, newFlow, screenElements } from "../src/index.js";
-import { BACKGROUND, FLOW_MARGIN, renderFlowSvg, renderSvg, svgToPng } from "../src/node.js";
-import { decodePng } from "./png.js";
+import { addScreen, embedSize, newFlow, screenElements } from "../src/index";
+import { BACKGROUND, FLOW_MARGIN, renderFlowSvg, renderSvg, svgToPng } from "../src/node";
+import { decodePng } from "./png";
 
 const proposal = readFileSync(
   new URL("../../../docs/prds/initial-implementation/syntax-proposal.md", import.meta.url),

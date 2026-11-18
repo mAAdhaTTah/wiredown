@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { run } from "../src/index.js";
-import { BASE, fixture, VARIANT } from "./helpers.js";
+import { run } from "../src/index";
+import { BASE, fixture, VARIANT } from "./helpers";
 
 /** Pixel size and top-left pixel of an RGBA PNG (no filter changes the first pixel). */
 async function png(path: string) {
@@ -131,7 +131,7 @@ describe("render --format png failures", { timeout: 30000 }, () => {
       ...(await original<object>()),
       svgToPng: () => Promise.reject(new Error("bad SVG")),
     }));
-    const { run: mocked } = await import("../src/index.js");
+    const { run: mocked } = await import("../src/index");
     const work = await fixture({ "screens.md": BASE });
     const out = join(work, "out");
     const result = await mocked([
