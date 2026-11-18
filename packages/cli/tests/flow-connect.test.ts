@@ -1,10 +1,10 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { expect, test } from "vitest";
 import { flowNodes, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import type { Flow } from "@wiredown/excalidraw";
+import { expect, test } from "vitest";
 import { run } from "../src/index.js";
-import { BASE, VARIANT, fixture } from "./helpers.js";
+import { BASE, fixture, VARIANT } from "./helpers.js";
 
 const read = async (file: string) => parseFlow(await readFile(file, "utf8"));
 const arrows = (flow: Flow) => flow.elements.filter((e) => e.type === "arrow");
