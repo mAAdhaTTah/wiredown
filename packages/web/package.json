@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "node build.mjs",
+    "build": "vite build",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -16,7 +16,6 @@
     "@types/node": "^26.6.6",
     "@wiredown/core": "workspace:*",
     "@wiredown/excalidraw": "workspace:*",
-    "esbuild": "^0.27.0",
     "happy-dom": "21.0.4",
     "react": "18.3.1",
     "react-dom": "18.3.1"

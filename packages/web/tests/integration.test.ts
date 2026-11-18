@@ -4,8 +4,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it, vi } from "vitest";
-import type { Host } from "../src/host.js";
-import type { Renderer } from "../src/loader.js";
+import type { Host } from "../src/host";
+import type { Renderer } from "../src/loader";
 
 it("renders a block through the built renderer and Excalidraw", async () => {
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function () {

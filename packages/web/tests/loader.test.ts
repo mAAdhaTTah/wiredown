@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { gitea } from "../src/gitea.js";
-import { LOAD_FAILED, rendererUrl, start } from "../src/loader.js";
-import type { Renderer } from "../src/loader.js";
+import { gitea } from "../src/gitea";
+import { LOAD_FAILED, rendererUrl, start } from "../src/loader";
+import type { Renderer } from "../src/loader";
 
 const block = (text: string) => `<pre><code class="language-wiredown">${text}</code></pre>`;
 let stop = () => {};

@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Window } from "happy-dom";
 import { expect, it } from "vitest";
-import { gitea, rawRoot, rawUrl } from "../src/gitea.js";
-import { DONE } from "../src/host.js";
+import { gitea, rawRoot, rawUrl } from "../src/gitea";
+import { DONE } from "../src/host";
 
 // The fixtures' structure is assumed from the prototypes, not captured from a live Gitea.
 export function page(fixture: string, url: string, dark = false): Document {

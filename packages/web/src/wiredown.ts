@@ -1,6 +1,6 @@
 // dist/wiredown.js: the loader. Load it with a classic <script src="…" defer>.
-import { gitea } from "./gitea.js";
-import { rendererUrl, start } from "./loader.js";
+import { gitea } from "./gitea";
+import { rendererUrl, start } from "./loader";
 
 // Only a classic script has currentScript; it gives the loader's own URL.
 const script = document.currentScript as HTMLScriptElement | null;

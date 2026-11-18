@@ -15,8 +15,8 @@
 //   `/` cannot be told from the path after it, so the root is taken at the
 //   ref's first segment: the shortest plausible root.
 import { FENCE_KEYWORD } from "@wiredown/core";
-import { DONE } from "./host.js";
-import type { Block, FlowTarget, Host, Theme } from "./host.js";
+import { DONE } from "./host";
+import type { Block, FlowTarget, Host, Theme } from "./host";
 
 const CODE = `pre > code.language-${FENCE_KEYWORD}`;
 const FILE_VIEW = ".file-view.markup";

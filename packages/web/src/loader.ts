@@ -1,7 +1,7 @@
 // The small script every page loads. It looks for wireframes and, only when
 // there are some, imports the renderer that sits next to it.
-import { DONE } from "./host.js";
-import type { Block, FlowTarget, Host } from "./host.js";
+import { DONE } from "./host";
+import type { Block, FlowTarget, Host } from "./host";
 
 export interface Targets {
   blocks: Block[];

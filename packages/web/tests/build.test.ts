@@ -19,12 +19,12 @@ it("builds a small loader with no Excalidraw or React in it", () => {
   // A classic script: no static imports, one dynamic import of the renderer.
   expect(loader).not.toMatch(/^import |\bexport\s*\{/m);
   expect(loader.match(/\bimport\(/g)).toHaveLength(1);
-  expect(loader).toContain('"wiredown-renderer.js"');
+  expect(loader).toMatch(/["'`]wiredown-renderer\.js["'`]/);
 });
 
 it("builds a renderer that imports Excalidraw, with its font next to it", () => {
   const renderer = read("wiredown-renderer.js");
-  expect(renderer).toMatch(/import\("\.\/chunks\/[^"]+\.js"\)/);
+  expect(renderer).toMatch(/import\(["'`]\.\/chunks\/[^"'`]+\.js["'`]\)/);
   expect(renderer).toMatch(/export\s*\{[^}]*\brender\b/);
   expect(scripts.some((f) => read(f).includes("svg-source:excalidraw"))).toBe(true);
   expect(readdirSync(new URL("fonts/Excalifont/", dist)).length).toBeGreaterThan(0);
