@@ -187,3 +187,9 @@ describe("sceneOf", () => {
     });
   });
 });
+
+it("fills a dot in a disabled component with the disabled colour", () => {
+  const { elements } = screenElements(layoutScreen(parse("icon: dot (disabled)").tree));
+  const dot = elements.find((e) => e.type === "ellipse");
+  expect(dot).toMatchObject({ backgroundColor: "#adb5bd" });
+});
