@@ -30,11 +30,11 @@ import type {
   ScreenLookup,
   ScreenRef,
 } from "@wiredown/excalidraw";
-import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds.js";
-import { formatFindings, json, plural, readSource, unknownScreen, UsageError } from "./output.js";
-import type { Finding, Result } from "./output.js";
-import { NewerFlowError, parseEditableFlow } from "./read-flow.js";
-import { safeWrite } from "./safe-write.js";
+import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds";
+import { formatFindings, json, plural, readSource, unknownScreen, UsageError } from "./output";
+import type { Finding, Result } from "./output";
+import { NewerFlowError, parseEditableFlow } from "./read-flow";
+import { safeWrite } from "./safe-write";
 
 export interface FlowOptions {
   screens?: string;
