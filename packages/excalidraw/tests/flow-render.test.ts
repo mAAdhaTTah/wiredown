@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
-import { beforeAll, expect, it, vi } from "vitest";
 import { checkScreens, layoutScreen } from "@wiredown/core";
+import { beforeAll, expect, it, vi } from "vitest";
 import {
-  addScreen,
   addHighlight,
+  addScreen,
+  embedSize,
+  flowFrames,
   newFlow,
   parseFlow,
   screenElements,
-  embedSize,
-  flowFrames,
 } from "../src/index.js";
 import type { ScreenRef } from "../src/index.js";
 import { renderFlowSvg } from "../src/node.js";
