@@ -175,6 +175,9 @@ importers:
 
   .:
     devDependencies:
+      '@ianvs/prettier-plugin-sort-imports':
+        specifier: ^4.7.1
+        version: 4.7.1(prettier@3.10.1)
       '@wiredown/cli':
         specifier: workspace:*
         version: link:packages/cli

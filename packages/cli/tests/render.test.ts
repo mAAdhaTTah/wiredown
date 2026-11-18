@@ -1,8 +1,8 @@
-import { mkdir, readFile, readdir } from "node:fs/promises";
+import { mkdir, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { render, run } from "../src/index.js";
-import { BASE, VARIANT, fixture } from "./helpers.js";
+import { BASE, fixture, VARIANT } from "./helpers.js";
 
 const sizeOf = (svg: string) => ({
   width: Number(/<svg[^>]* width="(\d+)"/.exec(svg)?.[1]),

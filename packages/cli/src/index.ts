@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionsConfig } from "node:util";
 import { check } from "./check.js";
-import { render } from "./render.js";
 import { UsageError } from "./output.js";
 import type { Result } from "./output.js";
+import { render } from "./render.js";
 
 export { check, render, UsageError };
 export type { CheckOptions, CheckedFile } from "./check.js";
