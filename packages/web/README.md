@@ -49,12 +49,11 @@ Sizes (Vite 8.3, `@excalidraw/excalidraw` 0.18.1, React 18.3.1):
 | Renderer and the chunks one drawing used (13 files) | 3.12 MB  | 1.15 MB |
 | Renderer and every chunk (182 files)                | 7.7 MB   | 2.5 MB  |
 
-The first two rows and the last are printed by `pnpm build`. The third was
-measured once by exporting a screen with the built renderer in Node under
-happy-dom and recording which files were loaded. That run also fetched one
-25 KB Excalifont file. It matches the design's estimate of about 1.15 MB
-gzipped. A real browser may load somewhat different chunks; for example, it
-may subset the font in a worker. The manual browser smoke check below prints current asset request counts.
+`pnpm build` prints the size of each file; the last row is their sum. The
+third was measured once in Chromium: the JavaScript a page with two screens
+loaded besides the loader. That page also fetched one 25 KB Excalifont
+file. It matches the design's estimate of about 1.15 MB gzipped. Other
+pages may load somewhat different chunks. The manual browser smoke check below prints current asset request counts.
 
 ## Loading it
 
