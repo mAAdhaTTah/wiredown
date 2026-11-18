@@ -1,7 +1,7 @@
 import { layout } from "./layout.js";
 import type { LayoutResult } from "./layout.js";
-import { fontMeasurer } from "./metrics.js";
 import { EXCALIFONT } from "./metrics-excalifont.js";
+import { fontMeasurer } from "./metrics.js";
 import { FONT_SIZE } from "./theme.js";
 import type { SpecNode, Theme } from "./types.js";
 
