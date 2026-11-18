@@ -62,7 +62,7 @@ Sizes (Vite 8.3, `@excalidraw/excalidraw` 0.18.1, React 18.3.1):
 third was measured once in Chromium: the JavaScript a page with two screens
 loaded besides the loader. That page also fetched one 25 KB Excalifont
 file. It matches the design's estimate of about 1.15 MB gzipped. Other
-pages may load somewhat different chunks. The manual browser smoke check below prints current asset request counts.
+pages may load somewhat different chunks. The browser smoke check below prints current asset request counts.
 
 ## Installing on Gitea
 
@@ -244,7 +244,7 @@ remain as placeholders. Generated screen SVGs are unaffected. SVG data URLs
 remain images inside Excalidraw's SVG export: the browser smoke observes no
 external fetch from an SVG's nested external image reference.
 
-### Manual browser smoke check
+### Browser smoke check
 
 ```sh
 pnpm smoke:web
@@ -261,8 +261,8 @@ Playwright uses its installed headless Chromium, honoring
 Installing dependencies downloads no browser. Screenshots default to a temp
 directory printed at the end; the generated site is always cleaned up.
 
-This is a manual script, outside `pnpm test` and CI. Its Gitea-shaped HTML
-stands in for the assumptions in `src/gitea.ts`; it does not verify live
+CI runs this script after `pnpm test`; it is not part of `pnpm test`. Its
+Gitea-shaped HTML stands in for the assumptions in `src/gitea.ts`; it does not verify live
 Gitea selectors, custom templates or Gitea's own CSP. One page is served
 with a strict policy (the example in "On Gitea", on every response): it must
 draw, with its fonts and styles applied, and only Excalidraw's known font
