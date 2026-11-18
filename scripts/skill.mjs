@@ -1,6 +1,6 @@
-import { CATALOG, COMMON_FLAGS, ICON_NAMES } from "../packages/core/dist/index.js";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { CATALOG, COMMON_FLAGS, ICON_NAMES } from "../packages/core/dist/index.js";
 
 // The syntax reference: its component sections come from core's catalog;
 // the grammar, escapes and variants text is written here, and the skill

@@ -1,9 +1,9 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { run } from "@wiredown/cli";
 import { checkScreens, parseScreens } from "@wiredown/core";
 import { expect, it } from "vitest";
-import { run } from "@wiredown/cli";
 // @ts-expect-error Plain ESM generator shared with the root script.
 import { skillSyntax } from "../../../scripts/skill.mjs";
 
