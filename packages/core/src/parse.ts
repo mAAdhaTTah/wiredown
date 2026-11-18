@@ -1,4 +1,4 @@
-import { CATALOG, COMMON_FLAGS, RETIRED_OPTIONS, catalogEntry, optionsOf } from "./catalog.js";
+import { CATALOG, catalogEntry, COMMON_FLAGS, optionsOf, RETIRED_OPTIONS } from "./catalog.js";
 import { ICON_NAMES, isIcon } from "./icons.js";
 import type { NodeType, ParseError, ParseResult, SpecNode } from "./types.js";
 

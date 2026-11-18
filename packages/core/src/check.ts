@@ -1,9 +1,9 @@
-import { RETIRED_OPTIONS, catalogEntry, optionsOf } from "./catalog.js";
+import { catalogEntry, optionsOf, RETIRED_OPTIONS } from "./catalog.js";
 import { gridRows } from "./components/grid.js";
 import { ICON_NAMES, isIcon } from "./icons.js";
-import { fontMeasurer } from "./metrics.js";
 import { EXCALIFONT } from "./metrics-excalifont.js";
-import { FLAGS, TRAILING, distance, parse, staysText } from "./parse.js";
+import { fontMeasurer } from "./metrics.js";
+import { distance, FLAGS, parse, staysText, TRAILING } from "./parse.js";
 import type { ParseError, ParseResult, SpecNode } from "./types.js";
 import { resolve } from "./variants.js";
 import type { ResolveOptions } from "./variants.js";
