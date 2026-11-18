@@ -19,7 +19,7 @@ export {
   markCentre,
   flowNodes,
   removeFromFlow,
-} from "./flow-edit.js";
+} from "./flow-edit";
 export type {
   OverlayOptions,
   AddDecisionOptions,
@@ -29,8 +29,8 @@ export type {
   Place,
   Removed,
   Unbound,
-} from "./flow-edit.js";
-export { bindingFailures, lintFlow, refreshFlow } from "./flow-refresh.js";
+} from "./flow-edit";
+export { bindingFailures, lintFlow, refreshFlow } from "./flow-refresh";
 export type {
   FlowChange,
   FlowFinding,
