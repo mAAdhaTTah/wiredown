@@ -2,9 +2,9 @@ import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { checkScreens, layoutScreen, nearest } from "@wiredown/core";
 import {
+  addDecision,
   addHighlight,
   addMark,
-  addDecision,
   addNote,
   addScreen,
   connect,

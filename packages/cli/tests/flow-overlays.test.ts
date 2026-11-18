@@ -1,10 +1,10 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { expect, test } from "vitest";
 import { checkScreens, layoutScreen } from "@wiredown/core";
-import { parseFlow, serializeFlow, screenElements, overlayBox } from "@wiredown/excalidraw";
+import { overlayBox, parseFlow, screenElements, serializeFlow } from "@wiredown/excalidraw";
+import { expect, test } from "vitest";
 import { run } from "../src/index.js";
-import { BASE, VARIANT, fixture } from "./helpers.js";
+import { BASE, fixture, VARIANT } from "./helpers.js";
 
 test("overlays resolve variant ids and use a hand-moved image", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
