@@ -9,9 +9,9 @@ import {
   newFlow,
   parseFlow,
   screenElements,
-} from "../src/index.js";
-import type { ScreenRef } from "../src/index.js";
-import { renderFlowSvg } from "../src/node.js";
+} from "../src/index";
+import type { ScreenRef } from "../src/index";
+import { renderFlowSvg } from "../src/node";
 
 const source = readFileSync(
   new URL("../../core/tests/fixtures/screens.md", import.meta.url),

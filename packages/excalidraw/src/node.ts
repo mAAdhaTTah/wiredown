@@ -1,11 +1,11 @@
 import { layoutScreen } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
-import { screenElements } from "./elements.js";
-import type { ExcalidrawElementJson, ScreenElements } from "./elements.js";
-import { embedSize } from "./flow-edit.js";
-import type { ScreenRef } from "./flow-refresh.js";
-import type { Flow } from "./flow.js";
-import { sceneOf } from "./scene.js";
+import { screenElements } from "./elements";
+import type { ExcalidrawElementJson, ScreenElements } from "./elements";
+import type { Flow } from "./flow";
+import { embedSize } from "./flow-edit";
+import type { ScreenRef } from "./flow-refresh";
+import { sceneOf } from "./scene";
 
 export interface SvgOptions {
   theme?: "light" | "dark";
