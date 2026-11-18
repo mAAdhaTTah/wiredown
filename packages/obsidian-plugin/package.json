@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs",
+    "build": "vite build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -13,7 +13,6 @@
   },
   "devDependencies": {
     "obsidian": "^1.12.3",
-    "esbuild": "^0.27.0",
     "happy-dom": "21.0.4",
     "@types/node": "^26.6.6"
   }

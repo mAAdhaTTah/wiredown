@@ -1,8 +1,8 @@
 import { check, layoutScreen, parseScreens } from "@wiredown/core";
 import { screenElements } from "@wiredown/excalidraw";
 import { expect, it, vi } from "vitest";
-import { findScreen, isVariant, MISSING_PLUGIN, renderBlock } from "../src/render.js";
-import type { Automate } from "../src/render.js";
+import { findScreen, isVariant, MISSING_PLUGIN, renderBlock } from "../src/render";
+import type { Automate } from "../src/render";
 
 const source = "text: Hello #hello";
 const fence = (s: string, id = "screen") => `\`\`\`wiredown\n${s}\n\`\`\`\n^${id}`;
