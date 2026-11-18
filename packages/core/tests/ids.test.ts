@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parse, resolve, serialize } from "../src/index.js";
+import { parse, resolve, serialize } from "../src/index";
 
 describe("#id shorthand", () => {
   it("is equivalent to the long form, including options", () => {
