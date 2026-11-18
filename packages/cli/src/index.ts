@@ -1,15 +1,15 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionsConfig } from "node:util";
-import { check } from "./check.js";
-import { UsageError } from "./output.js";
-import type { Result } from "./output.js";
-import { render } from "./render.js";
+import { check } from "./check";
+import { UsageError } from "./output";
+import type { Result } from "./output";
+import { render } from "./render";
 
 export { check, render, UsageError };
-export type { CheckOptions, CheckedFile } from "./check.js";
-export type { RenderOptions, RenderedScreen } from "./render.js";
-export type { Finding, Result } from "./output.js";
+export type { CheckOptions, CheckedFile } from "./check";
+export type { RenderOptions, RenderedScreen } from "./render";
+export type { Finding, Result } from "./output";
 
 type Values = Record<string, string | boolean | string[] | undefined>;
 

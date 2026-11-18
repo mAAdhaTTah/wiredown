@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { BASE, fixture } from "./helpers.js";
+import { BASE, fixture } from "./helpers";
 
 // Spawns the built bin, so it needs `pnpm build` first.
 const bin = fileURLToPath(new URL("../bin/wiredown.js", import.meta.url));

@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { check, run } from "../src/index.js";
-import { BASE, fixture } from "./helpers.js";
+import { check, run } from "../src/index";
+import { BASE, fixture } from "./helpers";
 
 describe("check", () => {
   it("passes a clean file with a summary", async () => {

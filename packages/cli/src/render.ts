@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { checkScreens, nearest } from "@wiredown/core";
 import type { Box, CheckedScreen } from "@wiredown/core";
 import { renderScreenSvg } from "@wiredown/excalidraw/node";
-import { formatFindings, json, readSource } from "./output.js";
-import type { Finding, Result } from "./output.js";
+import { formatFindings, json, readSource } from "./output";
+import type { Finding, Result } from "./output";
 
 export interface RenderOptions {
   /** Only these screen ids; all screens with an id when empty. */

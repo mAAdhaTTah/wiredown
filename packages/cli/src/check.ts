@@ -1,7 +1,7 @@
 import { checkScreens } from "@wiredown/core";
 import type { ScreenDiagnostic } from "@wiredown/core";
-import { formatFindings, json, plural, readSource } from "./output.js";
-import type { Result } from "./output.js";
+import { formatFindings, json, plural, readSource } from "./output";
+import type { Result } from "./output";
 
 export interface CheckOptions {
   json?: boolean;
