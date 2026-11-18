@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { flowNodes, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import type { Flow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
-import { run } from "../src/index.js";
-import { BASE, fixture, VARIANT } from "./helpers.js";
+import { run } from "../src/index";
+import { BASE, fixture, VARIANT } from "./helpers";
 
 const read = async (file: string) => parseFlow(await readFile(file, "utf8"));
 const arrows = (flow: Flow) => flow.elements.filter((e) => e.type === "arrow");

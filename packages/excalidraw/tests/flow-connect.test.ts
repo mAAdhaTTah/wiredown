@@ -11,9 +11,9 @@ import {
   newFlow,
   parseFlow,
   serializeFlow,
-} from "../src/index.js";
-import type { ExcalidrawElementJson, Flow } from "../src/index.js";
-import { bindingFailures, pluginFailures } from "./plugin-checks.js";
+} from "../src/index";
+import type { ExcalidrawElementJson, Flow } from "../src/index";
+import { bindingFailures, pluginFailures } from "./plugin-checks";
 
 const small = {
   screenId: "home",
