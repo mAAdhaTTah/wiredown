@@ -3,8 +3,8 @@ import type { SpecNode } from "@wiredown/core";
 import { screenElements } from "./elements.js";
 import type { ExcalidrawElementJson, ScreenElements } from "./elements.js";
 import { embedSize } from "./flow-edit.js";
-import type { Flow } from "./flow.js";
 import type { ScreenRef } from "./flow-refresh.js";
+import type { Flow } from "./flow.js";
 import { sceneOf } from "./scene.js";
 
 export interface SvgOptions {
