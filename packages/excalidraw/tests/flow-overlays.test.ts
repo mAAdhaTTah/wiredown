@@ -13,9 +13,9 @@ import {
   parseFlow,
   screenElements,
   serializeFlow,
-} from "../src/index.js";
-import type { ExcalidrawElementJson } from "../src/index.js";
-import { bindingFailures, pluginFailures } from "./plugin-checks.js";
+} from "../src/index";
+import type { ExcalidrawElementJson } from "../src/index";
+import { bindingFailures, pluginFailures } from "./plugin-checks";
 
 const screen = { width: 100, height: 200 };
 const box = { x: 20, y: 30, w: 40, h: 50 };

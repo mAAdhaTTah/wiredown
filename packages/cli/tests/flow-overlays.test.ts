@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import { overlayBox, parseFlow, screenElements, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
-import { run } from "../src/index.js";
-import { BASE, fixture, VARIANT } from "./helpers.js";
+import { run } from "../src/index";
+import { BASE, fixture, VARIANT } from "./helpers";
 
 test("overlays resolve variant ids and use a hand-moved image", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
