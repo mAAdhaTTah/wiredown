@@ -1,5 +1,5 @@
-import type { DrawContext, Size, Slot, SpecNode } from "../types.js";
-import { needsWidthFirst, stackSize } from "./shared.js";
+import type { DrawContext, Size, Slot, SpecNode } from "../types";
+import { needsWidthFirst, stackSize } from "./shared";
 
 /** What a framed container draws around its children. */
 export interface Chrome {

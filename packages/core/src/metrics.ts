@@ -1,5 +1,5 @@
-import { ADVANCE_RUNS, FALLBACK_ADVANCE, UNITS_PER_EM } from "./metrics-arimo.js";
-import type { MeasureText } from "./types.js";
+import { ADVANCE_RUNS, FALLBACK_ADVANCE, UNITS_PER_EM } from "./metrics-arimo";
+import type { MeasureText } from "./types";
 
 // One text measurer for every host (Node, Obsidian, a browser script): a
 // table of advance widths, so no canvas and no font file is needed to lay

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { extendsId, parse, resolve, serialize } from "../src/index.js";
-import type { SpecNode } from "../src/index.js";
+import { extendsId, parse, resolve, serialize } from "../src/index";
+import type { SpecNode } from "../src/index";
 
 const BASE = [
   "window: Review (id=win)",

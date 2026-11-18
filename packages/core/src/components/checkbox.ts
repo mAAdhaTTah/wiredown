@@ -1,5 +1,5 @@
-import type { Component } from "../types.js";
-import { BOX, checkMark, contentLines, parseCheck, splitItems } from "./shared.js";
+import type { Component } from "../types";
+import { BOX, checkMark, contentLines, parseCheck, splitItems } from "./shared";
 
 export const checkbox: Component = (ctx, node, x, y) => {
   const items = splitItems(contentLines(node).join("|"), false).map(

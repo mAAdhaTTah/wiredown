@@ -1,4 +1,10 @@
 {
   "printWidth": 100,
-  "plugins": ["@ianvs/prettier-plugin-sort-imports"]
+  "plugins": ["@ianvs/prettier-plugin-sort-imports"],
+  "overrides": [
+    {
+      "files": "packages/core/**",
+      "options": { "importOrder": [] }
+    }
+  ]
 }

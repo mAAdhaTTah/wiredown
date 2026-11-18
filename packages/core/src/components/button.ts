@@ -1,5 +1,5 @@
-import type { Component } from "../types.js";
-import { drawLabel, measureLabel } from "./label.js";
+import type { Component } from "../types";
+import { drawLabel, measureLabel } from "./label";
 
 export const button: Component = (ctx, node, x, y, slot) => {
   let text = (node.text || node.body[0] || "Button").trim();

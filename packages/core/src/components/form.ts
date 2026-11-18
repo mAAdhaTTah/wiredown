@@ -1,6 +1,6 @@
-import type { Component, DrawContext, Slot, SpecNode } from "../types.js";
-import { box } from "./box.js";
-import { drawLabel, measureLabel } from "./label.js";
+import type { Component, DrawContext, Slot, SpecNode } from "../types";
+import { box } from "./box";
+import { drawLabel, measureLabel } from "./label";
 
 /** Space between a field's label and its component. */
 const LABEL_GAP = 12;

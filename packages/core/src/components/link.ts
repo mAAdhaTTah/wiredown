@@ -1,6 +1,6 @@
-import type { Component } from "../types.js";
-import { drawLabel, measureLabel } from "./label.js";
-import { contentLines } from "./shared.js";
+import type { Component } from "../types";
+import { drawLabel, measureLabel } from "./label";
+import { contentLines } from "./shared";
 
 /** A line of link text: blue and underlined, icons allowed. */
 export const link: Component = (ctx, node, x, y, slot) => {

@@ -1,6 +1,6 @@
-import type { Component, SpecNode } from "../types.js";
-import { drawLabel, measureLabel } from "./label.js";
-import { contentLines, trailingButton, trailingIcon } from "./shared.js";
+import type { Component, SpecNode } from "../types";
+import { drawLabel, measureLabel } from "./label";
+import { contentLines, trailingButton, trailingIcon } from "./shared";
 
 const PAD_X = 10;
 

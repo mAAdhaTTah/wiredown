@@ -1,7 +1,7 @@
-import { drawIcon } from "../icons.js";
-import type { Component } from "../types.js";
-import { drawLabel, iconSizeFor, measureLabel } from "./label.js";
-import { stackSize } from "./shared.js";
+import { drawIcon } from "../icons";
+import type { Component } from "../types";
+import { drawLabel, iconSizeFor, measureLabel } from "./label";
+import { stackSize } from "./shared";
 
 /**
  * A header line over a group, with no frame: the title at the left, a grey

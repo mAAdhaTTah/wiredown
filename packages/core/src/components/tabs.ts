@@ -1,6 +1,6 @@
-import type { Component } from "../types.js";
-import { contentLines, needsWidthFirst, splitItems, stackSize, starred } from "./shared.js";
-import { tabStrip } from "./tabstrip.js";
+import type { Component } from "../types";
+import { contentLines, needsWidthFirst, splitItems, stackSize, starred } from "./shared";
+import { tabStrip } from "./tabstrip";
 
 export const tabs: Component = (ctx, node, x, y, slot) => {
   const { pad, stack } = ctx.theme.gap;

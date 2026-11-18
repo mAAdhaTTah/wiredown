@@ -1,6 +1,6 @@
-import type { Component } from "../types.js";
-import { drawLabel, measureLabel, wrapLabel } from "./label.js";
-import { contentLines } from "./shared.js";
+import type { Component } from "../types";
+import { drawLabel, measureLabel, wrapLabel } from "./label";
+import { contentLines } from "./shared";
 
 /** A tinted message box; each line is a label, so icons and links work. */
 export const alert: Component = (ctx, node, x, y, slot) => {

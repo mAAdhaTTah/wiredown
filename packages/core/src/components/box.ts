@@ -1,8 +1,8 @@
-import { drawIcon } from "../icons.js";
-import type { Component, DrawContext, Size, Slot, SpecNode } from "../types.js";
-import { framed, titleBar } from "./frame.js";
-import { drawLabel, iconSizeFor, measureLabel } from "./label.js";
-import { stackSize } from "./shared.js";
+import { drawIcon } from "../icons";
+import type { Component, DrawContext, Size, Slot, SpecNode } from "../types";
+import { framed, titleBar } from "./frame";
+import { drawLabel, iconSizeFor, measureLabel } from "./label";
+import { stackSize } from "./shared";
 
 export const box: Component = (ctx, node, x, y, slot) => {
   if (node.opts.plain) return plain(ctx, node, x, y, slot);

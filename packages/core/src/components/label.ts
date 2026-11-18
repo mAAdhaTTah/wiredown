@@ -1,5 +1,5 @@
-import { drawIcon, isIcon } from "../icons.js";
-import type { DrawContext, Size, TextOptions } from "../types.js";
+import { drawIcon, isIcon } from "../icons";
+import type { DrawContext, Size, TextOptions } from "../types";
 
 // A label is one line of text that may contain icons written as {name},
 // links written as [text] and grey text written as -text-. Unknown icon

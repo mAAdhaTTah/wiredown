@@ -1,7 +1,7 @@
-import { INK } from "../theme.js";
-import type { Component, DrawContext, Size, SpecNode } from "../types.js";
-import { drawLabel, measureLabel } from "./label.js";
-import { BOX, contentLines, splitItems } from "./shared.js";
+import { INK } from "../theme";
+import type { Component, DrawContext, Size, SpecNode } from "../types";
+import { drawLabel, measureLabel } from "./label";
+import { BOX, contentLines, splitItems } from "./shared";
 
 const GAP = 8,
   ROW_GAP = 8;

@@ -1,5 +1,5 @@
-import type { Component } from "../types.js";
-import { contentLines, splitItems, starred, trailingButton, trailingIcon } from "./shared.js";
+import type { Component } from "../types";
+import { contentLines, splitItems, starred, trailingButton, trailingIcon } from "./shared";
 
 export const dropdown: Component = (ctx, node, x, y, slot) => {
   const own = trailingIcon(contentLines(node).join("|"));

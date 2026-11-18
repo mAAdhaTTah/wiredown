@@ -1,8 +1,8 @@
-import { drawIcon } from "../icons.js";
-import type { Component } from "../types.js";
-import { framed, titleBar } from "./frame.js";
-import { iconSizeFor } from "./label.js";
-import { contentLines, splitItems } from "./shared.js";
+import { drawIcon } from "../icons";
+import type { Component } from "../types";
+import { framed, titleBar } from "./frame";
+import { iconSizeFor } from "./label";
+import { contentLines, splitItems } from "./shared";
 
 const CONTROL_GAP = 8;
 

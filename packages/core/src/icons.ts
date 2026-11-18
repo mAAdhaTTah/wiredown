@@ -1,5 +1,5 @@
-import { INK } from "./theme.js";
-import type { DrawContext, Point } from "./types.js";
+import { INK } from "./theme";
+import type { DrawContext, Point } from "./types";
 
 // Built-in icons, drawn with lines and ellipses so they get the canvas's
 // hand-drawn look. Each one draws into a square of side s at (x, y), using

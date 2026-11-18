@@ -1,8 +1,8 @@
-import { drawIcon } from "../icons.js";
-import type { Component } from "../types.js";
-import { drawLabel, iconSizeFor, measureLabel } from "./label.js";
-import type { Label } from "./label.js";
-import { contentLines, splitItems } from "./shared.js";
+import { drawIcon } from "../icons";
+import type { Component } from "../types";
+import { drawLabel, iconSizeFor, measureLabel } from "./label";
+import type { Label } from "./label";
+import { contentLines, splitItems } from "./shared";
 
 function asLink(label: Label): Label {
   for (const part of label.parts) if (part.kind === "text" && !part.tone) part.tone = "link";

@@ -34,7 +34,7 @@ scripts; tests run all package projects through the root Vitest config.
 TypeScript 6 is used because typescript-eslint does not yet support
 TypeScript 7.
 
-Packages extend `tsconfig.base.json` and compile with `tsc` to `dist/`.
+Packages extend `tsconfig.base.json` and build with Vite to `dist/`.
 
 The design and syntax proposal live in `docs/prds/initial-implementation/`.
 

@@ -1,7 +1,7 @@
-import type { Component, DrawContext, Size } from "../types.js";
-import { drawLabel, measureLabel, minLabelWidth, wrapLabel } from "./label.js";
-import type { Label } from "./label.js";
-import { BOX, checkMark, contentLines, parseCheck } from "./shared.js";
+import type { Component, DrawContext, Size } from "../types";
+import { drawLabel, measureLabel, minLabelWidth, wrapLabel } from "./label";
+import type { Label } from "./label";
+import { BOX, checkMark, contentLines, parseCheck } from "./shared";
 
 const NUMERIC = /^[-+]?[$€£]?\s?\d[\d\s.,:]*\s?(%|kr|sek|€|\$|£)?$/i;
 

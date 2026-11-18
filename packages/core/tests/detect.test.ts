@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractSpec, fenceSpec, specAtLine } from "../src/index.js";
+import { extractSpec, fenceSpec, specAtLine } from "../src/index";
 
 const plain = (text: string) => extractSpec(text, { plain: true });
 const fencedOnly = (text: string) => extractSpec(text, { plain: false });

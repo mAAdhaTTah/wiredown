@@ -1,6 +1,6 @@
-import type { Component } from "../types.js";
-import { drawLabel, isRich, measureLabel, wrapLabel } from "./label.js";
-import { contentLines } from "./shared.js";
+import type { Component } from "../types";
+import { drawLabel, isRich, measureLabel, wrapLabel } from "./label";
+import { contentLines } from "./shared";
 
 export const text: Component = (ctx, node, x, y, slot) => {
   const str = contentLines(node).join("\n") || "Text";

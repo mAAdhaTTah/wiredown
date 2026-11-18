@@ -1,6 +1,6 @@
-import { drawIcon, isIcon } from "../icons.js";
-import type { Component } from "../types.js";
-import { iconSizeFor } from "./label.js";
+import { drawIcon, isIcon } from "../icons";
+import type { Component } from "../types";
+import { iconSizeFor } from "./label";
 
 export const icon: Component = (ctx, node, x, y) => {
   const name = node.text.trim();

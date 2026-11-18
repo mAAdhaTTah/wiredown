@@ -1,5 +1,5 @@
-import { COMPONENTS } from "./components/index.js";
-import { DEFAULT_THEME } from "./theme.js";
+import { COMPONENTS } from "./components";
+import { DEFAULT_THEME } from "./theme";
 import type {
   DrawContext,
   DrawOp,
@@ -9,7 +9,7 @@ import type {
   SpecNode,
   TextStyle,
   Theme,
-} from "./types.js";
+} from "./types";
 
 /** Components that paint their own light background. */
 const LIGHT_SURFACES = new Set<NodeType>([

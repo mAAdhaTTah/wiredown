@@ -1,5 +1,5 @@
-import type { Component, DrawContext } from "../types.js";
-import { contentLines } from "./shared.js";
+import type { Component, DrawContext } from "../types";
+import { contentLines } from "./shared";
 
 const LOREM =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor " +

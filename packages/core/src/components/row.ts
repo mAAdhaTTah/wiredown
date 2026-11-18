@@ -1,4 +1,4 @@
-import type { Component, Slot } from "../types.js";
+import type { Component, Slot } from "../types";
 
 export const row: Component = (ctx, node, x, y, slot) => {
   const gap = ctx.theme.gap.row;

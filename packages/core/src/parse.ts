@@ -1,5 +1,5 @@
-import { ICON_NAMES, isIcon } from "./icons.js";
-import type { NodeType, ParseError, ParseResult, SpecNode } from "./types.js";
+import { ICON_NAMES, isIcon } from "./icons";
+import type { NodeType, ParseError, ParseResult, SpecNode } from "./types";
 
 const KEYWORDS = new Map<string, NodeType>([
   ["button", "button"],

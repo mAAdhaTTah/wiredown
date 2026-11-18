@@ -1,6 +1,6 @@
-import { drawIcon } from "../icons.js";
-import type { Component } from "../types.js";
-import { contentLines } from "./shared.js";
+import { drawIcon } from "../icons";
+import type { Component } from "../types";
+import { contentLines } from "./shared";
 
 /** A circle with initials, or a user icon when empty. Twice the line height by default. */
 export const avatar: Component = (ctx, node, x, y) => {

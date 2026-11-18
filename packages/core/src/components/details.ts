@@ -1,6 +1,6 @@
-import type { Component, SpecNode } from "../types.js";
-import { drawLabel, measureLabel } from "./label.js";
-import { contentLines } from "./shared.js";
+import type { Component, SpecNode } from "../types";
+import { drawLabel, measureLabel } from "./label";
+import { contentLines } from "./shared";
 
 const ROW_PAD = 6,
   COL_GAP = 16;

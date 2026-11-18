@@ -1,7 +1,7 @@
-import type { Component } from "../types.js";
-import { drawLabel, measureLabel } from "./label.js";
-import type { Label } from "./label.js";
-import { contentLines, splitItems } from "./shared.js";
+import type { Component } from "../types";
+import { drawLabel, measureLabel } from "./label";
+import type { Label } from "./label";
+import { contentLines, splitItems } from "./shared";
 
 const PAD_X = 12,
   PAD_Y = 8;

@@ -1,5 +1,5 @@
-import type { DrawContext, Size, Slot, SpecNode } from "../types.js";
-import { drawLabel, measureLabel } from "./label.js";
+import type { DrawContext, Size, Slot, SpecNode } from "../types";
+import { drawLabel, measureLabel } from "./label";
 
 const PAD_X = 16,
   PAD_Y = 8;

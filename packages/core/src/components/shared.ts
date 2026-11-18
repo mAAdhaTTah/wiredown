@@ -1,6 +1,6 @@
-import { drawIcon, isIcon } from "../icons.js";
-import type { DrawContext, Size, Slot, SpecNode } from "../types.js";
-import { iconSizeFor } from "./label.js";
+import { drawIcon, isIcon } from "../icons";
+import type { DrawContext, Size, Slot, SpecNode } from "../types";
+import { iconSizeFor } from "./label";
 
 /** The component's own line plus its continuation lines, without empty ones. */
 export function contentLines(node: SpecNode): string[] {

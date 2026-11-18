@@ -1,4 +1,4 @@
-import type { Component, Slot } from "../types.js";
+import type { Component, Slot } from "../types";
 
 /**
  * Panels side by side, all as tall as the tallest (or as (h=...)). With a

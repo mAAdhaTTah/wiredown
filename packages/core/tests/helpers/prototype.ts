@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { SpecNode } from "../../src/index.js";
+import type { SpecNode } from "../../src/index";
 
 // Loads the core of the Phase 1 script straight from prototype/Sketchdown.md,
 // so the port can be compared against the code that is known to work.
