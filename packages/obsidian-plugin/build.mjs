@@ -1,5 +1,6 @@
-import { build } from "esbuild";
 import { copyFile } from "node:fs/promises";
+import { build } from "esbuild";
+
 await build({
   entryPoints: ["src/main.ts"],
   bundle: true,

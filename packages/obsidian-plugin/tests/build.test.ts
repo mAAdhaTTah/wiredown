@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { readFileSync, statSync } from "node:fs";
 import { expect, it } from "vitest";
+
 it("ships a small browser bundle with external Obsidian and install files", () => {
   const file = new URL("../dist/main.js", import.meta.url);
   const text = readFileSync(file, "utf8");
