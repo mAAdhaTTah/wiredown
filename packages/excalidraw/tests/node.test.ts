@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { beforeAll, describe, expect, it } from "vitest";
 import { layoutScreen, parse } from "@wiredown/core";
+import { beforeAll, describe, expect, it } from "vitest";
 import { screenElements } from "../src/index.js";
 import { renderScreenSvg, renderSvg } from "../src/node.js";
 

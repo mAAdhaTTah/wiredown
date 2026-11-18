@@ -22,7 +22,7 @@ render. Both functions accept `{ theme?: "light" | "dark", fonts?: boolean }`,
 defaulting to light with embedded Excalifont.
 
 ```ts
-import { renderSvg, renderScreenSvg } from "@wiredown/excalidraw/node";
+import { renderScreenSvg, renderSvg } from "@wiredown/excalidraw/node";
 
 const svg = await renderSvg(elements);
 const rendered = await renderScreenSvg(parse("button: Save #save").tree);
