@@ -1,8 +1,8 @@
 // MANUAL check, outside Vitest and CI. These are Gitea-shaped STAND-IN pages,
 // using src/gitea.ts's HTML/URL assumptions, not a test of a live Gitea.
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { extname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
