@@ -5,13 +5,14 @@ import {
   embedSize,
   flowFrames,
   formatEmbed,
-  newFlow,
   newerDataVersion,
+  newFlow,
   parseFlow,
   serializeFlow,
 } from "../src/index.js";
 import type { ExcalidrawElementJson } from "../src/index.js";
 import { pluginFailures } from "./plugin-checks.js";
+
 const options = {
   screenId: "home",
   title: "Home",

@@ -1,9 +1,10 @@
 import { mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { expect, test } from "vitest";
 import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
+import { expect, test } from "vitest";
 import { run } from "../src/index.js";
-import { BASE, VARIANT, fixture } from "./helpers.js";
+import { BASE, fixture, VARIANT } from "./helpers.js";
+
 test("new, add, styling idempotence and hand edits", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
   const file = join(dir, "flows/a.excalidraw.md");
