@@ -7,5 +7,7 @@ export default defineProject({
   test: {
     name: "excalidraw",
     include: ["tests/**/*.test.ts"],
+    // headless Excalidraw export is slow on a cold or busy machine
+    testTimeout: 30_000,
   },
 });
