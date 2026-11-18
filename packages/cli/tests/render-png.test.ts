@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { run } from "../src/index.js";
-import { BASE, VARIANT, fixture } from "./helpers.js";
+import { BASE, fixture, VARIANT } from "./helpers.js";
 
 /** Pixel size and top-left pixel of an RGBA PNG (no filter changes the first pixel). */
 async function png(path: string) {
