@@ -2,8 +2,8 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { layoutScreen, parse } from "@wiredown/core";
 import { beforeAll, describe, expect, it } from "vitest";
-import { screenElements } from "../src/index.js";
-import { renderScreenSvg, renderSvg } from "../src/node.js";
+import { screenElements } from "../src/index";
+import { renderScreenSvg, renderSvg } from "../src/node";
 
 // Use the actual proposal so this fixture cannot silently diverge from it.
 const proposal = readFileSync(

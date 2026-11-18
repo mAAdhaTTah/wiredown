@@ -1,8 +1,8 @@
 import { layoutScreen } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
-import { screenElements } from "./elements.js";
-import type { ExcalidrawElementJson, ScreenElements } from "./elements.js";
-import { sceneOf } from "./scene.js";
+import { screenElements } from "./elements";
+import type { ExcalidrawElementJson, ScreenElements } from "./elements";
+import { sceneOf } from "./scene";
 
 export interface SvgOptions {
   theme?: "light" | "dark";
