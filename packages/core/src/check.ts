@@ -1,12 +1,12 @@
-import { catalogEntry, optionsOf, RETIRED_OPTIONS } from "./catalog.js";
-import { gridRows } from "./components/grid.js";
-import { ICON_NAMES, isIcon } from "./icons.js";
-import { EXCALIFONT } from "./metrics-excalifont.js";
-import { fontMeasurer } from "./metrics.js";
-import { distance, FLAGS, parse, staysText, TRAILING } from "./parse.js";
-import type { ParseError, ParseResult, SpecNode } from "./types.js";
-import { resolve } from "./variants.js";
-import type { ResolveOptions } from "./variants.js";
+import { catalogEntry, optionsOf, RETIRED_OPTIONS } from "./catalog";
+import { gridRows } from "./components/grid";
+import { ICON_NAMES, isIcon } from "./icons";
+import { EXCALIFONT } from "./metrics-excalifont";
+import { fontMeasurer } from "./metrics";
+import { distance, FLAGS, parse, staysText, TRAILING } from "./parse";
+import type { ParseError, ParseResult, SpecNode } from "./types";
+import { resolve } from "./variants";
+import type { ResolveOptions } from "./variants";
 
 export interface CheckResult extends ParseResult {
   /** Things that draw, but probably not as meant. */

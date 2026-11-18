@@ -1,4 +1,4 @@
-import type { ComponentType, DirectiveType } from "./types.js";
+import type { ComponentType, DirectiveType } from "./types";
 
 // Every component a user can write, with the options it takes. The parser
 // builds its keyword table and option lists from this, and the agent skill's

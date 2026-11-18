@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parse, resolve, serialize } from "../src/index.js";
+import { parse, resolve, serialize } from "../src/index";
 
 const first = (source: string) => parse(source).tree.children[0];
 

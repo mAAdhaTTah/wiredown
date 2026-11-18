@@ -1,6 +1,6 @@
-import { CATALOG, catalogEntry, COMMON_FLAGS, optionsOf, RETIRED_OPTIONS } from "./catalog.js";
-import { ICON_NAMES, isIcon } from "./icons.js";
-import type { NodeType, ParseError, ParseResult, SpecNode } from "./types.js";
+import { CATALOG, catalogEntry, COMMON_FLAGS, optionsOf, RETIRED_OPTIONS } from "./catalog";
+import { ICON_NAMES, isIcon } from "./icons";
+import type { NodeType, ParseError, ParseResult, SpecNode } from "./types";
 
 /** Keyword to node type; "field" is an input unless it has "Label | keyword:". */
 const KEYWORDS = new Map<string, NodeType>(
