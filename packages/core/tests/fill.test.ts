@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_THEME, FONT_SIZE, layout, parse } from "../src/index";
+import { DEFAULT_THEME, FONT_SIZE, layout, parse, resolve } from "../src/index";
 import type { DrawOp, LineOp, RectOp, Style, TextOp } from "../src/index";
 import { fakeMeasure } from "./helpers/fakeMeasure";
 
@@ -130,5 +130,56 @@ describe("adapters", () => {
       },
     );
     expect(seen.every((s) => s === FONT_SIZE)).toBe(true);
+  });
+});
+
+describe("grid width defaults", () => {
+  const table = "grid\na, b\n1, 2";
+  const gridRect = (ops: DrawOp[]) =>
+    rects(ops).find((r) => r.strokeWidth === 2 && r.h === 2 * (fakeMeasure("a", style).h + 14))!;
+
+  it.each(["window", "browser", "box", "form", "section"])(
+    "fills the inner width of %s, with fit opting out",
+    (container) => {
+      const source = (flag = "") =>
+        `${container}: T (w=600)\n  ${table.replace("grid", `grid${flag}`).replaceAll("\n", "\n  ")}`;
+      const inner = container === "section" ? 600 : 600 - 2 * pad;
+      expect(gridRect(draw(source()).ops).w).toBe(inner);
+      expect(draw(source())).toEqual(draw(source(" (fill)")));
+      expect(gridRect(draw(source(" (fit)")).ops).w).toBe(draw(table).size.w);
+      expect(draw(source(" (fill, fit)"))).toEqual(draw(source(" (fit)")));
+    },
+  );
+
+  it("keeps top-level and row grids content-sized unless explicitly filled", () => {
+    const natural = draw(table).size.w;
+    expect(gridRect(draw(`text: A much wider sibling than the grid\n${table}`).ops).w).toBe(
+      natural,
+    );
+    const row = `row: (w=600)\n  ${table.replaceAll("\n", "\n  ")}`;
+    expect(gridRect(draw(row).ops).w).toBe(natural);
+    expect(gridRect(draw(row.replace("grid", "grid (fill)")).ops).w).toBe(600);
+    expect(
+      gridRect(
+        draw(`text: A much wider sibling than the grid\n${table.replace("grid", "grid (fill)")}`)
+          .ops,
+      ).w,
+    ).toBeGreaterThan(natural);
+  });
+
+  it("accepts fit on other components as a no-op", () => {
+    expect(parse("button: Save (fit)").errors).toEqual([]);
+    expect(draw("button: Save (fit)")).toEqual(draw("button: Save"));
+  });
+
+  it("fills a grid inserted into a window by after without mutating the tree", () => {
+    const { tree, errors } = resolve("extends: base\nafter: anchor\n  grid\n  a, b\n  1, 2", {
+      lookup: () => "window: T (w=600)\n  text: Anchor #anchor",
+    });
+    expect(errors).toEqual([]);
+    const before = structuredClone(tree);
+    const result = layout(tree, { x: 0, y: 0 }, { measure: fakeMeasure, style });
+    expect(gridRect(result.ops).w).toBe(600 - 2 * pad);
+    expect(tree).toEqual(before);
   });
 });

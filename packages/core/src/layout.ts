@@ -11,6 +11,19 @@ import type {
   Theme,
 } from "./types";
 
+const GRID_FILL_PARENTS = new Set<NodeType>(["window", "browser", "box", "form", "section"]);
+
+/** Apply contextual defaults without changing the parsed or resolved tree. */
+function layoutDefaults(node: SpecNode, parent?: NodeType): SpecNode {
+  const grid = node.type === "grid";
+  const fill = grid && (node.opts.fit || (parent && GRID_FILL_PARENTS.has(parent)));
+  return {
+    ...node,
+    opts: fill ? { ...node.opts, fill: node.opts.fit ? 0 : 1 } : node.opts,
+    children: node.children.map((child) => layoutDefaults(child, node.type)),
+  };
+}
+
 /** Components that paint their own light background. */
 const LIGHT_SURFACES = new Set<NodeType>([
   "button",
@@ -72,14 +85,15 @@ function markInvalid(ctx: DrawContext, x: number, y: number, size: Size): Size {
   return { w: size.w + GAP + s, h: size.h };
 }
 
-/** Space between a component and its (hi) outline. */
-const HI_GAP = 4;
+/** Space between a component and its (focus) outline. */
+const FOCUS_GAP = 4;
 
 export function layout(
   tree: SpecNode,
   origin: { x: number; y: number },
   env: LayoutEnv,
 ): { ops: DrawOp[]; size: Size } {
+  tree = layoutDefaults(tree);
   const ops: DrawOp[] = [];
   const textStyle: TextStyle = { fontSize: env.style.fontSize, fontFamily: env.style.fontFamily };
   // Optional keys are only added when set, so ops without overrides stay
@@ -158,9 +172,9 @@ export function layout(
         node.opts.invalid && slot?.w ? { ...slot, w: slot.w - MARK_GAP - markSize(ctx) } : slot;
       let r = COMPONENTS[node.type](ctx, node, x, y, own);
       if (node.opts.invalid) r = markInvalid(ctx, x, y, r);
-      // (hi): an outline around the component, outside its box, so the layout doesn't move
-      if (node.opts.hi) {
-        ctx.rect(x - HI_GAP, y - HI_GAP, r.w + 2 * HI_GAP, r.h + 2 * HI_GAP, {
+      // (focus): an outline around the component, outside its box, so the layout doesn't move
+      if (node.opts.focus) {
+        ctx.rect(x - FOCUS_GAP, y - FOCUS_GAP, r.w + 2 * FOCUS_GAP, r.h + 2 * FOCUS_GAP, {
           width: 2,
           color: colors.highlight,
           rounded: true,
