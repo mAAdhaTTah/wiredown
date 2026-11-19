@@ -64,7 +64,7 @@ describe("runTask", () => {
     const r = await runTask({ task: task("variant"), arm, material, runner, cap: 3, run: 1 });
     expect(r).toMatchObject({ firstAttemptErrors: 1, firstClean: false, fixRounds: 1 });
     expect(r.attempts[0].findings).toMatch(
-      /^screens\.md:\d+: \^exports-paused: error: in a variant, say what this does/,
+      /^screens\.md:\d+: \^exports-paused: error: "\w+:" in a variant needs a command/,
     );
     expect(runner.prompts[1]).toContain(r.attempts[0].findings);
     expect(runner.prompts[1]).toContain("## Your previous reply");
