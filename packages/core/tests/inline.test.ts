@@ -3,7 +3,7 @@ import { layout } from "../src/layout";
 import { parse } from "../src/parse";
 import { DEFAULT_THEME, FONT_SIZE } from "../src/theme";
 import type { DrawOp, LineOp, Style, TextOp } from "../src/types";
-import { CHAR_W, fakeMeasure, LINE_H } from "./helpers/fakeMeasure";
+import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure";
 
 const style: Style = { stroke: "#1e1e1e", fontFamily: 5, roughness: 1, fontSize: FONT_SIZE };
 const draw = (source: string) =>

@@ -4,7 +4,7 @@ import { parse } from "../src/parse";
 import { DEFAULT_THEME, FONT_SIZE } from "../src/theme";
 import type { DrawOp, LineOp, RectOp, TextOp, TextStyle } from "../src/types";
 import { EXAMPLE, NEW_USER } from "./fixtures/specs";
-import { CHAR_W, fakeMeasure, LINE_H } from "./helpers/fakeMeasure";
+import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure";
 
 const style: TextStyle = { fontSize: FONT_SIZE, fontFamily: 5 };
 const draw = (source: string, x = 0, y = 0) =>
