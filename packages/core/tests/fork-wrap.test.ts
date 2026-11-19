@@ -4,7 +4,7 @@ import { layout } from "../src/layout";
 import { parse } from "../src/parse";
 import { FONT_SIZE } from "../src/theme";
 import type { LineOp, TextOp } from "../src/types";
-import { CHAR_W, fakeMeasure, LINE_H } from "./helpers/fakeMeasure";
+import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure";
 
 const style = { fontSize: FONT_SIZE, fontFamily: 5 };
 const draw = (source: string, maxWidth?: number) =>
