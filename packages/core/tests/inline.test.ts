@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_THEME, FONT_SIZE, layout, parse } from "../src/index";
 import type { DrawOp, LineOp, Style, TextOp } from "../src/index";
-import { CHAR_W, fakeMeasure, LINE_H } from "./helpers/fakeMeasure";
+import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure";
 
 const style: Style = { stroke: "#1e1e1e", fontFamily: 5, roughness: 1, fontSize: FONT_SIZE };
 const draw = (source: string) =>
