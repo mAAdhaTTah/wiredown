@@ -43,7 +43,7 @@ export type ComponentType =
   | "section"
   | "spin";
 /** Lines of a variant block (see variants.ts); they are resolved away before layout. */
-export type DirectiveType = "extends" | "remove" | "after" | "before" | "rows";
+export type DirectiveType = "extends" | "remove" | "after" | "before" | "rows" | "replace";
 export type NodeType = "root" | ComponentType | DirectiveType;
 
 export interface SpecNode {

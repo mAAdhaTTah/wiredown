@@ -5,7 +5,8 @@ import type { ParseError, ParseResult, SpecNode } from "./types";
 // A variant block draws another screen with a few changes:
 //
 //   extends: review-view
-//   alert: {check} Applied Bet 75% to 12 board(s). (id=notice)   <- replaces the component with that id
+//   replace: notice                                              <- replaces the component with that id
+//     alert: {check} Applied Bet 75% to 12 board(s).
 //   remove: apply-row                                            <- removes one
 //   after: boards                                                <- adds components after one (or before:)
 //     text: -Rows without a result queue a task-
@@ -25,7 +26,7 @@ export interface ResolveOptions {
   known?: () => string[];
 }
 
-const DIRECTIVES = new Set(["extends", "remove", "after", "before", "rows"]);
+const DIRECTIVES = new Set(["extends", "remove", "after", "before", "rows", "replace"]);
 const MAX_DEPTH = 8;
 
 function firstLine(source: string): { text: string; line: number } | null {
@@ -59,14 +60,20 @@ function index(tree: SpecNode): Map<string, { parent: SpecNode; node: SpecNode }
   return ids;
 }
 
-/** Errors for directives outside a variant block. */
+/** Errors for directives outside a variant block, or inside another change of one. */
 function check(tree: SpecNode, errors: ParseError[], variant: boolean): void {
-  walk(tree, (node) => {
+  walk(tree, (node, parent) => {
+    if (!DIRECTIVES.has(node.type)) return;
     const line = node.line ?? 0;
-    if (!variant && DIRECTIVES.has(node.type)) {
+    if (!variant) {
       errors.push({
         line,
         message: `"${node.type}:" only works in a block whose first line is "extends: <screen id>"`,
+      });
+    } else if (parent !== tree && parent !== tree.children[0]) {
+      errors.push({
+        line,
+        message: `"${node.type}:" can't go inside "${parent.type}:"; put it at the top level of the variant`,
       });
     }
   });
@@ -230,22 +237,31 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
         } else patchRows(hit.node, op, errors);
         break;
       }
-      default: {
-        if (!op.id) {
+      case "replace": {
+        const hit = target(op.text.replace(/^\^/, ""), at, "replace");
+        if (!hit) break;
+        if (op.children.length !== 1) {
           errors.push({
             line: at,
-            message:
-              `in a variant, "${op.type}:" needs the (id=...) of the component it replaces, ` +
-              `or a place under "after: <id>" or "before: <id>"; ids in "${baseId}": ${known().join(", ") || "(none)"}`,
+            message: `replace: "${hit.node.id}" needs exactly one component indented under it, not ${op.children.length}`,
           });
           break;
         }
-        const hit = target(op.id, at, op.type);
-        if (!hit) break;
-        clash([op], hit.node);
+        const [node] = op.children;
+        clash([node], hit.node);
+        // the replacement keeps the id, so later variants can still target it
+        node.id ??= hit.node.id;
         // a container replaced by a bare line keeps its children: only its title or options change
-        if (!op.children.length && op.type === hit.node.type) op.children = hit.node.children;
-        hit.parent.children.splice(hit.parent.children.indexOf(hit.node), 1, op);
+        if (!node.children.length && node.type === hit.node.type) node.children = hit.node.children;
+        hit.parent.children.splice(hit.parent.children.indexOf(hit.node), 1, node);
+        break;
+      }
+      default: {
+        const named = op.id && index(out).has(op.id) ? op.id : "<id>";
+        errors.push({
+          line: at,
+          message: `"${op.type}:" in a variant needs a command: "replace: ${named}", "after: <id>" or "before: <id>"`,
+        });
       }
     }
   }
