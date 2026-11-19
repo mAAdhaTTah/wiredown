@@ -59,15 +59,10 @@ function index(tree: SpecNode): Map<string, { parent: SpecNode; node: SpecNode }
   return ids;
 }
 
-/** Errors for ids used twice and for directives outside a variant block. */
+/** Errors for directives outside a variant block. */
 function check(tree: SpecNode, errors: ParseError[], variant: boolean): void {
-  const seen = new Set<string>();
   walk(tree, (node) => {
     const line = node.line ?? 0;
-    if (node.id) {
-      if (seen.has(node.id)) errors.push({ line, message: `the id "${node.id}" is used twice` });
-      seen.add(node.id);
-    }
     if (!variant && DIRECTIVES.has(node.type)) {
       errors.push({
         line,
@@ -177,10 +172,27 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
     errors.push({
       line: at,
       message:
-        `${what}: "${baseId}" has no component with (id=${id})` +
+        `${what}: "${baseId}" has no component #${id}` +
         (guess ? `; did you mean "${guess}"?` : `; its ids are: ${known().join(", ") || "(none)"}`),
     });
     return null;
+  };
+  /** Errors for ids of added components that the screen already uses; a replaced component frees its own. */
+  const clash = (added: SpecNode[], replaced?: SpecNode) => {
+    const taken = index(out);
+    const freed = replaced ? new Set([replaced.id, ...index(replaced).keys()]) : new Set();
+    const one = (node: SpecNode) => {
+      if (node.id && taken.has(node.id) && !freed.has(node.id)) {
+        errors.push({
+          line: node.line ?? 0,
+          message: `the id "${node.id}" is already used in "${baseId}"`,
+        });
+      }
+    };
+    added.forEach((node) => {
+      one(node);
+      walk(node, one);
+    });
   };
   // changes may be indented under "extends:" or follow it at the same level
   for (const op of [...head.children, ...tree.children.slice(1)]) {
@@ -202,6 +214,7 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
       case "before": {
         const hit = target(op.text.replace(/^\^/, ""), at, op.type);
         if (!hit) break;
+        clash(op.children);
         const i = hit.parent.children.indexOf(hit.node) + (op.type === "after" ? 1 : 0);
         hit.parent.children.splice(i, 0, ...op.children);
         break;
@@ -229,6 +242,7 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
         }
         const hit = target(op.id, at, op.type);
         if (!hit) break;
+        clash([op], hit.node);
         // a container replaced by a bare line keeps its children: only its title or options change
         if (!op.children.length && op.type === hit.node.type) op.children = hit.node.children;
         hit.parent.children.splice(hit.parent.children.indexOf(hit.node), 1, op);
@@ -246,12 +260,19 @@ export function resolve(source: string, options: ResolveOptions = {}): ParseResu
 // ---------- back to text ----------
 function line(node: SpecNode): string {
   const opts = Object.entries(node.opts).map(([k, v]) => (v === 1 ? k : `${k}=${v}`));
-  if (node.id) opts.push(`id=${node.id}`);
+  const shorthand = node.id && /^[a-z][a-z0-9-]*$/.test(node.id) ? `#${node.id}` : "";
+  if (node.id && !shorthand) opts.push(`id=${node.id}`);
   if (node.type === "field" && node.children[0]) {
     const inner = node.children[0];
     return `field: ${node.text} | ${line({ ...inner, id: node.id, opts: { ...inner.opts, ...node.opts } })}`;
   }
-  const text = [node.text, opts.length ? `(${opts.join(", ")})` : ""].filter(Boolean).join(" ");
+  const text = [
+    node.text.replace(/#/g, "\\#"),
+    shorthand,
+    opts.length ? `(${opts.join(", ")})` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return text ? `${node.type}: ${text}` : node.type;
 }
 

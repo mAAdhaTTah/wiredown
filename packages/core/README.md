@@ -42,12 +42,13 @@ The root export is the whole public API.
   string of a fenced code block that holds a spec.
 - **Parsing** (`parse`): `parse(source)` returns `{ tree, errors }`, a
   `SpecNode` tree and `ParseError`s with 1-based lines. `formatError(error)`
-  gives `line 3: …`. `parseOptions` reads a trailing `(k=v, flag)` group;
-  `nearest(word, known)` is the "did you mean" lookup.
+  gives `line 3: …`. `parseOptions` reads a trailing `#id` and
+  `(k=v, flag)` group; `nearest(word, known)` is the "did you mean" lookup.
 - **Variants** (`variants`): `resolve(source, { lookup, known })` parses a
   block and, when its first line is `extends: <id>`, applies it to the
   screen `lookup(id)` returns. Use `resolve` rather than `parse` for any
-  block that may be a variant. `extendsId(source)` reads that id;
+  block that may be a variant; its options are a `ResolveOptions`, with
+  `lookup` a `Lookup`. `extendsId(source)` reads that id;
   `serialize(tree)` turns a tree back into spec text.
 - **Layout** (`layout`): `layout(tree, origin, env)` returns
   `{ ops: DrawOp[], size }`. `env` is a `LayoutEnv`: a `measure` function,

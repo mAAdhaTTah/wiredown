@@ -41,7 +41,9 @@ describe("ids", () => {
 
   it("reports an id used twice", () => {
     const { errors } = resolve("button: A (id=x)\nbutton: B (id=x)");
-    expect(errors).toEqual([{ line: 2, message: 'the id "x" is used twice' }]);
+    expect(errors).toEqual([
+      { line: 2, message: 'the id "x" is used twice; first used on line 1' },
+    ]);
   });
 });
 
@@ -141,7 +143,7 @@ describe("variant errors", () => {
     expect(r.errors).toEqual([
       {
         line: 2,
-        message: 'remove: "base" has no component with (id=notise); did you mean "notice"?',
+        message: 'remove: "base" has no component #notise; did you mean "notice"?',
       },
     ]);
   });
