@@ -257,10 +257,10 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
         break;
       }
       default: {
-        const named = op.id && index(out).has(op.id) ? op.id : "…";
+        const named = op.id && index(out).has(op.id) ? op.id : "<id>";
         errors.push({
           line: at,
-          message: `in a variant, say what this does: "replace: ${named}", "after: …" or "before: …"`,
+          message: `"${op.type}:" in a variant needs a command: "replace: ${named}", "after: <id>" or "before: <id>"`,
         });
       }
     }

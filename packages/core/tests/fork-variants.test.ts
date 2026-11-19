@@ -161,7 +161,8 @@ describe("variant errors", () => {
     expect(r.errors).toEqual([
       {
         line: 2,
-        message: 'in a variant, say what this does: "replace: …", "after: …" or "before: …"',
+        message:
+          '"button:" in a variant needs a command: "replace: <id>", "after: <id>" or "before: <id>"',
       },
     ]);
   });

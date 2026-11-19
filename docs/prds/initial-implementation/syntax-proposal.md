@@ -106,8 +106,8 @@ after: members
 - The replacement keeps the replaced component's id unless it declares one,
   so later variants can still target it.
 - A top-level component line in a variant without a verb is an error:
-  `line 2: in a variant, say what this does: "replace: seats", "after: …"
-  or "before: …"`.
+  `line 2: "text:" in a variant needs a command: "replace: seats",
+  "after: <id>" or "before: <id>"`.
 - Cost: small on top of the existing 254-line variant code.
 
 ### P3. Rename the highlight: `(hi)` → `(focus)` (decided, D2)

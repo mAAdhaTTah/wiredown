@@ -60,11 +60,13 @@ rows: members
     expect(r.errors).toEqual([
       {
         line: 2,
-        message: 'in a variant, say what this does: "replace: seats", "after: …" or "before: …"',
+        message:
+          '"text:" in a variant needs a command: "replace: seats", "after: <id>" or "before: <id>"',
       },
       {
         line: 3,
-        message: 'in a variant, say what this does: "replace: notice", "after: …" or "before: …"',
+        message:
+          '"alert:" in a variant needs a command: "replace: notice", "after: <id>" or "before: <id>"',
       },
     ]);
   });
@@ -74,7 +76,8 @@ rows: members
     expect(r.errors).toEqual([
       {
         line: 3,
-        message: 'in a variant, say what this does: "replace: …", "after: …" or "before: …"',
+        message:
+          '"button:" in a variant needs a command: "replace: <id>", "after: <id>" or "before: <id>"',
       },
     ]);
   });
