@@ -2,7 +2,7 @@
 
 Wiredown's parser, variant resolution, layout and text metrics. It has no DOM
 and no Excalidraw dependency: layout turns a text spec into positioned draw
-operations, and text measuring is injected by the host.
+operations, measuring text with Excalifont's bundled advance widths.
 
 ## Use
 
@@ -12,21 +12,14 @@ no other entry points. Build it first (`pnpm build`): outside the
 workspace's type-checking, imports resolve to `dist/`.
 
 ```ts
-import { formatError, layout, resolve, tableMeasure } from "@wiredown/core";
+import { formatError, layoutScreen, resolve } from "@wiredown/core";
 
 const spec = ["row:", "  button: Cancel", "  button: *Save"].join("\n");
 
 const { tree, errors } = resolve(spec);
 for (const error of errors) console.warn(formatError(error));
 
-const { ops, size } = layout(
-  tree,
-  { x: 0, y: 0 },
-  {
-    measure: tableMeasure,
-    style: { fontSize: 16, fontFamily: 1 },
-  },
-);
+const { ops, size } = layoutScreen(tree);
 // ops: rect, line, text and ellipse operations in drawing order;
 // size: the width and height they cover.
 ```
@@ -42,14 +35,11 @@ The root export is the whole public API.
   string of a fenced code block that holds a spec.
 - **Parsing** (`parse`): `parse(source)` returns `{ tree, errors }`, a
   `SpecNode` tree and `ParseError`s with 1-based lines. `formatError(error)`
-  gives `line 3: …`. `parseOptions(text, takes)` reads a trailing `#id`
-  and `(k=v, flag)` group, offering the options in `takes` first for "did
-  you mean"; `nearest(word, known)` is the "did you mean" lookup.
+  gives `line 3: …`. `nearest(word, known)` is the "did you mean" lookup.
 - **Catalog** (`catalog`): `CATALOG`, a `CatalogEntry` for every component
   and variant directive: its node type, keywords, description, a minimal
   `example`, and the flags and number options it takes. `COMMON_FLAGS` are
-  the flags every component takes; `catalogEntry(type)` finds a type's entry
-  and `optionsOf(entry)` lists every option it takes.
+  the flags every component takes.
 - **Checking** (`check`): `check(source, options)` resolves a block as
   `resolve` does and returns a `CheckResult`: the tree, the errors and
   `warnings` about what draws but is probably a mistake (a misspelt icon,
@@ -60,29 +50,22 @@ The root export is the whole public API.
   screen `lookup(id)` returns. Use `resolve` rather than `parse` for any
   block that may be a variant; its options are a `ResolveOptions`, with
   `lookup` a `Lookup`, and an optional `lineOf` that maps a base screen's
-  lines for its errors. `extendsId(source)` reads that id;
-  `serialize(tree)` turns a tree back into spec text.
-- **Layout** (`layout`): `layout(tree, origin, env)` returns a
-  `LayoutResult`, `{ ops: DrawOp[], size, boxes }`, where `boxes` maps the
-  id of every component that has one to its `Box`. `env` is a `LayoutEnv`:
-  a `measure` function, the text `style` (`fontSize`, and a numeric
-  `fontFamily` that layout only passes on to `measure`), an optional
-  `theme` (default `DEFAULT_THEME`) and an optional `maxWidth` to wrap
-  grids, alerts and text to.
-- **Screen layout** (`screen`): `layoutScreen(tree, options)` is `layout`
-  with the defaults every surface shares: origin `0,0`, Excalifont
-  (`EXCALIFONT`) at `FONT_SIZE`. Its `LayoutScreenOptions` are an optional
-  `maxWidth` and `theme`.
-- **Metrics** (`metrics`, `metrics-excalifont`): `tableMeasure` measures
-  with the bundled Arimo advance table, and `unmeasured(text)` lists
-  characters that table lacks. `fontMeasurer(font)` builds the same pair
-  from any `FontMetrics`, such as `EXCALIFONT`, Excalifont's advances and
-  kerning. Also `FONT_STACK`, `FONT_CSS`, `LINE_HEIGHT`, `ASCENT`,
-  `DESCENT`.
-- **Theme** (`theme`): `DEFAULT_THEME`, `DARK_COLORS`, `FONT_SIZE`, `INK`
-  (a fill value meaning "the stroke colour"), and the ink colours for a
-  light and a dark page, `LIGHT_INK` and `DARK_INK`.
-- **Icons** (`icons`): `ICON_NAMES` and `isIcon(name)`.
+  lines for its errors. `extendsId(source)` reads that id.
+- **Screen layout** (`screen`, `layout`): `layoutScreen(tree, options)`
+  lays a tree out at origin `0,0` in Excalifont (`EXCALIFONT`, font family
+  `EXCALIFONT_FAMILY`) at `FONT_SIZE`. It returns a `LayoutResult`,
+  `{ ops: DrawOp[], size, boxes }`, where `boxes` maps the id of every
+  component that has one to its `Box`. Its `LayoutScreenOptions` are an
+  optional `theme` (default `DEFAULT_THEME`) and an optional `maxWidth` to
+  wrap grids, alerts and text to.
+- **Metrics** (`metrics`, `metrics-excalifont`): `fontMeasurer(font)`
+  builds a text measurer from any `FontMetrics`, with a list of the
+  characters its table lacks; `EXCALIFONT` holds Excalifont's advances and
+  kerning.
+- **Theme** (`theme`): `DEFAULT_THEME`, `FONT_SIZE`, `INK` (a fill value
+  meaning "the stroke colour"), and the ink colour for a light page,
+  `LIGHT_INK`.
+- **Icons** (`icons`): `ICON_NAMES`.
 - **Screens documents** (`screens`): a Markdown file whose `wiredown`
   fenced blocks are screens, each named by a `^id` line after its fence.
   `parseScreens(markdown)` returns every block as a `Screen` (its `id`, the
@@ -92,25 +75,18 @@ The root export is the whole public API.
   returns a `CheckScreensResult`: the `CheckedScreen`s (each with its
   tree), and `errors` and `warnings` as `ScreenDiagnostic`s with file
   lines.
-- **Types** (`types`): every type, including `SpecNode`, `ParseResult`,
-  `DrawOp` and its four op kinds, `MeasureText`, `TextStyle` and `Theme`.
+- **Types** (`types`): `SpecNode`, `ParseResult`, `ParseError`, `DrawOp`
+  and `Theme`.
 
 Draw ops carry geometry and colour overrides only. Stroke colour,
 roughness and the like come from the host's canvas style when it renders
 them.
 
-## Fork notice
+`checkScreens(markdown)` is the public checker. The private eval baseline
+imports `checkScreensInternal` directly from core's built workspace output
+to inject its block checker; it is not a published package subpath.
 
-This package is a fork of the core of
-[Sketchdown](https://github.com/magnushaggren/sketchdown) by Magnus Haggren,
-at commit `e790382`, used under the MIT licence. The upstream copyright
-notice is preserved in this package's [LICENSE](LICENSE).
-
-`tests/fixtures/prototype/Sketchdown.md` is Sketchdown's original
-single-script prototype, kept unchanged because the compatibility test runs
-its parser against the v2 fixture specs.
-
-## Metrics and API
+## Metrics
 
 `pnpm metrics` reads the installed `@excalidraw/utils` 0.1.8 Excalifont.ttf
 using a small sfnt table reader. It regenerates advances for the web font's
@@ -122,9 +98,17 @@ Kerning covers printable ASCII pairs only. These are retained browser canvas
 measurements against the web subsets, not regenerated by the advance reader.
 After building, `node packages/core/scripts/check-metrics.mjs` compares sample
 widths to headless Chromium canvas within 0.015 px after measuring at
-1,000 px and scaling to 16 px, avoiding small-size font rounding. It needs the web package's
-Playwright browser installation (`PLAYWRIGHT_BROWSERS_PATH` when applicable).
+1,000 px and scaling to 16 px, avoiding small-size font rounding. It needs
+the web package's Playwright browser installation
+(`PLAYWRIGHT_BROWSERS_PATH` when applicable).
 
-`checkScreens(markdown)` is the public checker. The private eval baseline
-imports `checkScreensInternal` directly from core's built workspace output
-to inject its block checker; it is not a published package subpath.
+## Fork notice
+
+This package is a fork of the core of
+[Sketchdown](https://github.com/magnushaggren/sketchdown) by Magnus Haggren,
+at commit `e790382`, used under the MIT licence. The upstream copyright
+notice is preserved in this package's [LICENSE](LICENSE).
+
+`tests/fixtures/prototype/Sketchdown.md` is Sketchdown's original
+single-script prototype, kept unchanged because the compatibility test runs
+its parser against the v2 fixture specs.
