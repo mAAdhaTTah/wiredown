@@ -1,4 +1,4 @@
-export { FENCE_KEYWORD, extractSpec, fenceSpec, specAtLine } from "./detect";
+export { FENCE_KEYWORD } from "./detect";
 export { formatError, nearest, parse, parseOptions } from "./parse";
 export { CATALOG, COMMON_FLAGS, catalogEntry, optionsOf } from "./catalog";
 export type { CatalogEntry } from "./catalog";
