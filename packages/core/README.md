@@ -4,6 +4,74 @@ Wiredown's parser, variant resolution, layout and text metrics. It has no DOM
 and no Excalidraw dependency: layout turns a text spec into positioned draw
 operations, and text measuring is injected by the host.
 
+## Use
+
+The package is private to this workspace. Depend on it with
+`"@wiredown/core": "workspace:*"` and import from the package root; it has
+no other entry points. Build it first (`pnpm build`): outside the
+workspace's type-checking, imports resolve to `dist/`.
+
+```ts
+import { formatError, layout, resolve, tableMeasure } from "@wiredown/core";
+
+const spec = ["row:", "  button: Cancel", "  button: *Save"].join("\n");
+
+const { tree, errors } = resolve(spec);
+for (const error of errors) console.warn(formatError(error));
+
+const { ops, size } = layout(
+  tree,
+  { x: 0, y: 0 },
+  {
+    measure: tableMeasure,
+    style: { fontSize: 16, fontFamily: 1 },
+  },
+);
+// ops: rect, line, text and ellipse operations in drawing order;
+// size: the width and height they cover.
+```
+
+Errors do not stop parsing: `resolve` and `parse` always return a tree, and
+a line they cannot read is reported in `errors` and left out of it.
+
+## API
+
+The root export is the whole public API.
+
+- **Fenced blocks** (`detect`): `FENCE_KEYWORD` (`wiredown`);
+  `extractSpec(text, { plain })` finds the first `wiredown` fenced block in
+  pasted text, or with `plain` the whole text when it parses cleanly;
+  `specAtLine(text, line)` is the spec of the block containing a 0-based
+  line; `fenceSpec(spec)` wraps a spec in a fence.
+- **Parsing** (`parse`): `parse(source)` returns `{ tree, errors }`, a
+  `SpecNode` tree and `ParseError`s with 1-based lines. `formatError(error)`
+  gives `line 3: …`. `parseOptions` reads a trailing `(k=v, flag)` group;
+  `nearest(word, known)` is the "did you mean" lookup.
+- **Variants** (`variants`): `resolve(source, { lookup, known })` parses a
+  block and, when its first line is `extends: <id>`, applies it to the
+  screen `lookup(id)` returns. Use `resolve` rather than `parse` for any
+  block that may be a variant. `extendsId(source)` reads that id;
+  `serialize(tree)` turns a tree back into spec text.
+- **Layout** (`layout`): `layout(tree, origin, env)` returns
+  `{ ops: DrawOp[], size }`. `env` is a `LayoutEnv`: a `measure` function,
+  the text `style` (`fontSize`, and a numeric `fontFamily` that layout only
+  passes on to `measure`), an optional `theme` (default `DEFAULT_THEME`) and an optional
+  `maxWidth` to wrap grids, alerts and text to.
+- **Metrics** (`metrics`): `tableMeasure` measures with the bundled Arimo
+  advance table, and `unmeasured(text)` lists characters that table lacks.
+  `fontMeasurer(font)` builds the same pair from any `FontMetrics`. Also
+  `FONT_STACK`, `FONT_CSS`, `LINE_HEIGHT`, `ASCENT`, `DESCENT`.
+- **Theme** (`theme`): `DEFAULT_THEME`, `DARK_COLORS`, `FONT_SIZE`, `INK`
+  (a fill value meaning "the stroke colour"), and the ink colours for a
+  light and a dark page, `LIGHT_INK` and `DARK_INK`.
+- **Icons** (`icons`): `ICON_NAMES` and `isIcon(name)`.
+- **Types** (`types`): every type, including `SpecNode`, `ParseResult`,
+  `DrawOp` and its four op kinds, `MeasureText`, `TextStyle` and `Theme`.
+
+Draw ops carry geometry and colour overrides only. Stroke colour,
+roughness and the like come from the host's canvas style when it renders
+them.
+
 ## Fork notice
 
 This package is a fork of the core of
