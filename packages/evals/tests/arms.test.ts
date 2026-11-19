@@ -56,7 +56,7 @@ describe("the new arm", () => {
     const { errors } = newArm().check(OLD_FILE);
     const messages = errors.map((e) => e.message);
     expect(messages).toContain('"hi" is not an option; the highlight option is now (focus)');
-    expect(messages.some((m) => m.startsWith("in a variant, say what this does"))).toBe(true);
+    expect(messages.some((m) => m.includes("in a variant needs a command"))).toBe(true);
   });
 
   it("accepts the new syntax", () => {
