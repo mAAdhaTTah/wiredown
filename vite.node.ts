@@ -10,7 +10,7 @@ import { defineConfig } from "vite";
 export function nodeLibrary() {
   return defineConfig({
     // declarations, with the ".js" specifiers Node's resolution needs
-    plugins: [dts({ tsconfig: "tsconfig.build.json" })],
+    plugins: [dts()],
     // keep Vite's Oxc transform off those declarations (and off .js, its default)
     oxc: { exclude: [/\.js$/, /\.d\.[cm]?ts$/] },
     build: {
