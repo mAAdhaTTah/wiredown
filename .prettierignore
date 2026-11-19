@@ -5,3 +5,9 @@ pnpm-lock.yaml
 
 # Existing design documents retain their authored formatting.
 docs/
+
+# Upstream prototype kept verbatim as a test fixture.
+packages/core/tests/fixtures/prototype/
+
+# Generated font metric tables.
+packages/core/src/metrics-*.ts
