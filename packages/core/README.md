@@ -38,11 +38,8 @@ a line they cannot read is reported in `errors` and left out of it.
 
 The root export is the whole public API.
 
-- **Fenced blocks** (`detect`): `FENCE_KEYWORD` (`wiredown`);
-  `extractSpec(text, { plain })` finds the first `wiredown` fenced block in
-  pasted text, or with `plain` the whole text when it parses cleanly;
-  `specAtLine(text, line)` is the spec of the block containing a 0-based
-  line; `fenceSpec(spec)` wraps a spec in a fence.
+- **Fenced blocks** (`detect`): `FENCE_KEYWORD` (`wiredown`), the info
+  string of a fenced code block that holds a spec.
 - **Parsing** (`parse`): `parse(source)` returns `{ tree, errors }`, a
   `SpecNode` tree and `ParseError`s with 1-based lines. `formatError(error)`
   gives `line 3: …`. `parseOptions` reads a trailing `(k=v, flag)` group;

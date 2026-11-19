@@ -1,4 +1,4 @@
-export { FENCE_KEYWORD, extractSpec, fenceSpec, specAtLine } from "./detect";
+export { FENCE_KEYWORD } from "./detect";
 export { formatError, nearest, parse, parseOptions } from "./parse";
 export { extendsId, resolve, serialize } from "./variants";
 export type { Lookup, ResolveOptions } from "./variants";
