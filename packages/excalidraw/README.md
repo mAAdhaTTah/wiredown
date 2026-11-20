@@ -273,3 +273,6 @@ The Node entry uses a private happy-dom document and lazily installs a
 installed. The pinned exporter cannot subset the font in Node, so it embeds
 the whole font; the Node entry drops the message Excalidraw logs about that
 while it exports. Layout uses core's metrics, without DOM text measurement.
+
+The Node entry needs Node 22.12 or later. It is an ES module; CommonJS can
+`require()` it.
