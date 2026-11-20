@@ -22,14 +22,12 @@ pnpm install
 pnpm format          # Apply formatting
 pnpm format:check
 pnpm lint
-pnpm build
 pnpm typecheck
+pnpm build
 pnpm test
 ```
 
 Build and typecheck recurse through workspace package scripts. The root
-Vitest config discovers package projects in `packages/*`. In type-checking
-and unit tests, a workspace package import resolves to the package's source
-(the `@wiredown/source` export condition). Node, the bundles and code that
-imports a `dist/` path use the built output, so build before typecheck and
-test.
+Vitest config discovers package projects in `packages/*`. Type-checking and
+unit tests read workspace packages from source (the `@wiredown/source` export
+condition); build before tests that use built output.
