@@ -14,8 +14,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm lint
-      - run: pnpm typecheck
       - run: pnpm build
+      - run: pnpm typecheck
       - run: pnpm test
       # the browser smoke is the only check that Excalidraw's font worker loads
       - run: pnpm --filter @wiredown/web exec playwright-core install --with-deps chromium-headless-shell
