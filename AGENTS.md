@@ -28,4 +28,6 @@ pnpm test
 ```
 
 Build and typecheck recurse through workspace package scripts. The root
-Vitest config discovers package projects in `packages/*`.
+Vitest config discovers package projects in `packages/*`. Type-checking and
+unit tests read workspace packages from source (the `@wiredown/source` export
+condition); build before tests that use built output.
