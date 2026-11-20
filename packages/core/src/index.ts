@@ -1,5 +1,9 @@
 export { FENCE_KEYWORD } from "./detect";
 export { formatError, nearest, parse, parseOptions } from "./parse";
+export { CATALOG, COMMON_FLAGS, catalogEntry, optionsOf } from "./catalog";
+export type { CatalogEntry } from "./catalog";
+export { check } from "./check";
+export type { CheckResult } from "./check";
 export { extendsId, resolve, serialize } from "./variants";
 export type { Lookup, ResolveOptions } from "./variants";
 export {
