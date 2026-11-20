@@ -1,9 +1,10 @@
 # @wiredown/excalidraw
 
 Turns a screen laid out by `@wiredown/core` into plain Excalidraw element
-JSON. It has no Excalidraw dependency and no DOM: Excalidraw draws the
-elements later, in whichever host exports them, so strokes, the font and dark
-mode are Excalidraw's own. Elements are always for the light theme.
+JSON. The main entry imports no Excalidraw runtime or DOM library:
+Excalidraw draws the elements in whichever host exports them, so strokes,
+the font and dark mode are Excalidraw's own. Elements are always for the
+light theme.
 
 ```ts
 import { layoutScreen, parse } from "@wiredown/core";
@@ -16,8 +17,8 @@ const scene = sceneOf(elements);
 
 ## API
 
-The root export is the whole public API. Nothing here renders: SVG export
-through Excalidraw is not here yet.
+The root export renders nothing; SVG export is in the Node entry,
+`@wiredown/excalidraw/node`, below.
 
 - **Elements** (`elements`): `screenElements(layout, options?)` takes core's
   `LayoutResult` (from `layoutScreen` or `layout`) and returns
@@ -49,3 +50,35 @@ through Excalidraw is not here yet.
 - **Types**: `ElementOptions`, `ScreenElements`, `ExcalidrawElementJson`
   (an element as a plain object with at least `id` and `type`) and
   `ExcalidrawScene`.
+
+## Node API
+
+`@wiredown/excalidraw/node` exports through Excalidraw in Node. Its heavy
+dependencies load on first render.
+
+- **SVG** (`node`): `renderSvg(elements, options?)` exports the adapter's
+  light-theme elements and resolves to the SVG markup.
+  `renderScreenSvg(tree, options?)` lays a parsed screen out with core's
+  `layoutScreen`, builds its elements with the default `ElementOptions` and
+  exports them, resolving to `{ svg, width, height, boxes }`: the SVG and
+  `screenElements`' size and boxes.
+- **Types** (`node`): `SvgOptions`, which both take: `theme` (`"light"` or
+  `"dark"`; default light) and `fonts` (inline Excalifont so the SVG is
+  portable; default true).
+
+```ts
+import { renderScreenSvg, renderSvg } from "@wiredown/excalidraw/node";
+
+const svg = await renderSvg(elements);
+const rendered = await renderScreenSvg(parse("button: Save #save").tree);
+// rendered: { svg, width, height, boxes }
+```
+
+The Node entry uses a private happy-dom document and lazily installs a
+`FontFace` stub only if the host has none. No global window or document is
+installed. The pinned exporter cannot subset the font in Node, so it embeds
+the whole font; the Node entry drops the message Excalidraw logs about that
+while it exports. Layout uses core's metrics, without DOM text measurement.
+
+The Node entry needs Node 22.12 or later. It is an ES module; CommonJS can
+`require()` it.

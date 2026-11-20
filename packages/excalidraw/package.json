@@ -4,11 +4,19 @@
   "private": true,
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "exports": {
     ".": {
       "@wiredown/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./node": {
+      "@wiredown/source": "./src/node.ts",
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
     }
   },
   "files": [
@@ -19,6 +27,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@wiredown/core": "workspace:*"
+    "@excalidraw/utils": "0.1.8",
+    "@wiredown/core": "workspace:*",
+    "happy-dom": "^21.0.4"
   }
 }
