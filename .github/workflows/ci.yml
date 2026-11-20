@@ -17,3 +17,19 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+
+  # Run the Node entry on the oldest Node its engines field allows, and on 24.
+  excalidraw-node:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["22.12.0", "24"]
+    env:
+      MISE_NODE_VERSION: ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v3
+      - run: node --version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter "@wiredown/excalidraw..." build
+      - run: pnpm vitest run --project excalidraw
