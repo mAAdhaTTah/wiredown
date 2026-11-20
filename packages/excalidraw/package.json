@@ -31,7 +31,7 @@
     "@excalidraw/utils": "0.1.8",
     "@wiredown/core": "workspace:*",
     "fractional-indexing": "^4.0.0",
-    "happy-dom": "21.0.4",
+    "happy-dom": "^21.0.4",
     "lz-string": "1.5.0"
   }
 }
