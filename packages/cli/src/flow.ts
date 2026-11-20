@@ -189,7 +189,7 @@ export async function editFlow(
 
 /** Load a screens file once, retaining only errors relevant to each selection. */
 export async function loadScreens(path: string) {
-  const source = await fileOp(`cannot read the screens file ${path}`, readFile(path, "utf8"));
+  const source = await readSource(path);
   const checked = checkScreens(source);
   return {
     path,

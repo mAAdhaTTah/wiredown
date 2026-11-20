@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { flowFrames, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, it } from "vitest";
@@ -214,3 +214,36 @@ it("refuses unsupported flows before creating output, with render JSON errors", 
   );
   await expect(readFile(out)).rejects.toMatchObject({ code: "ENOENT" });
 });
+
+it("reports a file that is not a drawing as an error, writing nothing", async () => {
+  const dir = await fixture({ "notes.excalidraw.md": "# Notes\n" });
+  const file = join(dir, "notes.excalidraw.md");
+  const message = 'not an Excalidraw drawing: no "## Drawing" json block';
+  const result = await run(["render", file, "--out", dir, "--json"]);
+  expect(result.exitCode).toBe(1);
+  expect(JSON.parse(result.stdout)).toMatchObject({ flow: null, errors: [{ message }] });
+  expect(await run(["render", file, "--out", dir])).toEqual({
+    exitCode: 1,
+    stdout: "",
+    stderr: `${file}: error: ${message}\n`,
+  });
+  await expect(readFile(join(dir, "notes.svg"))).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+it.skipIf(process.getuid?.() === 0)(
+  "exits 2 when a frame's screens file cannot be read",
+  async () => {
+    const dir = await fixture({ "screens.md": BASE });
+    const file = join(dir, "flows", "f.excalidraw.md");
+    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    const screens = join(dir, "screens.md");
+    await chmod(screens, 0o000);
+    try {
+      const result = await run(["render", file, "--out", dir]);
+      expect(result).toMatchObject({ exitCode: 2, stdout: "" });
+      expect(result.stderr).toContain(`cannot read ${screens}: EACCES`);
+    } finally {
+      await chmod(screens, 0o644);
+    }
+  },
+);
