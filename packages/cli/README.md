@@ -13,8 +13,8 @@ wiredown --help | <command> --help | --version
 the files it wrote on stdout and its findings on stderr. With `--json`,
 stdout is one JSON document and stderr is empty.
 
-Exit codes: 0 success; 1 the file has errors, or a screen could not be
-written; 2 bad usage or an unreadable file, with a message on stderr and
+Exit codes: 0 success; 1 the file has errors, a screen could not be
+written, or `render` had nothing to render; 2 bad usage or an unreadable file, with a message on stderr and
 nothing on stdout, even with `--json`. Any other error is a bug: Node
 prints its stack trace and exits 1.
 
@@ -27,7 +27,8 @@ a line it reads `path: ^id: error: message`.
 
 Checks every `wiredown` block in each file, resolving variants. Prints one
 line per finding and a summary line per file. Exits 1 if any file has
-errors; warnings don't fail.
+errors; warnings don't fail. A file with no `wiredown` blocks gets the
+warning `no wiredown blocks`, with no line.
 
 ```json
 {
@@ -52,7 +53,8 @@ Renders every screen with an `^id`, or only the `--screen` ids, to
 Variants render resolved. Screens without an id are skipped with a warning.
 A screen with errors is not rendered: its errors are reported as `check`
 reports them, the other screens still render, and the exit code is 1. An
-unknown `--screen` id is an error that lists the ids in the file.
+unknown `--screen` id is an error that lists the ids in the file. A file
+with no screen with an id is the error `no screens with an ^id to render`.
 
 Without `--json`, stdout has one `path  WxH` line per written file and the
 findings go to stderr. With `--json`:
@@ -77,7 +79,8 @@ findings go to stderr. With `--json`:
 `width` and `height` are the image's size, for sizing flow embeds. `boxes`
 holds the box of each `#id` in the screen, in image coordinates. The
 findings are those of the rendered screens plus any outside a screen; the
-error for an unknown `--screen` id has no `line`.
+errors for an unknown `--screen` id and for nothing to render have no
+`line`.
 
 `--theme dark` lets Excalidraw draw the dark theme; file names don't change,
 so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.

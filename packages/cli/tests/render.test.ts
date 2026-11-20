@@ -89,6 +89,20 @@ describe("render", { timeout: 30000 }, () => {
     ]);
   });
 
+  it("fails when there is nothing to render", async () => {
+    const dir = await fixture({
+      "notes.md": "# Notes\n",
+      "anon.md": "```wiredown\ntext: Hi\n```\n",
+    });
+    for (const name of ["notes.md", "anon.md"]) {
+      const file = join(dir, name);
+      const result = await render(file, { out: dir });
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain(`${file}: error: no screens with an ^id to render\n`);
+    }
+  });
+
   it("exits 2 on a missing file, with nothing on stdout", async () => {
     const result = await run(["render", "/nonexistent/screens.md", "--json"]);
     expect(result).toMatchObject({ exitCode: 2, stdout: "" });

@@ -48,6 +48,8 @@ export async function render(file: string, options: RenderOptions = {}): Promise
     errors.push({ message: `no screen "^${id}"${list}${hint}`, screen: id });
   }
 
+  if (!wanted.length) errors.push({ message: "no screens with an ^id to render" });
+
   const out = options.out ?? ".";
   const screens: RenderedScreen[] = [];
   for (const id of wanted) {

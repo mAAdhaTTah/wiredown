@@ -1,7 +1,6 @@
 import { checkScreens } from "@wiredown/core";
-import type { ScreenDiagnostic } from "@wiredown/core";
 import { formatFindings, json, plural, readSource } from "./output";
-import type { Result } from "./output";
+import type { Finding, Result } from "./output";
 
 export interface CheckOptions {
   json?: boolean;
@@ -10,8 +9,8 @@ export interface CheckOptions {
 export interface CheckedFile {
   file: string;
   screens: { id?: string; heading?: string; line: number }[];
-  errors: ScreenDiagnostic[];
-  warnings: ScreenDiagnostic[];
+  errors: Finding[];
+  warnings: Finding[];
 }
 
 /** Check each screens file; exit 1 if any has errors. Warnings don't fail. */
@@ -20,11 +19,12 @@ export async function check(files: string[], options: CheckOptions = {}): Promis
   const sources = await Promise.all(files.map(readSource));
   const results: CheckedFile[] = files.map((file, i) => {
     const { screens, errors, warnings } = checkScreens(sources[i]);
+    const empty: Finding[] = screens.length ? [] : [{ message: "no wiredown blocks" }];
     return {
       file,
       screens: screens.map(({ id, heading, line }) => ({ id, heading, line })),
       errors,
-      warnings,
+      warnings: [...empty, ...warnings],
     };
   });
   const exitCode = results.some((r) => r.errors.length) ? 1 : 0;

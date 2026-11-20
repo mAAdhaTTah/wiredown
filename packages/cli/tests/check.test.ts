@@ -33,6 +33,18 @@ describe("check", () => {
     expect(result.stdout).toContain("1 screen, 0 errors, 2 warnings");
   });
 
+  it("warns about a file with no wiredown blocks, without failing", async () => {
+    const dir = await fixture({ "notes.md": "# Notes\n" });
+    const file = join(dir, "notes.md");
+    expect(await check([file])).toEqual({
+      exitCode: 0,
+      stdout: `${file}: warning: no wiredown blocks\n${file}: 0 screens, 0 errors, 1 warning\n`,
+      stderr: "",
+    });
+    const parsed = JSON.parse((await check([file], { json: true })).stdout);
+    expect(parsed.files[0].warnings).toEqual([{ message: "no wiredown blocks" }]);
+  });
+
   it("prints one JSON document for several files", async () => {
     const dir = await fixture({ "a.md": BASE, "b.md": BASE.replace("button:", "buton:") });
     const [a, b] = [join(dir, "a.md"), join(dir, "b.md")];
