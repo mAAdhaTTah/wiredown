@@ -127,6 +127,6 @@ export async function run(argv: string[]): Promise<Result> {
     if ((error as { code?: string }).code?.startsWith("ERR_PARSE_ARGS")) {
       return usage((error as Error).message, command.help);
     }
-    return { exitCode: 2, stdout: "", stderr: `wiredown: ${String(error)}\n` };
+    throw error;
   }
 }

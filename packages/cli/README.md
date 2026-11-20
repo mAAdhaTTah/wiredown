@@ -15,11 +15,13 @@ stdout is one JSON document and stderr is empty.
 
 Exit codes: 0 success; 1 the file has errors, or a screen could not be
 written; 2 bad usage or an unreadable file, with a message on stderr and
-nothing on stdout, even with `--json`.
+nothing on stdout, even with `--json`. Any other error is a bug: Node
+prints its stack trace and exits 1.
 
-A finding is `{ line, message, screen? }`: a 1-based line in the file and
-the `^id` of the screen it belongs to, when known. Printed, it reads
-`path:line: ^id: error: message` (or `warning:`).
+A finding is `{ line?, message, screen? }`: the 1-based line in the file,
+when it has one, and the `^id` of the screen it belongs to, when known.
+Printed, it reads `path:line: ^id: error: message` (or `warning:`); without
+a line it reads `path: ^id: error: message`.
 
 ## check
 
@@ -80,9 +82,30 @@ error for an unknown `--screen` id has no `line`.
 `--theme dark` lets Excalidraw draw the dark theme; file names don't change,
 so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
 
-## Programmatic use
+## API
 
-`run(argv)` and the commands `check(files, options)` and
-`render(file, options)` return `{ exitCode, stdout, stderr }` without
-writing to the terminal or exiting; the `bin/wiredown.js` entry prints the
-result. Build the package (`pnpm build`) before running the bin.
+The root export runs the commands without a terminal. Each resolves to a
+`Result`, `{ exitCode, stdout, stderr }`, and never writes to the terminal
+or exits; `bin/wiredown.js` prints the result. Build the package
+(`pnpm build`) before running the bin.
+
+- **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
+  the script, as `bin/wiredown.js` does. Bad usage and unreadable files
+  give exit code 2; any other error rejects.
+- **Check** (`check`): `check(files, options?)` runs the `check` command
+  on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
+  entry of the JSON document's `files`.
+- **Render** (`render`): `render(file, options?)` runs the `render`
+  command. `RenderOptions` are all optional: `screens` (ids; all screens
+  with an id when empty), `out` (default `.`), `theme` (`"light"` or
+  `"dark"`), `fonts` (default true) and `json`. `RenderedScreen` is one
+  entry of the JSON document's `screens`.
+- **Output** (`output`): `UsageError`, which `check` and `render` throw
+  for an unreadable file and `run` turns into exit code 2. `Finding` is a
+  finding as above; `Result` is what every command returns.
+
+```ts
+import { render } from "@wiredown/cli";
+
+const { exitCode, stdout } = await render("screens.md", { out: "out", json: true });
+```
