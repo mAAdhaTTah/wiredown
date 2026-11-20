@@ -32,9 +32,6 @@ pnpm test
 
 `pnpm format` applies formatting. Build and typecheck run each package's
 scripts; tests run all package projects through the root Vitest config.
-In type-checking and unit tests, workspace package imports resolve to their
-source; the CLI bin, the bundles and code that imports a `dist/` path use
-the build, so run `pnpm build` before `pnpm typecheck` and `pnpm test`.
 After a build, `pnpm exec wiredown` runs the CLI from the repository root.
 TypeScript 6 is used because typescript-eslint does not yet support
 TypeScript 7.
