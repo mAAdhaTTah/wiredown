@@ -29,6 +29,6 @@
   "dependencies": {
     "@excalidraw/utils": "0.1.8",
     "@wiredown/core": "workspace:*",
-    "happy-dom": "21.0.4"
+    "happy-dom": "^21.0.4"
   }
 }
