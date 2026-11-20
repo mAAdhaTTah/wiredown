@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { layoutScreen, parse } from "@wiredown/core";
 import { beforeAll, describe, expect, it } from "vitest";
 import { screenElements } from "../src/index";
@@ -14,6 +15,14 @@ const source = proposal.split("```wiredown\n")[1].split("\n```")[0];
 const tree = parse(source).tree;
 const screen = screenElements(layoutScreen(tree));
 let svg: string;
+
+// Runs the built entry in a fresh Node process, as a consumer would.
+const runNode = (...args: string[]) =>
+  execFileSync(process.execPath, [...args, JSON.stringify(screen.elements)], {
+    cwd: new URL("..", import.meta.url),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
 
 beforeAll(async () => {
   svg = await renderSvg(screen.elements);
@@ -51,18 +60,14 @@ describe("Node SVG export", () => {
       const elements = JSON.parse(process.argv[1]);
       process.stdout.write(await renderSvg(elements));
     `;
-    const run = () =>
-      execFileSync(
-        process.execPath,
-        ["--input-type=module", "-e", script, JSON.stringify(screen.elements)],
-        {
-          cwd: new URL("..", import.meta.url),
-          encoding: "utf8",
-          stdio: ["ignore", "pipe", "pipe"],
-        },
-      );
-    expect(run()).toBe(svg);
-    expect(run()).toBe(svg);
+    expect(runNode("--input-type=module", "-e", script)).toBe(svg);
+    expect(runNode("--input-type=module", "-e", script)).toBe(svg);
+  }, 15000);
+
+  it("can be required from CommonJS", () => {
+    // A file, not `node -e`: -e defines a global __dirname, which changes how
+    // Excalidraw embeds the font.
+    expect(runNode(fileURLToPath(new URL("require.cjs", import.meta.url)))).toBe(svg);
   }, 15000);
 
   it("returns layout dimensions and boxes for the CLI convenience", async () => {
