@@ -98,29 +98,79 @@ function rowKey(row: string, pipe: boolean): string {
   return cells.find((c) => c && !parseCheck(c)) ?? "";
 }
 
-function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
+/** Applies a rows: patch to a grid; `lines` are the block's, to name each patch row's line. */
+function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[], lines: string[]): void {
   const rows = [grid.text, ...grid.body].filter(Boolean);
   const pipe = [...rows, ...op.body].some((r) => r.includes("|"));
   const sep = pipe ? " | " : ", ";
-  const find = (key: string) => rows.findIndex((r, i) => i > 0 && rowKey(r, pipe) === key);
+  // the header sets the width; a grid with no rows yet takes any
+  const columns = rows.length ? split(rows[0].replace(MARKS, ""), pipe).length : Infinity;
   const keys = () => rows.slice(1).map((r) => rowKey(r, pipe));
+  /** The row with this key: -1 if none, null if several (an error: which is meant?). */
+  const find = (key: string, line: number) => {
+    const hits = keys().flatMap((k, ri) => (k === key ? [ri + 1] : []));
+    if (hits.length > 1) {
+      errors.push({
+        line,
+        message: `rows: "${key}" matches ${hits.length} rows in the grid "${grid.id}"`,
+      });
+    }
+    return hits.length === 1 ? hits[0] : hits.length ? null : -1;
+  };
+  /** The line that changed each row; a second change is an error, as only one would count. */
+  const changed = new Map<string, number>();
+  const twice = (key: string, line: number) => {
+    const first = changed.get(key);
+    if (first !== undefined) {
+      errors.push({ line, message: `rows: "${key}" is changed twice; first on line ${first}` });
+    }
+    return first !== undefined;
+  };
+  // the patch rows follow the rows: line; comment lines between them don't count
+  const patchLines: number[] = [];
+  for (let n = op.line ?? 0; patchLines.length < op.body.length && n < lines.length; n++) {
+    if (!lines[n].trim().startsWith("//")) patchLines.push(n + 1);
+  }
   op.body.forEach((patch, i) => {
-    const line = (op.line ?? 0) + 1 + i;
+    const line = patchLines[i];
     const removal = /^remove\s+(.+)$/i.exec(patch);
     if (removal && !patch.includes(pipe ? "|" : ",")) {
-      const at = find(removal[1].trim());
+      const key = removal[1].trim();
+      const at = find(key, line);
+      if (at === null || twice(key, line)) return;
       if (at < 0) {
         errors.push({
           line,
-          message: `no row "${removal[1].trim()}" in the grid "${grid.id}"; its rows are: ${keys().join(", ")}`,
+          message: `no row "${key}" in the grid "${grid.id}"; its rows are: ${keys().join(", ")}`,
         });
-      } else rows.splice(at, 1);
+      } else {
+        rows.splice(at, 1);
+        changed.set(key, line);
+      }
       return;
     }
     const marks = (MARKS.exec(patch) ?? [""])[0].replace(/\s/g, "");
-    const cells = split(patch.replace(MARKS, ""), pipe);
+    let cells = split(patch.replace(MARKS, ""), pipe);
     const key = cells.find((c) => c && c !== "=" && !parseCheck(c)) ?? "";
-    const at = find(key);
+    const at = find(key, line);
+    if (at === null || twice(key, line)) return;
+    // a patch that leaves out the checkbox starts at the key column: of the
+    // row it changes or, for a row it adds, of the last row
+    const like = rows[at > 0 ? at : rows.length - 1];
+    let implied = "";
+    if (like && parseCheck(split(like.replace(MARKS, ""), pipe)[0])) {
+      if (cells[0] !== "=" && !parseCheck(cells[0])) {
+        cells = [at > 0 ? "=" : "[ ]", ...cells];
+        implied = " with its checkbox";
+      }
+    }
+    if (cells.length > columns) {
+      errors.push({
+        line,
+        message: `rows: "${key}" has ${cells.length} cells${implied}, but the grid "${grid.id}" has ${columns} columns`,
+      });
+      return;
+    }
     if (at < 0) {
       if (cells.includes("=")) {
         errors.push({
@@ -130,6 +180,7 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
         return;
       }
       rows.push(marks + cells.join(sep));
+      changed.set(key, line);
       return;
     }
     const base = split(rows[at].replace(MARKS, ""), pipe);
@@ -137,6 +188,7 @@ function patchRows(grid: SpecNode, op: SpecNode, errors: ParseError[]): void {
       ci >= cells.length || cells[ci] === "=" ? cell : cells[ci],
     );
     rows[at] = marks + merged.concat(cells.slice(base.length)).join(sep);
+    changed.set(key, line);
   });
   grid.text = rows[0] ?? "";
   grid.body = rows.slice(1);
@@ -245,7 +297,7 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
             line: at,
             message: `rows: "${op.text}" is a ${hit.node.type}, not a grid`,
           });
-        } else patchRows(hit.node, op, errors);
+        } else patchRows(hit.node, op, errors, source.replace(/\r/g, "").split("\n"));
         break;
       }
       case "replace": {

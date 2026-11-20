@@ -31,7 +31,7 @@ replace: seats
 replace: notice
   alert: {check} Erik Lund was removed from the team. [Undo]
 rows: members
-  [ ] | Maja Berg | = | = | = | Active
+  [ ] | Maja Berg | = | = | Active
   remove Erik Lund
 after: members
   text: -Removed members keep access until the end of the day-`);
@@ -55,7 +55,7 @@ after: members
 text: 2 of 5 seats used (id=seats)
 alert: {check} Erik Lund was removed from the team. [Undo] (id=notice)
 rows: members
-  [ ] | Maja Berg | = | = | = | Active
+  [ ] | Maja Berg | = | = | Active
   remove Erik Lund`);
     expect(r.errors).toEqual([
       {

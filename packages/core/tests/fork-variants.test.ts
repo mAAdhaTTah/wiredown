@@ -138,6 +138,167 @@ describe("rows", () => {
     ]);
   });
 
+  const members = [
+    "grid #members",
+    "[ ] | Name | Email | Role | Status",
+    "[ ] | Maja Berg | maja@example.com | Member | Invited",
+  ].join("\n");
+
+  it("lets rows fill a grid that has none yet", () => {
+    const r = run("extends: base\nrows: empty\n  Name | Role\n  Anna | Admin", {
+      base: "grid #empty",
+    });
+    expect(r.errors).toEqual([]);
+    const grid = r.tree.children[0];
+    expect([grid.text, ...grid.body].filter(Boolean)).toEqual(["Name | Role", "Anna | Admin"]);
+  });
+
+  it.each(["Maja Berg", "Anna Svensson"])("rejects an overwide row for %s", (key) => {
+    const r = run(`extends: base\nrows: members\n  [ ] | ${key} | = | = | = | Active`, {
+      base: members,
+    });
+    expect(r.errors).toEqual([
+      {
+        line: 3,
+        message: `rows: "${key}" has 6 cells, but the grid "members" has 5 columns`,
+      },
+    ]);
+    expect(r.tree.children[0]).toMatchObject({
+      text: "[ ] | Name | Email | Role | Status",
+      body: ["[ ] | Maja Berg | maja@example.com | Member | Invited"],
+    });
+  });
+
+  it("rejects an overwide new row without keep-cell placeholders", () => {
+    const r = run(
+      "extends: base\nrows: members\n  [ ] | Anna Svensson | anna@example.com | Admin | Active | Extra",
+      { base: members },
+    );
+    expect(r.errors).toEqual([
+      {
+        line: 3,
+        message: 'rows: "Anna Svensson" has 6 cells, but the grid "members" has 5 columns',
+      },
+    ]);
+    expect(r.tree.children[0]).toMatchObject({
+      text: "[ ] | Name | Email | Role | Status",
+      body: ["[ ] | Maja Berg | maja@example.com | Member | Invited"],
+    });
+  });
+
+  it.each(["", "*", ">"])("accepts a full-width patch with mark %j", (mark) => {
+    const r = run(`extends: base\nrows: members\n  ${mark}[ ] | Maja Berg | = | = | Active`, {
+      base: members,
+    });
+    expect(r.errors).toEqual([]);
+    expect(r.tree.children[0].body).toEqual([
+      `${mark}[ ] | Maja Berg | maja@example.com | Member | Active`,
+    ]);
+  });
+
+  it("accepts a shorter new row", () => {
+    const r = run("extends: base\nrows: members\n  [ ] | Anna Svensson", { base: members });
+    expect(r.errors).toEqual([]);
+    expect(r.tree.children[0].body).toEqual([
+      "[ ] | Maja Berg | maja@example.com | Member | Invited",
+      "[ ] | Anna Svensson",
+    ]);
+  });
+
+  it("checks comma-separated rows against their header width", () => {
+    const base = members.replaceAll(" | ", ", ");
+    const r = run(
+      "extends: base\nrows: members\n  [ ], Maja Berg, =, =, =, Active\n  >[ ], Maja Berg, =, =, Active",
+      { base },
+    );
+    expect(r.errors).toEqual([
+      {
+        line: 3,
+        message: 'rows: "Maja Berg" has 6 cells, but the grid "members" has 5 columns',
+      },
+    ]);
+    expect(r.tree.children[0].body).toEqual([">[ ], Maja Berg, maja@example.com, Member, Active"]);
+  });
+
+  it("lines up a patch that leaves out the checkbox cell", () => {
+    const base =
+      "grid #g\n[ ] | Name | Email | Role\n[ ] | Anna | a@x | Member\n[x] | Erik | e@x | Member";
+    const without = run("extends: base\nrows: g\n  Anna | = | Admin", { base });
+    const withBox = run("extends: base\nrows: g\n  [ ] | Anna | = | Admin", { base });
+    expect(without.errors).toEqual([]);
+    expect(without.tree).toEqual(withBox.tree);
+    expect(without.tree.children[0].body).toEqual([
+      "[ ] | Anna | a@x | Admin",
+      "[x] | Erik | e@x | Member",
+    ]);
+  });
+
+  it("lines up a new row that leaves out the checkbox cell", () => {
+    const base = "grid #g\n[ ] | Name | Email\n[ ] | Anna | a@x";
+    const r = run("extends: base\nrows: g\n  Cara | c@x\n  Dan | d@x | x", { base });
+    expect(r.errors).toEqual([
+      {
+        line: 4,
+        message: 'rows: "Dan" has 4 cells with its checkbox, but the grid "g" has 3 columns',
+      },
+    ]);
+    expect(r.tree.children[0].body).toEqual(["[ ] | Anna | a@x", "[ ] | Cara | c@x"]);
+    // without a checkbox column, a new row is added as written
+    const plain = run("extends: base\nrows: g\n  Cara | c@x", { base: "grid #g\nName | Email" });
+    expect(plain.tree.children[0].body).toEqual(["Cara | c@x"]);
+  });
+
+  it("rejects a row changed twice in one patch", () => {
+    const base = "grid #g\n[ ] | Name | Role\n[ ] | Anna | Member\n[ ] | Erik | Member";
+    const r = run(
+      "extends: base\nrows: g\n  Anna | Admin\n  Anna | Owner\n  remove Erik\n  remove Erik",
+      { base },
+    );
+    expect(r.errors).toEqual([
+      { line: 4, message: 'rows: "Anna" is changed twice; first on line 3' },
+      { line: 6, message: 'rows: "Erik" is changed twice; first on line 5' },
+    ]);
+    expect(r.tree.children[0].body).toEqual(["[ ] | Anna | Admin"]);
+  });
+
+  it("names the source lines of patch rows with comments between them", () => {
+    const base = "grid #g\nName | Role\nAnna | User";
+    const r = run(
+      "extends: base\nrows: g\n  // note\n  Anna | Admin\n  // note\n  Anna | Owner\n  remove Erik",
+      { base },
+    );
+    expect(r.errors).toEqual([
+      { line: 6, message: 'rows: "Anna" is changed twice; first on line 4' },
+      { line: 7, message: 'no row "Erik" in the grid "g"; its rows are: Anna' },
+    ]);
+    // a blank line ends the patch, so a row after it is not understood
+    const blank = run("extends: base\nrows: g\n  Anna | Admin\n\n  Anna | Owner", { base });
+    expect(blank.errors).toEqual([{ line: 5, message: 'don\'t understand "Anna | Owner"' }]);
+  });
+
+  it("counts a patch's width after lining it up", () => {
+    // "Anna" in the checkbox column was the old reading of this patch
+    const base = "grid #g\n[ ] | Name | Role\n[ ] | Anna | Member";
+    expect(run("extends: base\nrows: g\n  Anna | = | Admin", { base }).errors).toEqual([
+      {
+        line: 3,
+        message: 'rows: "Anna" has 4 cells with its checkbox, but the grid "g" has 3 columns',
+      },
+    ]);
+  });
+
+  it("rejects a patch or removal whose key matches several rows", () => {
+    const base = "grid #members\n[ ] | Name | Role\n[ ] | Anna | Member\n[ ] | Anna | Admin";
+    const r = run("extends: base\nrows: members\n  Anna | = | Owner\n  remove Anna", { base });
+    expect(r.errors).toEqual([
+      { line: 3, message: 'rows: "Anna" matches 2 rows in the grid "members"' },
+      { line: 4, message: 'rows: "Anna" matches 2 rows in the grid "members"' },
+    ]);
+    expect(r.tree.children[0].body).toEqual(["[ ] | Anna | Member", "[ ] | Anna | Admin"]);
+    // a grid no variant patches may repeat a key
+    expect(run("extends: base", { base }).errors).toEqual([]);
+  });
+
   it("never treats the header as a row to change", () => {
     const r = run("extends: base\nrows: boards\n  remove Board");
     expect(r.errors[0].message).toContain('no row "Board"');
