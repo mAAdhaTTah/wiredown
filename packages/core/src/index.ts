@@ -18,7 +18,12 @@ export {
 } from "./metrics";
 export type { FontMetrics } from "./metrics";
 export { layout } from "./layout";
-export type { LayoutEnv } from "./layout";
+export type { Box, LayoutResult, LayoutEnv } from "./layout";
 export { DARK_COLORS, DARK_INK, DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme";
 export { ICON_NAMES, isIcon } from "./icons";
 export type * from "./types";
+export { EXCALIFONT } from "./metrics-excalifont";
+export { layoutScreen } from "./screen";
+export type { LayoutScreenOptions } from "./screen";
+export { parseScreens, checkScreens } from "./screens";
+export type { Screen, CheckedScreen, ScreenDiagnostic, CheckScreensResult } from "./screens";

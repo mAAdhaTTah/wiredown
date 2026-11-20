@@ -88,13 +88,22 @@ function markInvalid(ctx: DrawContext, x: number, y: number, size: Size): Size {
 /** Space between a component and its (focus) outline. */
 const FOCUS_GAP = 4;
 
+export type Box = { x: number; y: number; w: number; h: number };
+
+export interface LayoutResult {
+  ops: DrawOp[];
+  size: Size;
+  boxes: Record<string, Box>;
+}
+
 export function layout(
   tree: SpecNode,
   origin: { x: number; y: number },
   env: LayoutEnv,
-): { ops: DrawOp[]; size: Size } {
+): LayoutResult {
   tree = layoutDefaults(tree);
   const ops: DrawOp[] = [];
+  const boxes: Record<string, Box> = {};
   const textStyle: TextStyle = { fontSize: env.style.fontSize, fontFamily: env.style.fontFamily };
   // Optional keys are only added when set, so ops without overrides stay
   // exactly as they were before overrides existed.
@@ -180,6 +189,9 @@ export function layout(
           rounded: true,
         });
       }
+      if (!ctx.dry && node.id) {
+        boxes[node.id] = { x, y, ...r };
+      }
       ctx.ink = ink;
       return r;
     },
@@ -206,5 +218,5 @@ export function layout(
     },
   };
   const size = ctx.draw(tree, origin.x, origin.y);
-  return { ops, size };
+  return { ops, size, boxes };
 }

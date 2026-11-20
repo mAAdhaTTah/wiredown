@@ -51,6 +51,13 @@ describe("extends", () => {
   it("is found on the first line that isn't a comment", () => {
     expect(extendsId("// after applying\nextends: ^base\nremove: notice")).toBe("base");
     expect(extendsId("window: A")).toBeNull();
+    expect(extendsId("extends: ^2fa")).toBe("2fa");
+  });
+
+  it("names a base's error by its line in the base block", () => {
+    expect(run("extends: bad", { bad: "text: a\nbuton: B" }).errors).toEqual([
+      { line: 1, message: 'in "bad", line 2: unknown component "buton"; did you mean "button"?' },
+    ]);
   });
 
   it("draws the base unchanged when nothing else is said", () => {
@@ -191,5 +198,11 @@ describe("variant errors", () => {
   it("rejects a directive outside a variant", () => {
     const r = resolve("window: A\nremove: x");
     expect(r.errors[0].message).toContain("only works in a block whose first line is");
+  });
+
+  it("names a malformed screen id in extends:", () => {
+    expect(resolve("extends: a_b\nremove: x").errors).toEqual([
+      { line: 1, message: 'extends: invalid screen id "a_b"; use letters, digits and hyphens' },
+    ]);
   });
 });

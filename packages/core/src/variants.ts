@@ -24,7 +24,14 @@ export interface ResolveOptions {
   lookup?: Lookup;
   /** Ids of every screen the host knows, for "did you mean". */
   known?: () => string[];
+  /** The line to name for a line of the screen with this id; its block line by default. */
+  lineOf?: (id: string, line: number) => number;
 }
+
+/** A block id: letters, digits and hyphens, as after "^" in a screens document. */
+export const BLOCK_ID = /[A-Za-z0-9-]+/;
+// any single word, so that a malformed id gets its own error
+const EXTENDS = /^extends\s*:\s*\^?(\S+)\s*$/i;
 
 const DIRECTIVES = new Set(["extends", "remove", "after", "before", "rows", "replace"]);
 const MAX_DEPTH = 8;
@@ -41,7 +48,7 @@ function firstLine(source: string): { text: string; line: number } | null {
 /** The id a block extends, or null for an ordinary block. */
 export function extendsId(source: string): string | null {
   const first = firstLine(source);
-  const m = first && /^extends\s*:\s*\^?([A-Za-z][\w-]*)\s*$/i.exec(first.text);
+  const m = first && EXTENDS.exec(first.text);
   return m ? m[1] : null;
 }
 
@@ -149,6 +156,9 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
     tree: { ...tree, children: [] },
     errors: [...errors, { line, message }],
   });
+  if (!new RegExp(`^${BLOCK_ID.source}$`).test(baseId)) {
+    return fail(`extends: invalid screen id "${baseId}"; use letters, digits and hyphens`);
+  }
   if (chain.includes(baseId) || chain.length >= MAX_DEPTH) {
     return fail(`extends: "${baseId}" extends itself (${[...chain, baseId].join(" → ")})`);
   }
@@ -167,7 +177,8 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
   }
   const base = resolveAt(baseSource, o, [...chain, baseId]);
   for (const e of base.errors) {
-    errors.push({ line, message: `in "${baseId}", line ${e.line}: ${e.message}` });
+    const at = o.lineOf?.(baseId, e.line) ?? e.line;
+    errors.push({ line, message: `in "${baseId}", line ${at}: ${e.message}` });
   }
   const out = base.tree;
   check(tree, errors, true);

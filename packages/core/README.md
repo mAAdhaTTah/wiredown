@@ -59,21 +59,39 @@ The root export is the whole public API.
   block and, when its first line is `extends: <id>`, applies it to the
   screen `lookup(id)` returns. Use `resolve` rather than `parse` for any
   block that may be a variant; its options are a `ResolveOptions`, with
-  `lookup` a `Lookup`. `extendsId(source)` reads that id;
+  `lookup` a `Lookup`, and an optional `lineOf` that maps a base screen's
+  lines for its errors. `extendsId(source)` reads that id;
   `serialize(tree)` turns a tree back into spec text.
-- **Layout** (`layout`): `layout(tree, origin, env)` returns
-  `{ ops: DrawOp[], size }`. `env` is a `LayoutEnv`: a `measure` function,
-  the text `style` (`fontSize`, and a numeric `fontFamily` that layout only
-  passes on to `measure`), an optional `theme` (default `DEFAULT_THEME`) and an optional
-  `maxWidth` to wrap grids, alerts and text to.
-- **Metrics** (`metrics`): `tableMeasure` measures with the bundled Arimo
-  advance table, and `unmeasured(text)` lists characters that table lacks.
-  `fontMeasurer(font)` builds the same pair from any `FontMetrics`. Also
-  `FONT_STACK`, `FONT_CSS`, `LINE_HEIGHT`, `ASCENT`, `DESCENT`.
+- **Layout** (`layout`): `layout(tree, origin, env)` returns a
+  `LayoutResult`, `{ ops: DrawOp[], size, boxes }`, where `boxes` maps the
+  id of every component that has one to its `Box`. `env` is a `LayoutEnv`:
+  a `measure` function, the text `style` (`fontSize`, and a numeric
+  `fontFamily` that layout only passes on to `measure`), an optional
+  `theme` (default `DEFAULT_THEME`) and an optional `maxWidth` to wrap
+  grids, alerts and text to.
+- **Screen layout** (`screen`): `layoutScreen(tree, options)` is `layout`
+  with the defaults every surface shares: origin `0,0`, Excalifont
+  (`EXCALIFONT`) at `FONT_SIZE`. Its `LayoutScreenOptions` are an optional
+  `maxWidth` and `theme`.
+- **Metrics** (`metrics`, `metrics-excalifont`): `tableMeasure` measures
+  with the bundled Arimo advance table, and `unmeasured(text)` lists
+  characters that table lacks. `fontMeasurer(font)` builds the same pair
+  from any `FontMetrics`, such as `EXCALIFONT`, Excalifont's advances and
+  kerning. Also `FONT_STACK`, `FONT_CSS`, `LINE_HEIGHT`, `ASCENT`,
+  `DESCENT`.
 - **Theme** (`theme`): `DEFAULT_THEME`, `DARK_COLORS`, `FONT_SIZE`, `INK`
   (a fill value meaning "the stroke colour"), and the ink colours for a
   light and a dark page, `LIGHT_INK` and `DARK_INK`.
 - **Icons** (`icons`): `ICON_NAMES` and `isIcon(name)`.
+- **Screens documents** (`screens`): a Markdown file whose `wiredown`
+  fenced blocks are screens, each named by a `^id` line after its fence.
+  `parseScreens(markdown)` returns every block as a `Screen` (its `id`, the
+  `heading` above it, its `source` and the file `line` of its first line)
+  and throws on an unclosed fence. `checkScreens(markdown)` checks every
+  block, resolving variants against the first block with each id, and
+  returns a `CheckScreensResult`: the `CheckedScreen`s (each with its
+  tree), and `errors` and `warnings` as `ScreenDiagnostic`s with file
+  lines.
 - **Types** (`types`): every type, including `SpecNode`, `ParseResult`,
   `DrawOp` and its four op kinds, `MeasureText`, `TextStyle` and `Theme`.
 
