@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
@@ -94,4 +94,18 @@ test("lint passes when clean, warnings don't fail, and defaults to .", async () 
   const missing = await run(["lint", join(dir, "nope")]);
   expect(missing.exitCode).toBe(2);
   expect(missing.stderr).toContain("cannot read");
+});
+
+test.skipIf(process.getuid?.() === 0)("exits 2 on a directory it cannot read", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  const locked = join(dir, "locked");
+  await mkdir(locked);
+  await chmod(locked, 0o000);
+  try {
+    const result = await run(["lint", dir]);
+    expect(result).toMatchObject({ exitCode: 2, stdout: "" });
+    expect(result.stderr).toContain(`cannot read ${locked}: EACCES`);
+  } finally {
+    await chmod(locked, 0o755);
+  }
 });

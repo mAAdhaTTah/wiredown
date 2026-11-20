@@ -16,11 +16,12 @@ export interface CheckedFile {
 /** One screens file's result, as `check` reports it. */
 export function checkSource(file: string, source: string): CheckedFile {
   const { screens, errors, warnings } = checkScreens(source);
+  const empty: Finding[] = screens.length ? [] : [{ message: "no wiredown blocks" }];
   return {
     file,
     screens: screens.map(({ id, heading, line }) => ({ id, heading, line })),
     errors,
-    warnings,
+    warnings: [...empty, ...warnings],
   };
 }
 
