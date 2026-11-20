@@ -1,0 +1,32 @@
+{
+  "name": "@wiredown/cli",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "wiredown": "./bin/wiredown.js"
+  },
+  "exports": {
+    ".": {
+      "@wiredown/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wiredown/core": "workspace:*",
+    "@wiredown/excalidraw": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6"
+  }
+}

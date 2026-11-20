@@ -5,14 +5,14 @@ rendered as hand-drawn Excalidraw sketches, and composed into user-flow
 drawings. It is built to be written mostly by an AI coding agent and reviewed
 by a person in Obsidian and in a Git forge.
 
-Packages (`@wiredown/core` and `@wiredown/excalidraw` exist so far; the rest
-are planned):
+Packages (`@wiredown/core`, `@wiredown/excalidraw` and `@wiredown/cli`
+exist so far; the rest are planned):
 
 | Package                    | Purpose                                                |
 | -------------------------- | ------------------------------------------------------ |
 | `@wiredown/core`           | Parser, variants, layout, text metrics, and validation |
-| `@wiredown/excalidraw`     | Excalidraw elements (SVG export is planned)            |
-| `@wiredown/cli`            | Headless checks, rendering, and flow commands          |
+| `@wiredown/excalidraw`     | Excalidraw elements and headless SVG export            |
+| `@wiredown/cli`            | `wiredown check` and `render` (flow commands planned)  |
 | `packages/obsidian-plugin` | Obsidian code-block processor                          |
 | `@wiredown/web`            | Rendering for Markdown hosts, starting with Gitea      |
 
@@ -32,6 +32,7 @@ pnpm test
 
 `pnpm format` applies formatting. Build and typecheck run each package's
 scripts; tests run all package projects through the root Vitest config.
+After a build, `pnpm exec wiredown` runs the CLI from the repository root.
 TypeScript 6 is used because typescript-eslint does not yet support
 TypeScript 7.
 
