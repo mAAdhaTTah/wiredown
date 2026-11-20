@@ -13,7 +13,11 @@ export interface LintOptions {
 
 /** Markdown files under a directory, skipping node_modules and dot-directories. */
 async function walk(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
+  const entries = await readdir(dir, { withFileTypes: true }).catch(
+    (error: NodeJS.ErrnoException) => {
+      throw new UsageError(`cannot read ${dir}: ${error.code ?? String(error)}`);
+    },
+  );
   const out: string[] = [];
   for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
     const path = join(dir, e.name);
