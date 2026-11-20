@@ -443,9 +443,13 @@ or exits; `bin/wiredown.js` prints the result. Build the package
 - **Render** (`render`): `render(file, options?)` runs the `render`
   command on a screens file or a `*.excalidraw.md` flow. `RenderOptions`
   are all optional: `screens` (ids, for a screens file; all screens with an
-  id when empty), `out` (default `.`), `theme` (`"light"` or `"dark"`),
-  `fonts` (default true) and `json`. `RenderedScreen` is one entry of the
-  JSON document's `screens`.
+  id when empty), `out` (default `.`), `format` (`"svg"` or `"png"`,
+  default `"svg"`), `scale` (PNG pixels per SVG pixel, default 2),
+  `transparent`, `theme` (`"light"` or `"dark"`), `fonts` (default true;
+  SVG only) and `json`. `Output` is a written image,
+  `{ svg?, png?, width, height, pixelWidth?, pixelHeight? }`, as in the
+  JSON document's `flow`; `RenderedScreen` is an `Output` with `id` and
+  `boxes`, one entry of its `screens`.
 - **Lint** (`lint`, `flow`): `lint(paths, options?)` runs the `lint`
   command on files and directories (`.` when empty). `LintOptions` is
   `{ json? }`; `LintedFlow`, `{ file, findings }`, is one entry of the JSON
