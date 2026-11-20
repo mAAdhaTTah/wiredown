@@ -190,12 +190,7 @@ export function layout(
         });
       }
       if (!ctx.dry && node.id) {
-        Object.defineProperty(boxes, node.id, {
-          value: { x, y, ...r },
-          enumerable: true,
-          configurable: true,
-          writable: true,
-        });
+        boxes[node.id] = { x, y, ...r };
       }
       ctx.ink = ink;
       return r;

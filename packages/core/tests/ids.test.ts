@@ -39,6 +39,16 @@ describe("#id shorthand", () => {
     expect(tree.children[0].id).toBeUndefined();
   });
 
+  // layout() records boxes by plain assignment, which relies on this:
+  // an id of "__proto__" would replace the boxes object's prototype.
+  it("never gives an id that could be an object's prototype", () => {
+    const short = parse("button: Save #__proto__");
+    expect(short.tree.children[0].id).toBeUndefined();
+    const long = parse("button: Save (id=__proto__)");
+    expect(long.tree.children[0].id).toBeUndefined();
+    expect(long.errors).toHaveLength(1);
+  });
+
   it("keeps grid headers and rows literal, including a trailing #word", () => {
     const { tree, errors } = parse("grid #members\n# | Name | Role\n1 | Anna | #admin");
     expect(errors).toEqual([]);
