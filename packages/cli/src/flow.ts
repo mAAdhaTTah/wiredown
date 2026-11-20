@@ -164,7 +164,7 @@ export async function editFlow(
 
 /** Load a screens file once, retaining only errors relevant to each selection. */
 export async function loadScreens(path: string) {
-  const source = await readFile(path, "utf8");
+  const source = await readSource(path);
   const checked = checkScreens(source);
   return {
     path,

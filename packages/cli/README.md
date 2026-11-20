@@ -352,6 +352,9 @@ are reported, and the command exits 1. Flow JSON is
 `{ file, flow: { svg, width, height }, errors, warnings }`. The size is
 rounded to whole pixels, as a screen's is; the SVG keeps Excalidraw's exact
 size.
+A file that is not an Excalidraw drawing, or a drawing written by a newer
+wiredown, is an error (exit 1) and nothing is written; a screens file an
+embed names that cannot be read exits 2.
 
 Flow embeds include their own Excalifont copy, since nested SVG images cannot
 use the outer SVG's fonts. Each distinct screen is rendered once. This adds
@@ -364,3 +367,38 @@ Dark flows use light screen images with Excalidraw's own dark image filter.
 Flow renders reject drawing image files unless they contain inline PNG, JPEG,
 GIF, WebP or SVG data URLs; each rejection is a finding (exit 1), and the
 render is still written, as with missing screens.
+
+## API
+
+The root export runs the commands without a terminal. Each resolves to a
+`Result`, `{ exitCode, stdout, stderr }`, and never writes to the terminal
+or exits; `bin/wiredown.js` prints the result. Build the package
+(`pnpm build`) before running the bin.
+
+- **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
+  the script, as `bin/wiredown.js` does. Bad usage and unreadable files
+  give exit code 2, and the `flow` commands report their own errors with
+  exit code 1; any other error rejects.
+- **Check** (`check`): `check(files, options?)` runs the `check` command
+  on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
+  entry of the JSON document's `files`.
+- **Render** (`render`): `render(file, options?)` runs the `render`
+  command on a screens file or a `*.excalidraw.md` flow. `RenderOptions`
+  are all optional: `screens` (ids, for a screens file; all screens with an
+  id when empty), `out` (default `.`), `theme` (`"light"` or `"dark"`),
+  `fonts` (default true) and `json`. `RenderedScreen` is one entry of the
+  JSON document's `screens`.
+- **Lint** (`lint`, `flow`): `lint(paths, options?)` runs the `lint`
+  command on files and directories (`.` when empty). `LintOptions` is
+  `{ json? }`; `LintedFlow`, `{ file, findings }`, is one entry of the JSON
+  document's `flows`.
+- **Output** (`output`): `UsageError`, which `check`, `lint` and `render`
+  throw for an unreadable file and `run` turns into exit code 2. `Finding`
+  is a finding as above; a flow's names a `frame` and an `element` instead
+  of a `screen`. `Result` is what every command returns.
+
+```ts
+import { render } from "@wiredown/cli";
+
+const { exitCode, stdout } = await render("screens.md", { out: "out", json: true });
+```

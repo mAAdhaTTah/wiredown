@@ -104,8 +104,9 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
   try {
     flow = parseEditableFlow(await readSource(file), "use");
   } catch (error) {
-    if (!(error instanceof NewerFlowError)) throw error;
-    const { message } = error;
+    // an unreadable file is exit 2; a drawing we can't use is this file's error
+    if (error instanceof UsageError) throw error;
+    const { message } = error as Error;
     return {
       exitCode: 1,
       stdout: options.json
@@ -117,7 +118,11 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
             warnings: [],
           })
         : "",
-      stderr: options.json ? "" : `${file}: ${message}\n`,
+      stderr: options.json
+        ? ""
+        : error instanceof NewerFlowError
+          ? `${file}: ${message}\n`
+          : formatFindings(file, [{ message }], []),
     };
   }
   const errors: Finding[] = [];
