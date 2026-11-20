@@ -85,13 +85,6 @@ errors for an unknown `--screen` id and for nothing to render have no
 `--theme dark` lets Excalidraw draw the dark theme; file names don't change,
 so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
 
-## API
-
-`run(argv)` and the commands `check(files, options)` and
-`render(file, options)` return `{ exitCode, stdout, stderr }` without
-writing to the terminal or exiting; the `bin/wiredown.js` entry prints the
-result. Build the package (`pnpm build`) before running the bin.
-
 ## flow
 
 `wiredown flow new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>]
@@ -150,3 +143,32 @@ best effort: a save landing in the last instant can still be lost. If the
 screens file changed, the drawing is left as it was, and `flow new` leaves no
 file behind. Close the drawing in Obsidian before running flow commands, or
 retry after a concurrent save.
+
+## API
+
+The root export runs the commands without a terminal. Each resolves to a
+`Result`, `{ exitCode, stdout, stderr }`, and never writes to the terminal
+or exits; `bin/wiredown.js` prints the result. Build the package
+(`pnpm build`) before running the bin.
+
+- **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
+  the script, as `bin/wiredown.js` does. Bad usage and unreadable files
+  give exit code 2, and the `flow` commands report their own errors with
+  exit code 1; any other error rejects.
+- **Check** (`check`): `check(files, options?)` runs the `check` command
+  on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
+  entry of the JSON document's `files`.
+- **Render** (`render`): `render(file, options?)` runs the `render`
+  command. `RenderOptions` are all optional: `screens` (ids; all screens
+  with an id when empty), `out` (default `.`), `theme` (`"light"` or
+  `"dark"`), `fonts` (default true) and `json`. `RenderedScreen` is one
+  entry of the JSON document's `screens`.
+- **Output** (`output`): `UsageError`, which `check` and `render` throw
+  for an unreadable file and `run` turns into exit code 2. `Finding` is a
+  finding as above; `Result` is what every command returns.
+
+```ts
+import { render } from "@wiredown/cli";
+
+const { exitCode, stdout } = await render("screens.md", { out: "out", json: true });
+```
