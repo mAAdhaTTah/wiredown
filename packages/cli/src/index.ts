@@ -26,19 +26,18 @@ interface Command {
 /** Each flow command's usage, then what it does, its options and an example. */
 const FLOW: [string, string][] = [
   [
-    "new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>] [--json]",
+    "new <flow.excalidraw.md> [<screen-id>... --screens <screens.md>] [--json]",
     `Creates a drawing, empty or with a row of frames, one per screen.
 
 options:
-  --screens <file>   the screens file to embed from (default: the nearest
-                     screens.md)
+  --screens <file>   the screens file to embed from; required with screen ids
   --json             print one JSON document instead
 
 example:
-  wiredown flow new flows/invite.excalidraw.md team-members team-members-after`,
+  wiredown flow new flows/invite.excalidraw.md team-members team-members-after --screens screens.md`,
   ],
   [
-    "add-screen <flow.excalidraw.md> <screen-id> [--right-of F2 | --below F2] [--title <text>] [--screens <screens.md>] [--json]",
+    "add-screen <flow.excalidraw.md> <screen-id> --screens <screens.md> [--right-of F2 | --below F2] [--title <text>] [--json]",
     `Adds a frame for the screen, right of the rightmost frame unless placed.
 
 options:
@@ -46,12 +45,11 @@ options:
   --below <frame>    place it below this frame
   --title <text>     the frame's title (default: the screen's heading, then
                      its id)
-  --screens <file>   the screens file to embed from (default: the nearest
-                     screens.md)
+  --screens <file>   the screens file to embed from (required)
   --json             print one JSON document instead
 
 example:
-  wiredown flow add-screen flows/invite.excalidraw.md team-members-after --below F1`,
+  wiredown flow add-screen flows/invite.excalidraw.md team-members-after --screens screens.md --below F1`,
   ],
 ];
 

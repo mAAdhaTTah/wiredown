@@ -29,7 +29,9 @@ test("atomic replacement cleans up, and stale edits preserve the directory", asy
 test("add-screen refuses a concurrent Obsidian save", async () => {
   const dir = await realpath(await fixture({ "screens.md": BASE }));
   const file = join(dir, "a.excalidraw.md");
-  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  expect(
+    (await run(["flow", "new", file, "team", "--screens", join(dir, "screens.md")])).exitCode,
+  ).toBe(0);
   const original = await readFile(file, "utf8");
   const newer = original + "\nHuman save\n";
   const read = (await vi.importActual<typeof fs>("node:fs/promises")).readFile;
@@ -41,7 +43,14 @@ test("add-screen refuses a concurrent Obsidian save", async () => {
     return read(...args);
   }) as typeof read);
   try {
-    const result = await run(["flow", "add-screen", file, "team"]);
+    const result = await run([
+      "flow",
+      "add-screen",
+      file,
+      "team",
+      "--screens",
+      join(dir, "screens.md"),
+    ]);
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain(
       "changed while the command was running, so it was not written.",
@@ -81,7 +90,7 @@ test("flow new leaves no drawing behind when the screens file changes", async ()
     return read(...args);
   }) as typeof read);
   try {
-    const result = await run(["flow", "new", file, "team"]);
+    const result = await run(["flow", "new", file, "team", "--screens", join(dir, "screens.md")]);
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain(
       "changed while the command was running, so it was not written.",
@@ -89,7 +98,9 @@ test("flow new leaves no drawing behind when the screens file changes", async ()
     expect(await readdir(dir)).toEqual(["screens.md"]);
     // so running it again works
     spy.mockRestore();
-    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    expect(
+      (await run(["flow", "new", file, "team", "--screens", join(dir, "screens.md")])).exitCode,
+    ).toBe(0);
   } finally {
     spy.mockRestore();
   }
@@ -101,7 +112,9 @@ for (const command of ["new", "add-screen"]) {
     const screens = join(dir, "screens.md");
     const file = join(dir, "a.excalidraw.md");
     if (command === "add-screen")
-      expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+      expect(
+        (await run(["flow", "new", file, "team", "--screens", join(dir, "screens.md")])).exitCode,
+      ).toBe(0);
     await writeFile(screens, BASE);
     const read = (await vi.importActual<typeof fs>("node:fs/promises")).readFile;
     let reads = 0;
@@ -116,7 +129,7 @@ for (const command of ["new", "add-screen"]) {
       return read(...args);
     }) as typeof read);
     try {
-      const result = await run(["flow", command, file, "team"]);
+      const result = await run(["flow", command, file, "team", "--screens", screens]);
       expect(result.exitCode).toBe(1);
       // names both files: why the screens file was not written, and the flow's state
       expect(result.stderr).toContain(

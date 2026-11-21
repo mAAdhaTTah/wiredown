@@ -4,9 +4,8 @@
 //
 // Every search is bounded by a root, a directory URL ending in `/` that
 // holds the flow: in Node the git repository's root, else the Obsidian
-// vault's, else the folder above the nearest `flows/` folder, else the
-// parent of the flow's directory; on a forge, the repository's raw-content
-// root. Nothing outside the root is ever read.
+// vault's, else the parent of the flow's directory; on a forge, the
+// repository's raw-content root. Nothing outside the root is ever read.
 //
 // The path written is the screens file's path from the root. A reader takes
 // `./x` and `../x` from the flow's directory; any other path names a file by

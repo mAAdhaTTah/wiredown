@@ -69,7 +69,7 @@ export async function editFlow(
     let screensPath: string | undefined;
     let source = "";
     if (ids.length) {
-      const embed = await screensToEmbed(file, options.screens);
+      const embed = await screensToEmbed(file, options.screens!);
       screensPath = embed.path;
       source = await fileOp(
         `cannot read the screens file ${screensPath}`,
@@ -174,6 +174,8 @@ export function flowCommand(
     throw new UsageError(
       `flow ${command} needs a file${command === "add-screen" ? " and one screen id" : ""}`,
     );
+  if (ids.length && !values.screens)
+    throw new UsageError(`flow ${command} needs --screens <screens.md> to embed screens from`);
   if (values["right-of"] && values.below)
     throw new UsageError("--right-of and --below are mutually exclusive");
   if (command === "new" && (values["right-of"] || values.below || values.title))

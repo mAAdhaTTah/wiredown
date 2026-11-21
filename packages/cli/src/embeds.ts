@@ -44,8 +44,7 @@ async function repoOrVault(dir: string) {
 /**
  * The root of embed searches from `file`: the git repository's root, else
  * the Obsidian vault's, each looked for above the flow's path and then above
- * its real path; else the folder above the nearest `flows/` folder holding
- * the flow; else the parent of the flow's directory.
+ * its real path; else the parent of the flow's directory.
  */
 export async function embedRoot(file: string): Promise<EmbedRoot> {
   const logical = resolve(file);
@@ -60,12 +59,7 @@ export async function embedRoot(file: string): Promise<EmbedRoot> {
     ));
   const real = realFlow && (await repoOrVault(dirname(realFlow)));
   if (real) return { url: dirUrl(real), flow: pathToFileURL(realFlow).href };
-  let dir = dirname(logical);
-  while (basename(dir) !== "flows" && dirname(dir) !== dir) dir = dirname(dir);
-  return {
-    url: dirUrl(dirname(basename(dir) === "flows" ? dir : dirname(logical))),
-    flow: pathToFileURL(logical).href,
-  };
+  return { url: dirUrl(dirname(dirname(logical))), flow: pathToFileURL(logical).href };
 }
 
 /**
@@ -153,33 +147,12 @@ export async function resolveEmbed(
 }
 
 /**
- * The `screens.md` a new frame embeds from by default: beside the flow's
- * folder, in it, then in each folder further up to the root.
- */
-async function defaultScreens(flowFile: string, root: EmbedRoot) {
-  const dirs: string[] = [];
-  for (let dir = new URL(".", root.flow).href; dir.startsWith(root.url);) {
-    dirs.push(dir);
-    if (dir === root.url) break;
-    dir = new URL("..", dir).href;
-  }
-  if (dirs.length > 1) dirs.unshift(...dirs.splice(1, 1));
-  for (const dir of dirs) {
-    const path = fileURLToPath(new URL("screens.md", dir));
-    if (await isFile(path)) return shown(flowFile, path);
-  }
-  throw new CommandError(`no screens.md was found from ${dirname(flowFile)} upward`);
-}
-
-/**
  * The screens file a new frame embeds from (`--screens`, any `.md` file in
- * the flow's root, else the nearest `screens.md`) and the embed path to
- * write for it, its path from the root. Throws if the file is outside the
- * root.
+ * the flow's root) and the embed path to write for it, its path from the
+ * root. Throws if the file is outside the root.
  */
-export async function screensToEmbed(flowFile: string, screens: string | undefined) {
+export async function screensToEmbed(flowFile: string, path: string) {
   const root = await embedRoot(flowFile);
-  const path = screens ?? (await defaultScreens(flowFile, root));
   await fileOp(`cannot read the screens file ${path}`, stat(path));
   if (!/\.md$/i.test(path)) throw new CommandError(`the screens file ${path} is not a .md file`);
   let url = pathToFileURL(resolve(path)).href;

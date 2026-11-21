@@ -99,9 +99,8 @@ The root export renders nothing; SVG export is in the Node entry,
 
 - **Screens paths** (`screens-path`): an embed's path names its screens file
   within a root, a directory URL ending in `/`: the git repository's root, else
-  the Obsidian vault's, else the folder above the nearest `flows/` folder, else
-  the parent of the flow's directory (on a forge, the repository's raw-content
-  root). Locations are URLs, `file:` ones in Node.
+  the Obsidian vault's, else the parent of the flow's directory (on a forge,
+  the repository's raw-content root). Locations are URLs, `file:` ones in Node.
   `embedPathFor(screensUrl, root)` is the path to write, the file's path from
   the root without `.md`, such as `docs/checkout/screens`; undefined for a file
   outside the root. `isRelativeEmbed(path)` says whether a path is relative to

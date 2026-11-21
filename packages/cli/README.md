@@ -87,14 +87,14 @@ so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
 
 ## flow
 
-`wiredown flow new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>]
-[--json]` creates an empty drawing or a row of frames; an existing file is
-an error.
+`wiredown flow new <flow.excalidraw.md> [<screen-id>... --screens
+<screens.md>] [--json]` creates an empty drawing or a row of frames; an
+existing file is an error.
 
-`wiredown flow add-screen <flow.excalidraw.md> <screen-id> [--right-of F2 |
---below F2] [--title <text>] [--screens <screens.md>] [--json]` appends a frame
-relative to the current image position. Default placement is right of the
-rightmost frame. Titles default to the screen heading, then its id.
+`wiredown flow add-screen <flow.excalidraw.md> <screen-id> --screens
+<screens.md> [--right-of F2 | --below F2] [--title <text>] [--json]` appends
+a frame relative to the current image position. Default placement is right
+of the rightmost frame. Titles default to the screen heading, then its id.
 
 Each frame embeds its screen as `[[<path>#^<id>|WxH]]`, and that path says
 which screens file the frame uses. The path written is the screens file's
@@ -102,8 +102,7 @@ path from the flow's root without `.md`, such as `docs/checkout/screens`.
 The root is the git repository's root (the nearest directory at or above
 the flow holding `.git`), else the Obsidian vault's (holding `.obsidian/`),
 each looked for above the flow's path and then above its real path; else
-the folder above the nearest `flows/` folder holding the flow; else the
-parent of the flow's directory. Readers take:
+the parent of the flow's directory. Readers take:
 
 - `./x` and `../x` from the flow's directory;
 - any other path from the root, if that file exists;
@@ -121,10 +120,9 @@ A screens file or root found from the flow is printed relative to the
 working directory when the flow's path was given relative, and absolute when
 it was given absolute. Paths given on the command line print as given.
 
-`--screens` takes any `.md` file inside the root; one outside it is an
-error (`the screens file <file> points outside <root>`). Without it, the
-screens file is the `screens.md` in the parent of the flow's directory,
-else in that directory, else in each directory further up to the root.
+`--screens` names the screens file and is required whenever screens are
+added; there is no default. It takes any `.md` file inside the root; one
+outside it is an error (`the screens file <file> points outside <root>`).
 A screens file whose path from the root contains `#`, `|` or `]` is
 refused, since those end the path in an embed link.
 Missing embed styling frontmatter is added; existing values are preserved.

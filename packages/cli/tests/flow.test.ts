@@ -6,10 +6,21 @@ import { run } from "../src/index";
 import { CommandError, fileOp } from "../src/output";
 import { BASE, fixture, VARIANT } from "./helpers";
 
+const screensIn = (dir: string) => ["--screens", join(dir, "screens.md")];
+
 test("new, add, styling idempotence and hand edits", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
   const file = join(dir, "flows/a.excalidraw.md");
-  const first = await run(["flow", "new", file, "team", "team-after", "team", "--json"]);
+  const first = await run([
+    "flow",
+    "new",
+    file,
+    "team",
+    "team-after",
+    "team",
+    ...screensIn(dir),
+    "--json",
+  ]);
   expect(first.exitCode).toBe(0);
   expect(JSON.parse(first.stdout)).toMatchObject({
     flow: file,
@@ -22,7 +33,16 @@ test("new, add, styling idempotence and hand edits", async () => {
   flow.elements[1].x = 777;
   flow.elements.push({ ...flow.elements[0], id: "handedit", text: "Human", rawText: "Human" });
   await writeFile(file, serializeFlow(flow));
-  const added = await run(["flow", "add-screen", file, "team-after", "--below", "F1", "--json"]);
+  const added = await run([
+    "flow",
+    "add-screen",
+    file,
+    "team-after",
+    "--below",
+    "F1",
+    ...screensIn(dir),
+    "--json",
+  ]);
   expect(added.exitCode).toBe(0);
   expect(JSON.parse(added.stdout)).toMatchObject({
     frames: [{ frame: "F4", x: 777 }],
@@ -33,8 +53,8 @@ test("new, add, styling idempotence and hand edits", async () => {
   expect(after.elements.slice(0, flow.elements.length)).toEqual(flow.elements);
   for (const args of [
     ["new", file],
-    ["add-screen", file, "missing"],
-    ["add-screen", file, "team", "--below", "F99"],
+    ["add-screen", file, "missing", ...screensIn(dir)],
+    ["add-screen", file, "team", "--below", "F99", ...screensIn(dir)],
   ]) {
     expect((await run(["flow", ...args])).exitCode).toBe(1);
   }
@@ -42,40 +62,27 @@ test("new, add, styling idempotence and hand edits", async () => {
     (await run(["flow", "add-screen", file, "team", "--below", "F1", "--right-of", "F2"])).exitCode,
   ).toBe(2);
 });
-test("discovery, explicit path, errors, and empty drawings", async () => {
+test("--screens is required to add screens, and only then", async () => {
   const dir = await fixture({
     "screens.md": BASE,
     "bad.md": "# Bad\n\n```wiredown\nnonsense: bad\n```\n^bad",
   });
-  await mkdir(join(dir, "nested"));
-  for (const [name, extra] of [
-    ["own", []],
-    ["explicit", ["--screens", join(dir, "screens.md")]],
-  ] as const) {
-    expect(
-      (await run(["flow", "new", join(dir, name + ".excalidraw.md"), "team", ...extra])).exitCode,
-    ).toBe(0);
+  const file = join(dir, "flows/a.excalidraw.md");
+  for (const args of [
+    ["new", file, "team"],
+    ["add-screen", file, "team"],
+  ]) {
+    const result = await run(["flow", ...args]);
+    expect(result).toMatchObject({ exitCode: 2, stdout: "" });
+    expect(result.stderr).toContain(
+      `flow ${args[0]} needs --screens <screens.md> to embed screens from`,
+    );
   }
-  expect(
-    (
-      await run([
-        "flow",
-        "new",
-        join(dir, "nested/bad.excalidraw.md"),
-        "bad",
-        "--screens",
-        join(dir, "bad.md"),
-      ])
-    ).exitCode,
-  ).toBe(1);
-  // with no vault or repository, discovery stops at the parent of the flow's folder
-  const deep = join(dir, "nested/deep/a.excalidraw.md");
-  const missing = await run(["flow", "new", deep, "team"]);
-  expect(missing.exitCode).toBe(1);
-  expect(missing.stderr).toContain(
-    `no screens.md was found from ${join(dir, "nested/deep")} upward`,
-  );
-  expect((await run(["flow", "new", join(dir, "empty.excalidraw.md")])).exitCode).toBe(0);
+  await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
+  const bad = await run(["flow", "new", file, "bad", "--screens", join(dir, "bad.md")]);
+  expect(bad.exitCode).toBe(1);
+  expect((await run(["flow", "new", file])).exitCode).toBe(0);
+  expect((await run(["flow", "add-screen", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
 });
 
 test("empty frontmatter is filled without adding a second block", async () => {
@@ -107,7 +114,7 @@ test.each([
   if (nl === "\r\n") expect(styled.replace(/\r\n/g, "")).not.toContain("\n");
   const dir = await fixture({ "screens.md": source });
   const file = join(dir, "flows/a.excalidraw.md");
-  const result = await run(["flow", "new", file, "team", "--json"]);
+  const result = await run(["flow", "new", file, "team", ...screensIn(dir), "--json"]);
   expect(result.exitCode).toBe(0);
   expect(JSON.parse(result.stdout).screensFileUpdated).toBe(changed);
   expect(await readFile(join(dir, "screens.md"), "utf8")).toBe(styled);
@@ -131,12 +138,13 @@ test.each(["unknown-screen", "unknown-frame", "bad-block", "later-id", "missing-
           : file;
     const args =
       kind === "later-id"
-        ? ["new", target, "team", "teem"]
+        ? ["new", target, "team", "teem", ...screensIn(dir)]
         : [
             "add-screen",
             target,
             kind === "bad-block" ? "bad" : kind === "unknown-screen" ? "teem" : "team",
             ...(kind === "unknown-frame" ? ["--right-of", "F99"] : []),
+            ...screensIn(dir),
           ];
     const result = await run(["flow", ...args, "--json"]);
     expect(result.exitCode).toBe(1);
@@ -174,48 +182,12 @@ test.each(["unknown-screen", "unknown-frame", "bad-block", "later-id", "missing-
   },
 );
 
-test.each(["parent", "own", "both", "explicit", "neither"])(
-  "screen discovery: %s",
-  async (kind) => {
-    const dir = await fixture({ "explicit.md": BASE });
-    await mkdir(join(dir, "flows"));
-    if (kind === "parent" || kind === "both") await writeFile(join(dir, "screens.md"), BASE);
-    if (kind === "own" || kind === "both")
-      await writeFile(join(dir, "flows/screens.md"), kind === "both" ? "wrong" : BASE);
-    const file = join(dir, "flows/a.excalidraw.md");
-    const result = await run([
-      "flow",
-      "new",
-      file,
-      "team",
-      ...(kind === "explicit" ? ["--screens", join(dir, "explicit.md")] : []),
-      "--json",
-    ]);
-    if (kind === "neither") {
-      expect(result.exitCode).toBe(1);
-      expect(JSON.parse(result.stdout).errors[0].message).toBe(
-        "no screens.md was found from " + join(dir, "flows") + " upward",
-      );
-      await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
-    } else {
-      expect(result.exitCode).toBe(0);
-      expect(JSON.parse(result.stdout).frames[0].screen).toBe("team");
-      expect(parseFlow(await readFile(file, "utf8")).embeds.size).toBe(1);
-      const picked =
-        kind === "explicit" ? "explicit.md" : kind === "own" ? "flows/screens.md" : "screens.md";
-      expect(await readFile(join(dir, picked), "utf8")).toContain("excalidraw-font:");
-      if (kind === "both")
-        expect(await readFile(join(dir, "flows/screens.md"), "utf8")).toBe("wrong");
-    }
-  },
-);
-
 test.each([[], ["--right-of", "F1"], ["--below", "F1"], ["--title", "Custom"]])(
   "placement and human output %j",
   async (...flags: string[]) => {
     const dir = await fixture({ "screens.md": BASE });
     const file = join(dir, "flows/a.excalidraw.md");
-    await run(["flow", "new", file, "team"]);
+    await run(["flow", "new", file, "team", ...screensIn(dir)]);
     const before = parseFlow(await readFile(file, "utf8"));
     before.elements[1].x = 777;
     before.elements[1].y = 55;
@@ -226,7 +198,7 @@ test.each([[], ["--right-of", "F1"], ["--below", "F1"], ["--title", "Custom"]])(
       rawText: "Human",
     });
     await writeFile(file, serializeFlow(before));
-    const result = await run(["flow", "add-screen", file, "team", ...flags]);
+    const result = await run(["flow", "add-screen", file, "team", ...flags, ...screensIn(dir)]);
     expect(result.exitCode).toBe(0);
     const after = parseFlow(await readFile(file, "utf8"));
     const image = after.elements.at(-1)!;
@@ -250,7 +222,16 @@ test("new creates empty drawings and a measured row, preserving existing files",
   expect(JSON.parse(result.stdout)).toEqual({ flow: empty, frames: [], screensFileUpdated: false });
   expect(parseFlow(await readFile(empty, "utf8")).elements).toEqual([]);
   const file = join(dir, "flows/row.excalidraw.md");
-  const row = await run(["flow", "new", file, "team", "team-after", "team", "--json"]);
+  const row = await run([
+    "flow",
+    "new",
+    file,
+    "team",
+    "team-after",
+    "team",
+    ...screensIn(dir),
+    "--json",
+  ]);
   expect(row.exitCode).toBe(0);
   const frames = JSON.parse(row.stdout).frames;
   expect(frames).toHaveLength(3);
@@ -286,6 +267,7 @@ test("new creates empty drawings and a measured row, preserving existing files",
     "F1",
     "--below",
     "F1",
+    ...screensIn(dir),
   ]);
   expect(conflict.exitCode).toBe(2);
   expect(conflict.stdout).toBe("");
@@ -297,7 +279,7 @@ test("title falls back to id without a heading", async () => {
   const dir = await fixture({ "screens.md": "```wiredown\nbutton: Save\n```\n^plain" });
   const file = join(dir, "a.excalidraw.md");
   await run(["flow", "new", file]);
-  const result = await run(["flow", "add-screen", file, "plain", "--json"]);
+  const result = await run(["flow", "add-screen", file, "plain", ...screensIn(dir), "--json"]);
   expect(result.exitCode).toBe(0);
   expect(JSON.parse(result.stdout).frames[0]).toMatchObject({ title: "plain", screen: "plain" });
   expect(parseFlow(await readFile(file, "utf8")).elements[0].text).toBe("F1 · plain");
@@ -306,11 +288,11 @@ test("title falls back to id without a heading", async () => {
 const embedPaths = async (file: string) =>
   [...parseFlow(await readFile(file, "utf8")).embeds.values()].map((e) => e.path);
 
-test.each(["git", "vault", "flows", "neither"])(
+test.each(["git", "vault", "neither"])(
   "the embed is the screens file's path from the root: %s",
   async (kind) => {
     const dir = await fixture({});
-    const flows = kind === "neither" ? "a/b/c" : "a/b/flows";
+    const flows = "a/b/flows";
     await mkdir(join(dir, flows), { recursive: true });
     await writeFile(join(dir, "a/b/screens.md"), BASE);
     await writeFile(join(dir, "a/ui.md"), BASE);
@@ -319,11 +301,12 @@ test.each(["git", "vault", "flows", "neither"])(
     if (kind === "git" || kind === "vault") await mkdir(join(dir, "a/.obsidian"));
     const from = kind === "git" ? "a/b/" : kind === "vault" ? "b/" : "";
     const file = join(dir, flows, "x.excalidraw.md");
-    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    const screens = ["--screens", join(dir, "a/b/screens.md")];
+    expect((await run(["flow", "new", file, "team", ...screens])).exitCode).toBe(0);
     expect(await embedPaths(file)).toEqual([`${from}screens`]);
     // --screens takes any .md file in the root, beside the flow or not
     const ui = await run(["flow", "add-screen", file, "team", "--screens", join(dir, "a/ui.md")]);
-    if (kind === "flows" || kind === "neither") {
+    if (kind === "neither") {
       expect(ui.stderr).toContain(`the screens file ${join(dir, "a/ui.md")} points outside`);
     } else {
       expect(ui.exitCode).toBe(0);
@@ -340,7 +323,8 @@ test("a flow folder linked into a repository: the repository is the root", async
   await writeFile(join(repo, "spec/screens.md"), BASE);
   await symlink(join(repo, "spec/flows"), join(dir, "linked"));
   const file = join(dir, "linked/x.excalidraw.md");
-  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  const screens = ["--screens", join(repo, "spec/screens.md")];
+  expect((await run(["flow", "new", file, "team", ...screens])).exitCode).toBe(0);
   expect(await embedPaths(file)).toEqual(["spec/screens"]);
   // and from the repository's side of the link
   const { embedRoot } = await import("../src/embeds");
@@ -358,7 +342,8 @@ test("a flow file linked into a repository: the repository is the root", async (
   expect((await run(["flow", "new", real])).exitCode).toBe(0);
   const file = join(dir, "links/x.excalidraw.md");
   await symlink(real, file);
-  expect((await run(["flow", "add-screen", file, "team"])).exitCode).toBe(0);
+  const screens = ["--screens", join(repo, "spec/screens.md")];
+  expect((await run(["flow", "add-screen", file, "team", ...screens])).exitCode).toBe(0);
   expect(await embedPaths(real)).toEqual(["spec/screens"]);
 });
 
@@ -369,14 +354,12 @@ test("a screens file whose path would end the embed link early is refused", asyn
     await mkdir(join(dir, name));
     await writeFile(join(dir, name, "screens.md"), BASE);
     const file = join(dir, name, "flows/x.excalidraw.md");
-    for (const screens of [[], ["--screens", join(dir, name, "screens.md")]]) {
-      const result = await run(["flow", "new", file, "team", ...screens]);
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain(
-        `${join(dir, name, "screens.md")}: a screens file's path cannot contain #, | or ], which end the path in an embed link`,
-      );
-      await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
-    }
+    const result = await run(["flow", "new", file, "team", ...screensIn(join(dir, name))]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain(
+      `${join(dir, name, "screens.md")}: a screens file's path cannot contain #, | or ], which end the path in an embed link`,
+    );
+    await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
   }
 });
 
@@ -447,23 +430,20 @@ test.each(["vault", "git", "neither"])(
     if (kind === "git") await writeFile(join(repo, ".git"), "gitdir: elsewhere\n");
     const root = kind === "neither" ? join(repo, "spec") : repo;
     const file = join(repo, "spec/flows/a.excalidraw.md");
-    // dir/screens.md is above the root: never found
-    const above = await run(["flow", "new", file, "team"]);
-    expect(above.exitCode).toBe(1);
-    expect(above.stderr).toContain(
-      `no screens.md was found from ${join(repo, "spec/flows")} upward`,
-    );
-    const outside = await run(["flow", "new", file, "team", "--screens", join(dir, "screens.md")]);
+    const outside = await run(["flow", "new", file, "team", ...screensIn(dir)]);
     expect(outside.exitCode).toBe(1);
     expect(outside.stderr).toContain(
       `the screens file ${join(dir, "screens.md")} points outside ${root}`,
     );
     // a symlink inside the root that leaves it is outside too
     await symlink(join(dir, "screens.md"), join(repo, "spec/screens.md"));
-    expect((await run(["flow", "new", file, "team"])).stderr).toContain(`points outside ${root}`);
+    const spec = screensIn(join(repo, "spec"));
+    expect((await run(["flow", "new", file, "team", ...spec])).stderr).toContain(
+      `points outside ${root}`,
+    );
     await rm(join(repo, "spec/screens.md"));
     await writeFile(join(repo, "spec/screens.md"), BASE);
-    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    expect((await run(["flow", "new", file, "team", ...spec])).exitCode).toBe(0);
     expect(await embedPaths(file)).toEqual([kind === "neither" ? "screens" : "spec/screens"]);
   },
 );
@@ -471,13 +451,13 @@ test.each(["vault", "git", "neither"])(
 test("add-screen refuses newer live metadata before writing", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "a.excalidraw.md");
-  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
   const flow = parseFlow(await readFile(file, "utf8"));
   flow.elements[0].customData = { wiredown: { v: 2 } };
   const source = serializeFlow(flow);
   await writeFile(file, source);
   const screens = await readFile(join(dir, "screens.md"), "utf8");
-  const result = await run(["flow", "add-screen", file, "team"]);
+  const result = await run(["flow", "add-screen", file, "team", ...screensIn(dir)]);
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain(
     `${file}: this drawing was written by a newer wiredown (data version 2); upgrade wiredown to edit it`,
@@ -489,11 +469,11 @@ test("add-screen refuses newer live metadata before writing", async () => {
 test.each([2, "2"])("add-screen refuses unsupported version %s as JSON", async (v) => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "a.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const flow = parseFlow(await readFile(file, "utf8"));
   flow.elements[0].customData = { wiredown: { v } };
   await writeFile(file, serializeFlow(flow));
-  const result = await run(["flow", "add-screen", file, "team", "--json"]);
+  const result = await run(["flow", "add-screen", file, "team", ...screensIn(dir), "--json"]);
   expect(result.exitCode).toBe(1);
   expect(JSON.parse(result.stdout)).toMatchObject({
     flow: file,
@@ -504,7 +484,7 @@ test.each([2, "2"])("add-screen refuses unsupported version %s as JSON", async (
 test("add-screen ignores deleted newer metadata", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "a.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const flow = parseFlow(await readFile(file, "utf8"));
   flow.elements.push({
     ...flow.elements[0],
@@ -513,22 +493,33 @@ test("add-screen ignores deleted newer metadata", async () => {
     customData: { wiredown: { v: 2 } },
   });
   await writeFile(file, serializeFlow(flow));
-  expect((await run(["flow", "add-screen", file, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "add-screen", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
 });
 
-test("paths found from a relative flow path print relative to the working directory", async () => {
+test("paths print as given; a root found from a relative flow path prints relative", async () => {
   const dir = await realpath(
     await fixture({ "screens.md": "# Bad\n\n```wiredown\nnonsense: bad\n```\n^bad" }),
   );
+  await mkdir(join(dir, "sub"));
   const cwd = process.cwd();
   process.chdir(dir);
   try {
-    const result = await run(["flow", "new", "flows/a.excalidraw.md", "bad"]);
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/^screens\.md:4: \^bad: error: /);
-    // a path given absolute stays absolute
-    const absolute = await run(["flow", "new", join(dir, "flows/a.excalidraw.md"), "bad"]);
-    expect(absolute.stderr).toMatch(new RegExp(`^${join(dir, "screens.md")}:4: `));
+    const bad = await run([
+      "flow",
+      "new",
+      "flows/a.excalidraw.md",
+      "bad",
+      "--screens",
+      "screens.md",
+    ]);
+    expect(bad.exitCode).toBe(1);
+    expect(bad.stderr).toMatch(/^screens\.md:4: \^bad: error: /);
+    // the root of sub/flows/a.excalidraw.md is sub, which screens.md is outside
+    const flow = "sub/flows/a.excalidraw.md";
+    const outside = await run(["flow", "new", flow, "bad", "--screens", "screens.md"]);
+    expect(outside.stderr).toContain("the screens file screens.md points outside sub\n");
+    const absolute = await run(["flow", "new", join(dir, flow), "bad", "--screens", "screens.md"]);
+    expect(absolute.stderr).toContain(`points outside ${join(dir, "sub")}\n`);
   } finally {
     process.chdir(cwd);
   }
@@ -537,7 +528,7 @@ test("paths found from a relative flow path print relative to the working direct
 test("a missing file is reported in plain words", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const flow = join(dir, "flows/a.excalidraw.md");
-  const missing = await run(["flow", "add-screen", flow, "team"]);
+  const missing = await run(["flow", "add-screen", flow, "team", ...screensIn(dir)]);
   expect(missing).toMatchObject({ exitCode: 1, stdout: "" });
   expect(missing.stderr).toBe(`${flow}: error: cannot read ${flow}: it does not exist\n`);
   const screens = join(dir, "nope.md");
