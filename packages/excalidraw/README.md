@@ -77,15 +77,42 @@ The root export renders nothing; SVG export is in the Node entry,
 - **Flow commands** (`flow-edit`): `addScreen(flow, options)` appends a frame,
   a label (`F1 · <title>`) and an image, and returns its F-number. Its
   `AddScreenOptions` are `screenId`, `title`, `path` (the embed path), `size`,
-  the rendered screen size, and an optional `place`, `{ rightOf: "F2" }` or
-  `{ below: "F2" }`; without it the frame goes right of the rightmost frame.
+  the rendered screen size, and an optional `place` (below).
   `embedSize(width, height)` converts a screen export size to `{ link, image }`
   dimensions. `flowFrames(flow)` finds live images with Wiredown customData, as
   `{ frame, element }`. Legacy labels reserve numbers, but legacy images are not
-  placement targets. Deleted elements reserve their numbers too. Existing
-  elements are never changed. A frame's label carries an `anchor` naming its
-  image element. The label and image share a new Excalidraw group, recorded as
-  `group` in the image's `customData.wiredown`.
+  placement targets. Deleted elements reserve their numbers too. A frame's label
+  carries an `anchor` naming its image element. The label and image share a new
+  Excalidraw group, recorded as `group` in the image's `customData.wiredown`.
+
+  Frames (F1, F2, ...) and decisions (D1, D2, ...) are the flow's nodes;
+  `flowNodes(flow)` lists the live ones as `FlowNode`s,
+  `{ node, kind, element }`.
+
+  - `addDecision(flow, { text, place? })` appends a diamond with its text
+    centred inside and returns its D-number; the diamond grows if the
+    wrapped text does not fit. Its options are `AddDecisionOptions`.
+  - `connect(flow, from, to, { label? })` appends a straight arrow between
+    the facing edges of two nodes, where they are now, bound at both ends,
+    with an optional bound-text label (`ConnectOptions`); it returns the
+    arrow's element id. Further arrows between the same pair are offset so
+    they do not overlap.
+  - `addNote(flow, node, text)` appends a free grey text under a frame or to
+    the right of a decision (below its earlier notes), wrapped to the node's
+    width, and returns its id. The note takes the node's Excalidraw groups from
+    ours outward, so it moves with the node and stays inside any group a person
+    put the node in; a decision gets its group (diamond and text) on its first
+    note, inserted innermost.
+
+  A `Place` is `{ rightOf: "F2" }` or `{ below: "D1" }`; without one, a new
+  node goes right of the rightmost node. Unknown nodes throw and change
+  nothing. Existing elements are never moved or restyled; `connect` only
+  adds the arrow to its two nodes' `boundElements`, as Excalidraw's binding
+  requires, and a note may add the group to its node. A person's pasted
+  copy of a node (its data's `id` names another element) is not a node:
+  nothing attaches to it, placement ignores it, and its name stays taken.
+  Two live nodes with one name (data without `id`, or edited by hand) make
+  every command that takes that name throw, naming both element ids.
 
   Every `customData.wiredown` carries `v` (`DATA_VERSION`, now 1); data
   without `v` is version 1, and data with a higher `v` is ignored.
@@ -95,6 +122,14 @@ The root export renders nothing; SVG export is in the Node entry,
   naming a different element belongs to a person's pasted copy and is
   ignored by flow commands, though its F-number stays taken. Existing data
   without `id` keeps its previous behaviour; writes do not migrate it.
+  Every element records itself in `customData.wiredown`, with `v: 1` and
+  its own `id`: frames as `{ frame, screen, role: "screen" | "label" }`
+  (the image adds `group`), decisions as
+  `{ node, role: "decision" | "label" }` (the diamond adds `group` once it
+  has one), arrows as `{ role: "arrow", from, to, slot? }`, where `slot` is
+  the arrow's place among the arrows between its pair, 1 for the first
+  offset one (their labels `role: "label"`), notes as
+  `{ role: "note", node, anchor }` where `anchor` is the node's element id.
 
 - **Screens paths** (`screens-path`): an embed's path names its screens file
   within a root, a directory URL ending in `/`: the git repository's root, else

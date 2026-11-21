@@ -90,7 +90,7 @@ test("rightmost placement follows moved frames rather than insertion order", () 
   addScreen(flow, options);
   expect(flowFrames(flow)[2].element).toMatchObject({ x: 1460, y: 90 });
   expect(() => addScreen(flow, { ...options, place: { rightOf: "F99" } })).toThrow(
-    'unknown frame "F99" (frames: F1, F2, F3)',
+    'unknown node "F99" (nodes: F1, F2, F3)',
   );
 });
 test("identities, distinct embeds, and appended indices", () => {
