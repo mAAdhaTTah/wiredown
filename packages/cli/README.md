@@ -394,8 +394,8 @@ or exits; `bin/wiredown.js` prints the result. Build the package
 
 - **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
   the script, as `bin/wiredown.js` does. Bad usage and unreadable files
-  give exit code 2, and the `flow` commands report their own errors with
-  exit code 1; any other error rejects.
+  give exit code 2, and the `flow` commands report file and input problems
+  with exit code 1; any other error rejects.
 - **Check** (`check`): `check(files, options?)` runs the `check` command
   on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
   entry of the JSON document's `files`.

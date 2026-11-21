@@ -2,10 +2,17 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import type { Box, CheckedScreen } from "@wiredown/core";
-import { flowFrames, screenElements } from "@wiredown/excalidraw";
+import { FlowError, flowFrames, screenElements } from "@wiredown/excalidraw";
 import { renderFlowSvg, renderScreenSvg } from "@wiredown/excalidraw/node";
 import { embeddedScreens } from "./flow";
-import { formatFindings, json, readSource, unknownScreen, UsageError } from "./output";
+import {
+  CommandError,
+  formatFindings,
+  json,
+  readSource,
+  unknownScreen,
+  UsageError,
+} from "./output";
 import type { Finding, Result } from "./output";
 import { NewerFlowError, parseEditableFlow } from "./read-flow";
 
@@ -105,8 +112,8 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
     flow = parseEditableFlow(await readSource(file), "use");
   } catch (error) {
     // an unreadable file is exit 2; a drawing we can't use is this file's error
-    if (error instanceof UsageError) throw error;
-    const { message } = error as Error;
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
+    const { message } = error;
     return {
       exitCode: 1,
       stdout: options.json
@@ -128,7 +135,10 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
   const errors: Finding[] = [];
   const warnings: Finding[] = [];
   // each embed's screens file is the one its path names, from the flow
-  const screens = await embeddedScreens(file, flow);
+  const screens = await embeddedScreens(file, flow).catch((error: unknown) => {
+    // an unreadable screens file is exit 2, as an unreadable flow is
+    throw error instanceof CommandError ? new UsageError(error.message) : error;
+  });
   const warned = new Set<string>();
   const rendered = await renderFlowSvg(
     flow,

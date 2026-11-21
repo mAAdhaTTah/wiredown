@@ -472,7 +472,13 @@ test.each([
   const result = await run(
     args[0] === "render"
       ? ["render", file, "--out", join(dir, "out")]
-      : ["flow", args[0], file, ...args.slice(1)],
+      : [
+          "flow",
+          args[0],
+          file,
+          ...args.slice(1),
+          ...(args[0] === "add-screen" ? screensIn(dir) : []),
+        ],
   );
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain(

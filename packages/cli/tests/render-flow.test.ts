@@ -4,12 +4,14 @@ import { join } from "node:path";
 import { flowFrames, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, it } from "vitest";
 import { run } from "../src/index";
-import { BASE, fixture, VARIANT } from "./helpers";
+import { BASE, fixture, screensIn, VARIANT } from "./helpers";
 
 it("renders each embed's screens, rejecting --screen and --screens and retaining invalid embeds", async () => {
   const dir = await fixture({ "screens.md": `${BASE}\n${VARIANT}` });
   const file = join(dir, "flows", "f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team", "team-after"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", "team-after", ...screensIn(dir)])).exitCode).toBe(
+    0,
+  );
   const args = ["render", file, "--out", join(dir, "out"), "--json"];
   const result = await run(args);
   expect(result.exitCode).toBe(0);
@@ -38,7 +40,7 @@ it("renders each embed's screens, rejecting --screen and --screens and retaining
 it("writes human output, theme/font variants, and preserves the flow bytes", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "flows", "f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
   const before = await readFile(file);
   const out = join(dir, "new", "out");
   const args = ["render", file, "--out", out];
@@ -64,7 +66,7 @@ it("writes human output, theme/font variants, and preserves the flow bytes", asy
 it("reports a flow's size rounded, as screens report theirs", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "flows", "f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
   expect((await run(["flow", "note", file, "F1", "A note"])).exitCode).toBe(0);
   // a person dragged the note: the drawing's height has a fraction
   const flow = parseFlow(await readFile(file, "utf8"));
@@ -83,7 +85,7 @@ it("reports a flow's size rounded, as screens report theirs", async () => {
 it("reports each frame whose embed names no file, and still writes the SVG", async () => {
   const dir = await fixture({ "screens.md": BASE, "ui.md": BASE });
   const file = join(dir, "flows", "f.excalidraw.md");
-  await run(["flow", "new", file, "team", "team"]);
+  await run(["flow", "new", file, "team", "team", ...screensIn(dir)]);
   await run(["flow", "add-screen", file, "team", "--screens", join(dir, "ui.md")]);
   const args = ["render", file, "--out", dir];
   expect(await run(args)).toMatchObject({ exitCode: 0, stderr: "" });
@@ -100,7 +102,7 @@ it("reports each frame whose embed names no file, and still writes the SVG", asy
 it("rejects incompatible screen selectors with usage errors", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "f.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const plain = await run(["render", join(dir, "screens.md"), "--screens", "other.md"]);
   expect(plain).toMatchObject({ exitCode: 2, stdout: "" });
   expect(plain.stderr).toContain("--screens");
@@ -112,7 +114,7 @@ it("rejects incompatible screen selectors with usage errors", async () => {
 it("names the frame and block for a removed screen while writing the SVG", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
   const file = join(dir, "flows", "f.excalidraw.md");
-  await run(["flow", "new", file, "team", "team-after"]);
+  await run(["flow", "new", file, "team", "team-after", ...screensIn(dir)]);
   await writeFile(join(dir, "screens.md"), BASE);
   const result = await run(["render", file, "--out", dir]);
   expect(result.exitCode).toBe(1);
@@ -124,7 +126,7 @@ it("names the frame and block for a removed screen while writing the SVG", async
 it("returns a write finding and valid JSON for an output under a file", async () => {
   const dir = await fixture({ "screens.md": BASE, blocker: "" });
   const file = join(dir, "f.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const args = ["render", file, "--out", join(dir, "blocker", "out")];
   const human = await run(args);
   expect(human).toMatchObject({ exitCode: 1, stdout: "" });
@@ -145,19 +147,19 @@ it("resolves embeds of a flow given relative to the current directory", async ()
   const script = `import { embedRoot, resolveEmbed } from ${JSON.stringify(new URL("../dist/embeds.js", import.meta.url).href)};
     const root = await embedRoot("f.excalidraw.md");
     console.log((await resolveEmbed("f.excalidraw.md", "screens", root)).path);
-    console.log((await resolveEmbed("f.excalidraw.md", "ui", root)).why);`;
+    console.log((await resolveEmbed("f.excalidraw.md", "ui", root)).message);`;
   const output = execFileSync(process.execPath, ["--input-type=module", "-e", script], {
     cwd: join(dir, "flows"),
     encoding: "utf8",
   });
   // a flow given relative finds paths it prints relative to the same directory
-  expect(output).toBe("../screens.md\nbut no ui.md was found in ..\n");
+  expect(output).toBe("../screens.md\nno ui.md was found in ..\n");
 });
 
 it("reports a missing hand-made embed by block id without an element id", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "f.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const flow = parseFlow(await readFile(file, "utf8"));
   const image = flowFrames(flow)[0].element;
   delete image.customData;
@@ -173,7 +175,7 @@ it("reports a missing hand-made embed by block id without an element id", async 
 it("reports rejected drawing images and still writes the flow", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "flows", "f.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const flow = parseFlow(await readFile(file, "utf8"));
   flow.files.remote = { dataURL: "https://attacker.invalid/x" };
   await writeFile(file, serializeFlow(flow));
@@ -190,7 +192,7 @@ it("reports rejected drawing images and still writes the flow", async () => {
 it("refuses unsupported flows before creating output, with render JSON errors", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "f.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const flow = parseFlow(await readFile(file, "utf8"));
   flow.elements[0].customData = { wiredown: { v: "2" } };
   await writeFile(file, serializeFlow(flow));
@@ -235,13 +237,13 @@ it.skipIf(process.getuid?.() === 0)(
   async () => {
     const dir = await fixture({ "screens.md": BASE });
     const file = join(dir, "flows", "f.excalidraw.md");
-    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    expect((await run(["flow", "new", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
     const screens = join(dir, "screens.md");
     await chmod(screens, 0o000);
     try {
       const result = await run(["render", file, "--out", dir]);
       expect(result).toMatchObject({ exitCode: 2, stdout: "" });
-      expect(result.stderr).toContain(`cannot read ${screens}: EACCES`);
+      expect(result.stderr).toContain(`cannot read the screens file ${screens}: permission denied`);
     } finally {
       await chmod(screens, 0o644);
     }
