@@ -22,6 +22,7 @@ import {
   styleScreens,
 } from "@wiredown/excalidraw";
 import type {
+  ExcalidrawElementJson,
   Flow,
   FlowChange,
   Moved,
@@ -706,7 +707,10 @@ const ARITY = {
   decision: [1, 0, "a file and the decision's text"],
   remove: [1, Infinity, "a file and at least one thing to remove"],
   move: [1, 0, "a file and a node"],
-};
+} satisfies Record<string, [number, number, string]>;
+type FlowCommand = keyof typeof ARITY;
+const isFlowCommand = (command: string | undefined): command is FlowCommand =>
+  Object.hasOwn(ARITY, command ?? "");
 
 export function flowCommand(
   values: Record<string, string | boolean | string[] | undefined>,
