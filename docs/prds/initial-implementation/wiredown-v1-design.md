@@ -137,6 +137,12 @@ is the source of truth for the flow; the agent and the person both edit it.
   from the layout. Checked in Obsidian: they render as wireframes, follow the
   theme, open the source block for editing, and appear in the plugin's SVG
   export. Editing happens only in `screens.md`, so drawings can't drift.
+- **Embed paths.** A new embed names its screens file by the file's path
+  from the root without `.md`: `[[docs/checkout/screens#^cart|388x209]]`.
+  The root is the git repository's, else the Obsidian vault's, else the
+  folder above the flow's `flows/` folder. Readers also take `./` and `../`
+  paths from the flow, and, as Obsidian does, a trailing part of a path
+  (`screens`) that matches exactly one file; several matches are an error.
 - **Editing commands, not a generator.** Each reads the current drawing,
   makes one targeted change and preserves everything else, including the
   person's edits:
@@ -150,6 +156,10 @@ is the source of truth for the flow; the agent and the person both edit it.
   - `flow lint` catches missing screens, stale sizes, dangling arrows.
 - **Free-form drawing stays available.** The agent can write Excalidraw
   elements directly for anything the commands don't cover.
+- **Element provenance.** New `customData.wiredown` records carry `v: 1`
+  and `id`, equal to their element's id. A different `id` identifies a
+  person's pasted copy, which flow commands leave alone; existing data
+  without `id` keeps its previous behaviour.
 - **Frame labels** (F1, F2, …) let review comments in the forge refer to
   steps.
 

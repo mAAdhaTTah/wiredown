@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionsConfig } from "node:util";
 import { check } from "./check";
+import { flowCommand } from "./flow";
 import { UsageError } from "./output";
 import type { Result } from "./output";
 import { render } from "./render";
@@ -16,12 +17,67 @@ type Values = Record<string, string | boolean | string[] | undefined>;
 interface Command {
   summary: string;
   help: string;
+  /** Each subcommand's own help, by name. */
+  subcommands?: Map<string, string>;
   options: ParseArgsOptionsConfig;
   run(values: Values, positionals: string[]): Promise<Result>;
 }
 
+/** Each flow command's usage, then what it does, its options and an example. */
+const FLOW: [string, string][] = [
+  [
+    "new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>] [--json]",
+    `Creates a drawing, empty or with a row of frames, one per screen.
+
+options:
+  --screens <file>   the screens file to embed from (default: the nearest
+                     screens.md)
+  --json             print one JSON document instead
+
+example:
+  wiredown flow new flows/invite.excalidraw.md team-members team-members-after`,
+  ],
+  [
+    "add-screen <flow.excalidraw.md> <screen-id> [--right-of F2 | --below F2] [--title <text>] [--screens <screens.md>] [--json]",
+    `Adds a frame for the screen, right of the rightmost node unless placed.
+
+options:
+  --right-of <node>  place it right of this node
+  --below <node>     place it below this node
+  --title <text>     the frame's title (default: the screen's heading, then
+                     its id)
+  --screens <file>   the screens file to embed from (default: the nearest
+                     screens.md)
+  --json             print one JSON document instead
+
+example:
+  wiredown flow add-screen flows/invite.excalidraw.md team-members-after --below F1`,
+  ],
+];
+
 // Each command parses its own options; add new commands (flow, lint) here.
 const COMMANDS: Record<string, Command> = {
+  flow: {
+    summary: "create and edit flow drawings",
+    help: `${FLOW.map(([usage], i) => `${i ? "      " : "usage:"} wiredown flow ${usage}`).join("\n")}
+
+Run "wiredown flow <command> --help" for its options and an example.
+`,
+    subcommands: new Map(
+      FLOW.map(([usage, help]) => [
+        usage.split(" ")[0],
+        `usage: wiredown flow ${usage}\n\n${help}\n`,
+      ]),
+    ),
+    options: {
+      screens: { type: "string" },
+      "right-of": { type: "string" },
+      below: { type: "string" },
+      title: { type: "string" },
+      json: { type: "boolean" },
+    },
+    run: flowCommand,
+  },
   check: {
     summary: "check screens files for errors and warnings",
     help: `usage: wiredown check <file.md>... [--json]
@@ -114,18 +170,21 @@ export async function run(argv: string[]): Promise<Result> {
   if (name === undefined) return usage("no command given", USAGE);
   const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
   if (!command) return usage(`unknown command "${name}"`, USAGE);
+  // a subcommand's help is its own: wiredown flow add-screen --help
+  let help = command.subcommands?.get(rest[0] ?? "") ?? command.help;
   try {
     const { values, positionals } = parseArgs({
       args: rest,
       options: { ...command.options, help: { type: "boolean", short: "h" } },
       allowPositionals: true,
     });
-    if (values.help) return ok(command.help);
+    help = command.subcommands?.get(positionals[0] ?? "") ?? command.help;
+    if (values.help) return ok(help);
     return await command.run(values, positionals);
   } catch (error) {
-    if (error instanceof UsageError) return usage(error.message, command.help);
+    if (error instanceof UsageError) return usage(error.message, help);
     if ((error as { code?: string }).code?.startsWith("ERR_PARSE_ARGS")) {
-      return usage((error as Error).message, command.help);
+      return usage((error as Error).message, help);
     }
     throw error;
   }

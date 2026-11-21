@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { checkScreens, nearest } from "@wiredown/core";
+import { checkScreens } from "@wiredown/core";
 import type { Box, CheckedScreen } from "@wiredown/core";
 import { renderScreenSvg } from "@wiredown/excalidraw/node";
-import { formatFindings, json, readSource } from "./output";
+import { formatFindings, json, readSource, unknownScreen } from "./output";
 import type { Finding, Result } from "./output";
 
 export interface RenderOptions {
@@ -42,10 +42,7 @@ export async function render(file: string, options: RenderOptions = {}): Promise
   const failed = new Set(checked.errors.map((e) => e.screen));
   const known = [...byId.keys()];
   for (const id of wanted.filter((id) => !byId.has(id))) {
-    const guess = nearest(id, known);
-    const list = known.length ? ` (it has ${known.map((k) => `^${k}`).join(", ")})` : "";
-    const hint = guess ? `; did you mean "^${guess}"?` : "";
-    errors.push({ message: `no screen "^${id}"${list}${hint}`, screen: id });
+    errors.push(unknownScreen(id, known));
   }
 
   if (!wanted.length) errors.push({ message: "no screens with an ^id to render" });

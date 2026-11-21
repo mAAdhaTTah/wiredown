@@ -74,6 +74,50 @@ The root export renders nothing; SVG export is in the Node entry,
   const next = serializeFlow(flow); // writes [[screens#^home|WxH]]
   ```
 
+- **Flow commands** (`flow-edit`): `addScreen(flow, options)` appends a frame,
+  a label (`F1 · <title>`) and an image, and returns its F-number. Its
+  `AddScreenOptions` are `screenId`, `title`, `path` (the embed path), `size`,
+  the rendered screen size, and an optional `place`, `{ rightOf: "F2" }` or
+  `{ below: "F2" }`; without it the frame goes right of the rightmost frame.
+  `embedSize(width, height)` converts a screen export size to `{ link, image }`
+  dimensions. `flowFrames(flow)` finds live images with Wiredown customData, as
+  `{ frame, element }`. Legacy labels reserve numbers, but legacy images are not
+  placement targets. Deleted elements reserve their numbers too. Existing
+  elements are never changed. A frame's label carries an `anchor` naming its
+  image element. The label and image share a new Excalidraw group, recorded as
+  `group` in the image's `customData.wiredown`.
+
+  Every `customData.wiredown` carries `v` (`DATA_VERSION`, now 1); data
+  without `v` is version 1, and data with a higher `v` is ignored.
+  `newerDataVersion(flow)` is the version of live elements from a newer
+  wiredown: the highest number, else the first value; undefined when there
+  are none. New elements also carry `id`, equal to the element's id. Data
+  naming a different element belongs to a person's pasted copy and is
+  ignored by flow commands, though its F-number stays taken. Existing data
+  without `id` keeps its previous behaviour; writes do not migrate it.
+
+- **Screens paths** (`screens-path`): an embed's path names its screens file
+  within a root, a directory URL ending in `/`: the git repository's root, else
+  the Obsidian vault's, else the folder above the nearest `flows/` folder, else
+  the parent of the flow's directory (on a forge, the repository's raw-content
+  root). Locations are URLs, `file:` ones in Node.
+  `embedPathFor(screensUrl, root)` is the path to write, the file's path from
+  the root without `.md`, such as `docs/checkout/screens`; undefined for a file
+  outside the root. `isRelativeEmbed(path)` says whether a path is relative to
+  the flow's directory (`./x`, `../x`).
+  `embedCandidates(flowUrl, embedPath, root)` lists where the file may be: for
+  `./x` or `../x` only that file from the flow's directory; otherwise the path
+  from the root first, then the path from the flow's directory and each one
+  above it, nearest first. It is undefined for a path that is absolute, has a
+  `..` segment without starting `./` or `../`, or normalises outside the root.
+  `resolveEmbedPath(flowUrl, embedPath, exists, root)` returns `{ url }` for the
+  first candidate that `exists` (a fetch in the browser), `{ outside: true }`,
+  or undefined. The CLI, which can list the root, instead matches a path not
+  found from the root against the end of every `.md` file's path and refuses
+  more than one match. `embedNotFound(embedPath, flowDir, root)` says why a path
+  did not resolve: `no ../ui.md was found from <dir>` for a relative path, else
+  `no ui.md was found in <root>`.
+
 - **Types**: `ElementOptions`, `ScreenElements`, `ExcalidrawElementJson`
   (an element as a plain object with at least `id` and `type`) and
   `ExcalidrawScene`.
