@@ -5,6 +5,7 @@ headlessly in Node, with JSON output for agents.
 
 ```sh
 wiredown check <file.md>... [--json]
+wiredown lint [<path>...] [--json]
 wiredown render <file.md> [--screen <id>]... [--out <dir>] [--theme light|dark] [--no-fonts] [--json]
 wiredown --help | <command> --help | flow <command> --help | --version
 ```
@@ -85,6 +86,30 @@ errors for an unknown `--screen` id and for nothing to render have no
 `--theme dark` lets Excalidraw draw the dark theme; file names don't change,
 so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
 
+## lint
+
+`wiredown lint [<path>...] [--json]` is the check for CI. Each path is a file
+or a directory, walked recursively, skipping `node_modules` and
+dot-directories; with no paths it lints `.`. It runs `check` on every
+Markdown file that has a `wiredown` block and `flow lint` on every
+`*.excalidraw.md` (each frame's screens file is the one its embed names,
+resolved as the `flow` commands do). Markdown without wiredown blocks is ignored. The report is `check`'s
+and `flow lint`'s, one after the other; exit 1 if any screen has errors or
+any flow has findings (screen warnings don't fail). With `--json`:
+
+```text
+{ screens: [<check's per-file objects>], flows: [{ file, findings }] }
+```
+
+In a GitHub Actions workflow of a repo with screens and flows (while the
+package is private, the registry needs a read token):
+
+```yaml
+- uses: actions/checkout@v4
+- uses: actions/setup-node@v4
+- run: npx --yes @wiredown/cli lint
+```
+
 ## flow
 
 `wiredown flow new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>]
@@ -121,21 +146,20 @@ A screens file or root found from the flow is printed relative to the
 working directory when the flow's path was given relative, and absolute when
 it was given absolute. Paths given on the command line print as given.
 
-`--screens` takes any `.md` file inside the root; one outside it is an
-error (`the screens file <file> points outside <root>`). Without it, the
-screens file is the `screens.md` in the parent of the flow's directory,
-else in that directory, else in each directory further up to the root.
-A screens file whose path from the root contains `#`, `|` or `]` is
-refused, since those end the path in an embed link.
-Missing embed styling frontmatter is added; existing values are preserved.
-Invalid screens and unknown nodes leave the drawing untouched.
-A frame's image and its `F3 · Title` label share an Excalidraw group, so
-they move together: clicking either selects both; double-click to select
-one. Human output is one `F3  team-members  548x333` line per frame, then one
-`F1 -> F2` line per arrow. The size is the embed image size in the drawing.
-JSON is `{ flow, frames: [{ frame, screen, title, x, y, width, height }],
-screensFileUpdated }`; `flow new` adds `arrows: [{ id, from, to, label }]`.
-Operational errors exit 1 (JSON adds an `errors` array); usage errors exit 2.
+`--screens` takes any `.md` file inside the root; one outside it is an error
+(`the screens file <file> points outside <root>`). Without it, the screens file
+is the `screens.md` in the parent of the flow's directory, else in that
+directory, else in each directory further up to the root. A screens file whose
+path from the root contains `#`, `|` or `]` is refused, since those end the path
+in an embed link. Missing embed styling frontmatter is added; existing values
+are preserved. Invalid screens and unknown nodes leave the drawing untouched. A
+frame's image and its `F3 · Title` label share an Excalidraw group, so they move
+together: clicking either selects both; double-click to select one. Human output
+is one `F3  team-members  548x333` line per frame, then one `F1 -> F2` line per
+arrow. The size is the embed image size in the drawing. JSON is `{ flow, frames:
+[{ frame, screen, title, x, y, width, height }], screensFileUpdated }`; `flow
+new` adds `arrows: [{ id, from, to, label }]`. Operational errors exit 1 (JSON
+adds an `errors` array); usage errors exit 2.
 
 Flow commands refuse to overwrite a drawing or screens file that changed
 while the command was running, and replace files atomically. The check is
@@ -202,8 +226,121 @@ axis scales after a distorted resize. Highlights extend 4px beyond the box.
 Alignment inside Obsidian embeds is still an open, unverified risk. The
 shared embed constants in `packages/excalidraw/src/flow-edit.ts` assume
 10px host padding on each side, zero above, and a 5px footer; one change
-there corrects both embed sizing and overlay placement. Refreshing overlays
-after screen edits is future work.
+there corrects both embed sizing and overlay placement.
+
+### refresh and lint
+
+`wiredown flow refresh <flow> [--json]` brings a flow up to date after its
+screens change. Each frame's screen comes from the screens file its embed names,
+so one flow may use several. For each frame whose screen exists it sets the `##
+Embedded Files` link size, resizes the image to the new screen size at the scale
+it had (a frame a person scaled stays scaled; its top-left stays put), and moves
+the frame's highlights and marks to where `flow highlight` and `flow mark` would
+put them now. Whenever it rewrites a frame's link it writes the path from the
+root, as new embeds are written; links it leaves alone keep their form. Notes
+under the frame move with its bottom edge, keeping their order and gaps; a note
+dragged onto the frame goes back under it, with the notes below it. Every
+straight arrow of ours whose ends are not where `flow connect` would put them
+now, because a frame was resized or a person moved a node, is re-routed that
+way, keeping its place among parallel arrows, its label (placed along it as
+`flow connect` places it) and its id. An arrow a person bent (more than two
+points) is left alone, and reported as unresolved while an end no longer meets
+its node (a frame grew under it, or moved away). Displaced labels and notes return to their places; decisions and hand-
+drawn arrows stay where they are. Frames are never moved apart, so a frame that
+grew may now overlap its neighbouring frame; lint reports that. An overlay whose
+component is gone is left where it is and reported as unresolved. The file is
+written only if something changed.
+
+Human output is one line per change, or `up to date` when nothing changed and
+every screen was found:
+
+```text
+F2  embed 548x373 -> 548x413
+F2  note moved
+F2  highlight #invite moved
+F2  mark 3 #members unresolved: ^team-members has no #members any more
+F2  arrow F2 -> F3 re-routed
+F2  arrow F1 -> F2 unresolved: it was bent by hand and no longer meets F2; straighten or move it in the drawing
+```
+
+(`F2  image WxH -> WxH` when only the image's aspect was off.) JSON is
+`{ flow, changes: [...], unresolved: [...] }`, with an `errors` array when a
+screen could not be used. A change is
+`{ frame, kind: "embed", element, link: { from, to }, image: { from, to } }`
+(sizes are `{ width, height }`) or
+`{ frame, kind: "highlight" | "mark", element, target, label? }`,
+`{ frame, kind: "note", element }` or
+`{ frame, kind: "arrow", element, from, to }`, where an arrow's `frame` is
+the node it stopped meeting; unresolved ones add `unresolved`, the reason.
+An overlay belongs to the frame whose image element id it records, whatever
+the frame is now called. Exit 0; 1
+if a frame's embed names no screens file (reported as
+`flow: F2: error: embeds [[ui#^members]], but no ui.md was found in
+<root>`) or a screen a frame embeds is missing or has errors (reported as
+findings in that screens file); the other frames are still refreshed. If
+several files match a frame's embed, refresh reports it, naming them, and
+writes nothing; so it does when two elements claim one node name (the
+error `flow note` gives). Each JSON error adds the `file` it is about. A
+person's copy of our elements is left where it is.
+
+`wiredown flow lint <flow>... [--json]` never writes. It reports, as
+`path: F2: error: message` and a summary line per file:
+
+- a frame whose embed names no screens file, matches several (naming
+  them), points outside the flow's root, or whose screen is missing or has
+  errors;
+- two frames or decisions claiming one name, a copy pasted before elements
+  recorded their own id: `F2 is claimed by elements <id> and <id>; delete
+the copy` (the flow commands, refresh included, refuse until then);
+- a person's copy of our elements, once per pasted group: `element <id> is
+a copy of F2's frame; flow commands leave copies alone: delete it in the
+drawing` (or of `F2's note`, `F2's highlight`, `arrow F1 -> F2`, …);
+- a stale frame: its link size is not the screen's current size, or its
+  image's aspect ratio no longer matches (more than 1%; scaling a frame
+  uniformly is fine);
+- a stale overlay (more than 1px from where refresh would put it), one
+  whose component or frame is gone, or one drawn for another screen than
+  its frame now embeds;
+- a note whose frame or decision is gone: `note "<first words…>" is on a
+node that no longer exists`;
+- a note whose top edge lies inside its frame: `note "<first words…>"
+overlaps F1; run "wiredown flow refresh" or move it`;
+- a dangling arrow, ours or hand-drawn: bound to an element that is missing,
+  deleted, or does not list the arrow in `boundElements` (the same for bound
+  text and its container), or one of ours whose node is gone;
+- a straight arrow of ours whose end is more than 1px from where
+  `flow connect` would put it now: `arrow F1 -> F2 no longer meets F1; run
+"wiredown flow refresh"`;
+- an arrow of ours a person bent whose end no longer meets its node (more
+  than 12px off it, or inside a frame): `arrow F1 -> F2: it was bent by hand
+and no longer meets F1; straighten or move it in the drawing` (refresh
+  leaves it);
+- two of our frames or decisions whose boxes overlap, once per pair on the
+  later one: `F3: overlaps F1; move one of them in the drawing` (touching
+  edges are fine);
+- an image whose `fileId` has no `## Embedded Files` entry;
+- data written by a newer wiredown, once: `this drawing was written by a
+newer wiredown (data version N)`; that data is otherwise ignored.
+
+Style, bent arrows that meet their nodes and working hand-drawn elements are
+never reported;
+when lint finds nothing, refresh has nothing to do. Exit 1 if any file has
+findings. JSON is `{ files: [{ file, findings }] }`, a
+finding being `{ message, frame?, element? }` (`element` is the element id).
+
+Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"
+in the Excalidraw plugin's Saving settings. `flow lint` reports compressed
+drawings; `flow refresh` rewrites them as JSON even when already up to date.
+
+Lint reports labels more than 60 px from their place above the frame. Notes stay
+in the stack within 60 px horizontally and with a vertical gap of at most 200 px
+from the node or previous in-place note, leaving room for a deleted note. They
+may overlap that edge by up to 60 px. Refresh returns displaced notes after the
+retained stack in vertical order, under a frame or beside a decision. It
+restores groups only on parts with no group; personal groups and small hand
+nudges stay untouched. Far notes beside a decision are handled the same way. A
+label or note with a group absent from its node is left untouched and does not
+take a place in the note stack.
 
 ## API
 
@@ -224,9 +361,14 @@ or exits; `bin/wiredown.js` prints the result. Build the package
   with an id when empty), `out` (default `.`), `theme` (`"light"` or
   `"dark"`), `fonts` (default true) and `json`. `RenderedScreen` is one
   entry of the JSON document's `screens`.
-- **Output** (`output`): `UsageError`, which `check` and `render` throw
-  for an unreadable file and `run` turns into exit code 2. `Finding` is a
-  finding as above; `Result` is what every command returns.
+- **Lint** (`lint`, `flow`): `lint(paths, options?)` runs the `lint`
+  command on files and directories (`.` when empty). `LintOptions` is
+  `{ json? }`; `LintedFlow`, `{ file, findings }`, is one entry of the JSON
+  document's `flows`.
+- **Output** (`output`): `UsageError`, which `check`, `lint` and `render`
+  throw for an unreadable file and `run` turns into exit code 2. `Finding`
+  is a finding as above; a flow's names a `frame` and an `element` instead
+  of a `screen`. `Result` is what every command returns.
 
 ```ts
 import { render } from "@wiredown/cli";

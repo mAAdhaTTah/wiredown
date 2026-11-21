@@ -13,23 +13,21 @@ export interface CheckedFile {
   warnings: Finding[];
 }
 
-/** Check each screens file; exit 1 if any has errors. Warnings don't fail. */
-export async function check(files: string[], options: CheckOptions = {}): Promise<Result> {
-  // read everything first, so an unreadable file leaves no partial output
-  const sources = await Promise.all(files.map(readSource));
-  const results: CheckedFile[] = files.map((file, i) => {
-    const { screens, errors, warnings } = checkScreens(sources[i]);
-    const empty: Finding[] = screens.length ? [] : [{ message: "no wiredown blocks" }];
-    return {
-      file,
-      screens: screens.map(({ id, heading, line }) => ({ id, heading, line })),
-      errors,
-      warnings: [...empty, ...warnings],
-    };
-  });
-  const exitCode = results.some((r) => r.errors.length) ? 1 : 0;
-  if (options.json) return { exitCode, stdout: json({ files: results }), stderr: "" };
-  const stdout = results
+/** One screens file's result, as `check` reports it. */
+export function checkSource(file: string, source: string): CheckedFile {
+  const { screens, errors, warnings } = checkScreens(source);
+  const empty: Finding[] = screens.length ? [] : [{ message: "no wiredown blocks" }];
+  return {
+    file,
+    screens: screens.map(({ id, heading, line }) => ({ id, heading, line })),
+    errors,
+    warnings: [...empty, ...warnings],
+  };
+}
+
+/** Findings and a summary line per file. */
+export function formatChecked(results: CheckedFile[]): string {
+  return results
     .map(({ file, screens, errors, warnings }) => {
       const summary = [
         plural(screens.length, "screen"),
@@ -39,5 +37,14 @@ export async function check(files: string[], options: CheckOptions = {}): Promis
       return formatFindings(file, errors, warnings) + `${file}: ${summary}\n`;
     })
     .join("");
-  return { exitCode, stdout, stderr: "" };
+}
+
+/** Check each screens file; exit 1 if any has errors. Warnings don't fail. */
+export async function check(files: string[], options: CheckOptions = {}): Promise<Result> {
+  // read everything first, so an unreadable file leaves no partial output
+  const sources = await Promise.all(files.map(readSource));
+  const results = files.map((file, i) => checkSource(file, sources[i]));
+  const exitCode = results.some((r) => r.errors.length) ? 1 : 0;
+  if (options.json) return { exitCode, stdout: json({ files: results }), stderr: "" };
+  return { exitCode, stdout: formatChecked(results), stderr: "" };
 }

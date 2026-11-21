@@ -153,6 +153,60 @@ The root export renders nothing; SVG export is in the Node entry,
   offset one (their labels `role: "label"`), notes as
   `{ role: "note", node, anchor }` where `anchor` is the node's element id.
 
+- **Lint and refresh** (`flow-refresh`): `lintFlow(flow, screens)` and
+  `refreshFlow(flow, screens)` compare a flow with the screens it embeds as
+  they lay out now. `screens` is a `ScreenLookup`: asked per embed with a
+  `ScreenRef`, `{ path, blockId }` (the path as written in the link, so two
+  screens files with one block id are never confused), it returns a
+  `ScreenState`, `{ width, height, boxes }` from `screenElements`, or a
+  string saying why there is none.
+
+  `lintFlow` returns `FlowFinding`s, `{ message, frame?, element? }`: missing
+  screens, stale embed sizes or image aspect (a uniformly scaled frame is fine),
+  two nodes claiming one name, two nodes whose boxes overlap (touching edges do
+  not), a person's copies of our elements (one finding per set pasted together),
+  stale overlays, ones whose target or frame is gone or that were drawn for
+  another screen, notes whose node is gone, notes whose top edge lies inside
+  their frame, straight arrows of ours whose ends are more than 1px from where
+  `connect` would put them now, dangling arrow or text bindings
+  (`bindingFailures(elements)` on its own), images without an
+  `## Embedded Files` entry, and data from a newer wiredown. Overlays belong to
+  the frame whose image id their `anchor` records.
+
+  `refreshFlow` updates each frame's link size and image size (same top-left and
+  scale), moves its overlays to where `addHighlight` and `addMark` would place
+  them, and moves the notes under it (those overlapping it sideways with their
+  top below its old top) by the change in its bottom edge, or, when the top one
+  overlaps the frame, to 20px under it, keeping their order. It then re-routes
+  each two-point arrow of ours whose ends are off with the geometry `connect`
+  uses, keeping the arrow's slot, id and bindings' mode, and places its label as
+  `connect` does (halfway, or a third along when the pair has parallel arrows).
+  Displaced labels and notes return to their places. Bent arrows, decisions and
+  hand-drawn elements never move. Frames are not moved apart, so a frame that
+  grew may overlap its neighbour. It returns `FlowChange`s:
+  `{ frame, kind: "embed", element, link, image }` (each a `{ from, to }` of
+  `Size`s, `{ width, height }`),
+  `{ frame, kind: "highlight" | "mark", element, target, label?, unresolved? }`,
+  `{ frame, kind: "note" | "label", element }` for a note moved or a displaced
+  label or note returned,
+  `{ frame, kind: "arrow", element, from, to, unresolved? }`, and
+  `{ frame, kind: "group", element, part }` for a frame's part put back in its
+  group. `unresolved` says why an overlay, or a bent arrow that no longer meets
+  its node, was left in place. It throws, changing nothing, when two nodes claim
+  one name. A flow that `lintFlow` finds nothing in is one `refreshFlow` leaves
+  untouched.
+
+  Lint reports labels more than 60 px from their place above the frame.
+  Notes stay in the stack within 60 px horizontally and with a vertical gap
+  of at most 200 px from the node or previous in-place note, leaving room
+  for a deleted note. They may overlap that edge by up to 60 px. Refresh
+  returns displaced notes after the retained stack in vertical order, under
+  a frame or beside a decision. It restores groups only on parts with no
+  group; personal groups and small hand nudges stay untouched. Far notes
+  beside a decision are handled the same way. A label or note with a group
+  absent from its node is left untouched and does not take a place in the
+  note stack.
+
 - **Screens paths** (`screens-path`): an embed's path names its screens file
   within a root, a directory URL ending in `/`: the git repository's root, else
   the Obsidian vault's, else the folder above the nearest `flows/` folder, else

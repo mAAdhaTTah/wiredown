@@ -111,7 +111,8 @@ async function markdownFiles(dir: string): Promise<string[]> {
  * The screens file `embedPath` names from the flow (`{ path, embedPath }`,
  * with the path to write for it now), or why there is none, as it reads
  * after `embeds [[…]]`: `but no ui.md was found in <root>`, `but it matches
- * several files: <a>, <b>; …` when several files end with the path, or
+ * several files: <a>, <b>; …` (with `ambiguous`) when several files end
+ * with the path, or
  * `which points outside <root>` for a path that leaves the root, symlinks
  * included.
  */
@@ -119,7 +120,7 @@ export async function resolveEmbed(
   flowFile: string,
   embedPath: string,
   root: EmbedRoot,
-): Promise<{ path: string; embedPath: string } | { why: string }> {
+): Promise<{ path: string; embedPath: string } | { why: string; ambiguous?: true }> {
   const outside = { why: `which points outside ${rootPath(root, flowFile)}` };
   const candidates = embedCandidates(root.flow, embedPath, root.url);
   if (!candidates) return outside;
@@ -138,6 +139,7 @@ export async function resolveEmbed(
       if (matches.length > 1)
         return {
           why: `but it matches several files: ${matches.join(", ")}; name one by its path from ${rootPath(root, flowFile)}`,
+          ambiguous: true,
         };
       if (matches.length)
         url = new URL(matches[0].split("/").map(encodeURIComponent).join("/"), root.url).href;
