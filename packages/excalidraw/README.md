@@ -115,6 +115,28 @@ The root export renders nothing; SVG export is in the Node entry,
   every command that takes that name throw a `FlowError`, naming both
   element ids.
 
+  Flow overlays use exported screen boxes and the image's current geometry:
+  `overlayBox(image, screenSize, box)` returns `{ x, y, width, height }`.
+  `addHighlight(flow, frame, { target, box, screen })` returns an outline id;
+  `addMark(flow, frame, { target, box, screen, label })` returns the circle id,
+  with its text bound to it. Their `OverlayOptions` are the `target` id, its
+  `box` from `screenElements` and the `screen`'s `{ width, height }`. Highlights
+  have a 4px outset; badges are at least 32px wide and grow to fit their label.
+  A badge's centre is `markCentre(x, y, diameter)`: up and left of the
+  component's top-left corner by a third of its diameter, so it sits just
+  outside the corner. Neither is bound to the image; both join the frame's
+  group. `frameImage(flow, frame)` is a frame's image element. Overlays record
+  `{ v: 1, id, role: "highlight" | "mark", frame, screen, target, label?, anchor }`
+  in `customData.wiredown`, where `anchor` is the frame image's element id and
+  `frame` is for people; bound text has the same data (with its own `id`) and
+  role `label`. Duplicate highlights or identical mark labels on one component
+  throw; a person's copy of an overlay is not one of ours.
+
+  Embed alignment in Obsidian remains unverified. Padding assumptions live
+  in `flow-edit.ts`'s existing embed constants: 10px on each side, zero
+  above, 5px footer below. Changing those constants corrects sizing and
+  overlays.
+
   Every `customData.wiredown` carries `v` (`DATA_VERSION`, now 1); data
   without `v` is version 1, and data with a higher `v` is ignored.
   `newerDataVersion(flow)` is the version of live elements from a newer

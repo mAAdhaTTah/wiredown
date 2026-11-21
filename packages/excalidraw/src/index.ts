@@ -5,6 +5,9 @@ export type { ExcalidrawScene } from "./scene";
 export { FlowError, newFlow, parseFlow, serializeFlow } from "./flow";
 export type { EmbedLink, Flow, FlowSource } from "./flow";
 export {
+  addHighlight,
+  addMark,
+  overlayBox,
   addDecision,
   addNote,
   addScreen,
@@ -12,9 +15,12 @@ export {
   connect,
   embedSize,
   flowFrames,
+  frameImage,
+  markCentre,
   flowNodes,
 } from "./flow-edit";
 export type {
+  OverlayOptions,
   AddDecisionOptions,
   AddScreenOptions,
   ConnectOptions,
