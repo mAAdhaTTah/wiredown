@@ -12,7 +12,7 @@ export { check, lint, render, UsageError };
 export type { CheckOptions, CheckedFile } from "./check";
 export type { LintedFlow } from "./flow";
 export type { LintOptions } from "./lint";
-export type { RenderOptions, RenderedScreen } from "./render";
+export type { Output, RenderOptions, RenderedScreen } from "./render";
 export type { Finding, Result } from "./output";
 
 type Values = Record<string, string | boolean | string[] | undefined>;
@@ -201,23 +201,28 @@ options:
     },
   },
   render: {
-    summary: "render screens or a flow to SVG",
+    summary: "render screens or a flow to SVG or PNG",
     help: `usage: wiredown render <file.md> [--screen <id>]... [--out <dir>]
+                       [--format svg|png] [--scale <n>] [--transparent]
                        [--theme light|dark] [--no-fonts] [--json]
 
-Renders every screen with an ^id (or only the given ids) to <dir>/<id>.svg.
-Screens with errors are skipped and reported; the rest still render, and
-the exit code is 1.
+Renders every screen with an ^id (or only the given ids) to <dir>/<id>.svg
+(or .png). Screens with errors are skipped and reported; the rest still
+render, and the exit code is 1.
 
-A *.excalidraw.md file renders the whole flow to <dir>/<name>.svg; each
-frame's screen comes from the screens file its embed names. --screen is only
-for screens files.
+A *.excalidraw.md file renders the whole flow to <dir>/<name>.svg (or .png);
+each frame's screen comes from the screens file its embed names. --screen is
+only for screens files.
 
 options:
   --screen <id>   render only this screen; repeatable
   --out <dir>     output directory, created if missing (default: .)
+  --format <f>    svg or png (default: svg)
+  --scale <n>     PNG pixels per SVG pixel, 1 to 4 (default: 2)
+  --transparent   keep the PNG background transparent (default: the
+                  theme's canvas colour)
   --theme <name>  light or dark (default: light)
-  --no-fonts      don't embed Excalifont in the SVG
+  --no-fonts      don't embed Excalifont in the SVG (SVG only)
   --json          print one JSON document instead
   -h, --help      show this help
 `,
@@ -225,6 +230,9 @@ options:
       screen: { type: "string", multiple: true },
       out: { type: "string" },
       theme: { type: "string" },
+      format: { type: "string" },
+      scale: { type: "string" },
+      transparent: { type: "boolean" },
       "no-fonts": { type: "boolean" },
       json: { type: "boolean" },
     },
@@ -234,10 +242,27 @@ options:
       if (theme !== "light" && theme !== "dark") {
         throw new UsageError(`--theme is light or dark, not "${theme}"`);
       }
+      const format = values.format ?? "svg";
+      if (format !== "svg" && format !== "png") {
+        throw new UsageError(`--format is svg or png, not "${format}"`);
+      }
+      if (format === "svg" && (values.scale !== undefined || values.transparent)) {
+        throw new UsageError("--scale and --transparent need --format png");
+      }
+      if (format === "png" && values["no-fonts"]) {
+        throw new UsageError("--no-fonts is for SVG; PNGs always draw Excalifont");
+      }
+      const scale = Number(values.scale ?? 2);
+      if (!Number.isInteger(scale) || scale < 1 || scale > 4) {
+        throw new UsageError(`--scale is a whole number from 1 to 4, not "${values.scale}"`);
+      }
       return render(positionals[0], {
         screens: values.screen as string[] | undefined,
         out: values.out as string | undefined,
         theme,
+        format,
+        scale,
+        transparent: values.transparent === true,
         fonts: values["no-fonts"] !== true,
         json: values.json === true,
       });

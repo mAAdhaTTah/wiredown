@@ -245,16 +245,64 @@ dependencies load on first render.
   exports them, resolving to `{ svg, width, height, boxes }`: the SVG and
   `screenElements`' size and boxes.
 
-  `renderFlowSvg(flow, screens, options?)` exports a flow, returning
-  `{ svg, width, height, missing, rejected }`. The lookup is asked per embed,
-  `screens({ path, blockId })`, and returns adapter elements or `undefined`;
-  missing entries contain `element`, `path` and `blockId`. Screen SVGs are
-  cached by embed path and block id, padded using `embedSize`, and supplied as
-  SVG data URLs alongside existing drawing files. Nested screens inline their
-  own fonts unless `fonts: false`. Excalidraw filters light SVG images for dark
-  flows, so nested screens are always exported light. A drawing file that is not
-  an inline PNG, JPEG, GIF, WebP or SVG data URL is left out and listed in
-  `rejected` as `{ id, reason }`.
+  `renderFlowSvg(flow, screens, options?)` exports a flow with `FLOW_MARGIN`
+  (16px) around it, so labels at its edge are not cut; its options are
+  `FlowSvgOptions`, those of `renderSvg` plus `raster` (below). It returns
+  `{ svg, width, height, missing, rejected, inline }`. The lookup is asked per
+  embed, `screens({ path, blockId })`, and returns adapter elements or
+  `undefined`; missing entries contain `element`, `path` and `blockId`. Screen
+  SVGs are cached by embed path and block id, padded using `embedSize`, and
+  supplied as SVG data URLs alongside existing drawing files. Nested screens
+  inline their own fonts unless `fonts: false`. Excalidraw filters light SVG
+  images for dark flows, so nested screens are always exported light. A drawing
+  file that is not an inline PNG, JPEG, GIF, WebP or SVG data URL is left out
+  and listed in `rejected` as `{ id, reason }`. `inline` is the set of screen
+  images the export generated, for `svgToPng`.
+
+- **PNG** (`node`): `svgToPng(svg, { scale?, background?, inline? })`
+  rasterises an SVG from the functions above with `@resvg/resvg-js`
+  (native, prebuilt for Linux, macOS and Windows; loaded on first use, no
+  browser) and resolves to `{ png, width, height }`: the PNG bytes and
+  their size in pixels, the SVG size times `scale` (default 1). It is
+  transparent unless `background` (a CSS colour) is given;
+  `BACKGROUND.light` (`#ffffff`) and `BACKGROUND.dark` (`#121212`, white
+  as Excalidraw's dark mode draws it) match the canvas behind each theme.
+  The same SVG gives the same bytes on the same machine. Its options are
+  `PngOptions`.
+
+  ```ts
+  import { BACKGROUND, renderScreenSvg, svgToPng } from "@wiredown/excalidraw/node";
+
+  const { svg } = await renderScreenSvg(tree, { theme: "dark" });
+  const { png, width, height } = await svgToPng(svg, {
+    scale: 2,
+    background: BACKGROUND.dark,
+  });
+  ```
+
+  resvg ignores `@font-face`, so `svgToPng` takes the Excalifont woff2
+  files the SVG embeds (in the SVG and in its nested screen images),
+  decompresses them to TrueType with `woff2-encoder`, and hands them to
+  resvg as font files in a temporary directory. Export with fonts (the
+  default) for PNGs: without them text falls back to a system font.
+  Characters Excalifont lacks are drawn with a system font that has them;
+  if none does, resvg draws an empty box, so their look depends on the
+  machine (`check` warns about them). Excalidraw draws images as a `<use>`
+  of a `<symbol>`; resvg sizes those wrongly and draws no text inside
+  nested SVG images, so `svgToPng` inlines into its symbol each SVG image
+  whose data URL is in `inline`, the set `renderFlowSvg` returns for the
+  screens it generated. The SVG output itself is unchanged.
+
+  An SVG image can make resvg read local files (through an image, an
+  `feImage`, a pattern), so for PNG output pass `raster: true` to
+  `renderFlowSvg`: the drawing's own SVG images are then listed in
+  `rejected` and not drawn, while its PNG, JPEG, GIF and WebP images are.
+  `svgToPng` throws ("refusing an SVG image that is not one of the trusted
+  screens") on any data URL in its tags or CSS other than a trusted
+  screen, a raster image or a font. It does not inspect the SVG's other
+  links, so an `<image href="/path">` in the SVG you pass is read from
+  disk; pass only SVGs from this module's exporters. In SVG output a
+  drawing's SVG images stay embedded as inert image data.
 
 - **Types** (`node`): `SvgOptions`, which the SVG functions take: `theme`
   (`"light"` or `"dark"`; default light) and `fonts` (inline Excalifont so

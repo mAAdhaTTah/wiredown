@@ -11,7 +11,7 @@ import {
   screenElements,
 } from "../src/index";
 import type { ScreenRef } from "../src/index";
-import { renderFlowSvg } from "../src/node";
+import { FLOW_MARGIN, renderFlowSvg } from "../src/node";
 
 const source = readFileSync(
   new URL("../../core/tests/fixtures/screens.md", import.meta.url),
@@ -73,6 +73,7 @@ it("pads the nested canvas and places its screen at x=10", () => {
     `width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}"`,
   );
   expect(nested).toContain('<svg x="10" y="0"');
+  expect([...light.inline]).toEqual(["data:image/svg+xml;base64," + urls(light.svg)[0]]);
 });
 it("aligns the invite highlight with the nested screen", () => {
   const image = flowFrames(flow)[0].element;
@@ -80,8 +81,8 @@ it("aligns the invite highlight with the nested screen", () => {
   const group = /<g stroke-linecap="round"[^>]*>/.exec(light.svg)![0];
   const position = /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(group)!;
   expect(position).not.toBeNull();
-  expect(Number(position[1])).toBeCloseTo(Number(image.x) + 10 + box.x - 4);
-  expect(Number(position[2])).toBeCloseTo(Number(image.y) + box.y - 4);
+  expect(Number(position[1])).toBeCloseTo(FLOW_MARGIN + Number(image.x) + 10 + box.x - 4);
+  expect(Number(position[2])).toBeCloseTo(FLOW_MARGIN + Number(image.y) + box.y - 4);
 });
 it("filters dark images while preserving light nested bytes", async () => {
   const dark = await renderFlowSvg(flow, lookup, { theme: "dark" });
@@ -125,7 +126,9 @@ it("passes through an ordinary PNG image unchanged", async () => {
     created: 1,
   };
   const lookup = vi.fn();
-  expect((await renderFlowSvg(ordinary, lookup)).svg).toContain(dataURL);
+  const rendered = await renderFlowSvg(ordinary, lookup);
+  expect(rendered.svg).toContain(dataURL);
+  expect(rendered.inline.size).toBe(0);
   expect(lookup).not.toHaveBeenCalled();
 });
 it("exports the real drawing with all three screens missing", async () => {
