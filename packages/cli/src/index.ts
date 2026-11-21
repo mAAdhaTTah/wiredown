@@ -39,11 +39,11 @@ example:
   ],
   [
     "add-screen <flow.excalidraw.md> <screen-id> [--right-of F2 | --below F2] [--title <text>] [--screens <screens.md>] [--json]",
-    `Adds a frame for the screen, right of the rightmost node unless placed.
+    `Adds a frame for the screen, right of the rightmost frame unless placed.
 
 options:
-  --right-of <node>  place it right of this node
-  --below <node>     place it below this node
+  --right-of <frame> place it right of this frame
+  --below <frame>    place it below this frame
   --title <text>     the frame's title (default: the screen's heading, then
                      its id)
   --screens <file>   the screens file to embed from (default: the nearest

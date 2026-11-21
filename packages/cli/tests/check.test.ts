@@ -84,7 +84,7 @@ describe("run", () => {
     const own = (await run(["flow", "add-screen", "--help"])).stdout;
     expect(flow).toMatch(/wiredown flow new .*\n.*wiredown flow add-screen /);
     expect(own).toMatch(/^usage: wiredown flow add-screen /);
-    expect(own).toContain("--right-of <node>");
+    expect(own).toContain("--right-of <frame>");
     expect(own).toContain("example:\n  wiredown flow add-screen ");
     expect(own).not.toContain("wiredown flow new");
   });
