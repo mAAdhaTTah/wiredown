@@ -78,17 +78,20 @@ const FILES_HEADING = "## Embedded Files\n";
 /** The plugin's end of a text element entry: ` ^` and an 8-character id. */
 const TEXT_MARKER = /\s\^(.{8})\n+/g;
 
-/** Parses an Obsidian Excalidraw drawing. Throws if it is not one. */
+/** A drawing a flow function cannot read or edit as asked; its message says why. */
+export class FlowError extends Error {}
+
+/** Parses an Obsidian Excalidraw drawing. Throws a `FlowError` if it is not one. */
 export function parseFlow(text: string): Flow {
   if (text.includes("\r\n"))
-    throw new Error("Excalidraw drawing: CRLF line endings are not supported");
+    throw new FlowError("Excalidraw drawing: CRLF line endings are not supported");
   const d = /\n(##? Drawing\n```(json|compressed-json)\n)/.exec(text);
-  if (!d) throw new Error('not an Excalidraw drawing: no "## Drawing" json block');
+  if (!d) throw new FlowError('not an Excalidraw drawing: no "## Drawing" json block');
   const before = text.slice(0, d.index + 1);
   const bodyStart = d.index + d[0].length;
   // Neither JSON.stringify nor base64 can produce a line that is just ```.
   const fence = /^```$/m.exec(text.slice(bodyStart));
-  if (!fence) throw new Error('not an Excalidraw drawing: "## Drawing" block is not closed');
+  if (!fence) throw new FlowError('not an Excalidraw drawing: "## Drawing" block is not closed');
   const closeStart = Math.max(bodyStart, bodyStart + fence.index - 1);
   const body = text.slice(bodyStart, closeStart);
   const compressed = d[2] === "compressed-json";
@@ -96,22 +99,22 @@ export function parseFlow(text: string): Flow {
   let json = body;
   if (compressed) {
     json = LZString.decompressFromBase64(body.replace(/[\r\n]/g, "")) ?? "";
-    if (!json) throw new Error("Excalidraw drawing: compressed-json does not decompress");
+    if (!json) throw new FlowError("Excalidraw drawing: compressed-json does not decompress");
   }
   let scene: unknown;
   try {
     scene = JSON.parse(json);
   } catch (e) {
-    throw new Error(`Excalidraw drawing: drawing JSON does not parse: ${(e as Error).message}`);
+    throw new FlowError(`Excalidraw drawing: drawing JSON does not parse: ${(e as Error).message}`);
   }
   if (!isRecord(scene) || !Array.isArray(scene.elements)) {
-    throw new Error("Excalidraw drawing: drawing JSON has no elements array");
+    throw new FlowError("Excalidraw drawing: drawing JSON has no elements array");
   }
   // compressed drawings hold one-line JSON; written out, they get the plugin's tabs so they diff
   const indent = /^\{\n([ \t]+)/.exec(json)?.[1] ?? (compressed ? "\t" : undefined);
 
   const ex = /^# Excalidraw Data$/m.exec(before);
-  if (!ex) throw new Error('not an Excalidraw drawing: no "# Excalidraw Data" section');
+  if (!ex) throw new FlowError('not an Excalidraw drawing: no "# Excalidraw Data" section');
   const { parts, sections } = splitSections(before.slice(ex.index));
 
   const textOrder = [...(sections[TEXT] ?? "").matchAll(TEXT_MARKER)].map((m) => m[1]);

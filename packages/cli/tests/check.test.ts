@@ -68,7 +68,9 @@ describe("check", () => {
     const result = await run(["check", "--json", join(dir, "a.md"), join(dir, "missing.md")]);
     expect(result.exitCode).toBe(2);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toContain("missing.md: ENOENT");
+    expect(result.stderr).toContain(
+      "cannot read " + join(dir, "missing.md") + ": it does not exist",
+    );
   });
 });
 
@@ -77,6 +79,16 @@ describe("run", () => {
     expect((await run(["--help"])).stdout).toContain("render ");
     expect((await run(["check", "--help"])).stdout).toContain("usage: wiredown check");
     expect(await run(["--version"])).toEqual({ exitCode: 0, stdout: "0.0.0\n", stderr: "" });
+  });
+
+  it("prints a flow command's own help, and every flow command's usage for flow", async () => {
+    const flow = (await run(["flow", "--help"])).stdout;
+    const own = (await run(["flow", "add-screen", "--help"])).stdout;
+    expect(flow).toMatch(/wiredown flow new .*\n.*wiredown flow add-screen /);
+    expect(own).toMatch(/^usage: wiredown flow add-screen /);
+    expect(own).toContain("--right-of <frame>");
+    expect(own).toContain("example:\n  wiredown flow add-screen ");
+    expect(own).not.toContain("wiredown flow new");
   });
 
   it("exits 2 with usage on stderr for bad usage", async () => {

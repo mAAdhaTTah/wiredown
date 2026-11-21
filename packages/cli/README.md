@@ -6,7 +6,7 @@ headlessly in Node, with JSON output for agents.
 ```sh
 wiredown check <file.md>... [--json]
 wiredown render <file.md> [--screen <id>]... [--out <dir>] [--theme light|dark] [--no-fonts] [--json]
-wiredown --help | <command> --help | --version
+wiredown --help | <command> --help | flow <command> --help | --version
 ```
 
 `check` prints its findings on stdout: they are its result. `render` prints
@@ -85,6 +85,65 @@ errors for an unknown `--screen` id and for nothing to render have no
 `--theme dark` lets Excalidraw draw the dark theme; file names don't change,
 so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
 
+## flow
+
+`wiredown flow new <flow.excalidraw.md> [<screen-id>... --screens
+<screens.md>] [--json]` creates an empty drawing or a row of frames; an
+existing file is an error.
+
+`wiredown flow add-screen <flow.excalidraw.md> <screen-id> --screens
+<screens.md> [--right-of F2 | --below F2] [--title <text>] [--json]` appends
+a frame relative to the current image position. Default placement is right
+of the rightmost frame. Titles default to the screen heading, then its id.
+
+Each frame embeds its screen as `[[<path>#^<id>|WxH]]`, and that path says
+which screens file the frame uses. The path written is the screens file's
+path from the flow's root without `.md`, such as `docs/checkout/screens`.
+The root is the git repository's root (the nearest directory at or above
+the flow holding `.git`), else the Obsidian vault's (holding `.obsidian/`),
+each looked for above the flow's path and then above its real path; else
+the parent of the flow's directory. Readers take:
+
+- `./x` and `../x` from the flow's directory;
+- any other path from the root, if that file exists;
+- else, as Obsidian does, the one `.md` file in the root whose path ends
+  with it (`screens`, `checkout/screens`), not searching `node_modules` or
+  folders starting with `.`. More than one is an error naming them
+  (`screens matches several files: a/screens.md, b/screens.md; …`).
+
+A path that is absolute, has a `..` segment without starting `./` or `../`,
+or leads outside the root (a symlink included) is rejected:
+`../outside points outside <root>`. One flow can embed screens from several
+files.
+
+A screens file or root found from the flow is printed relative to the
+working directory when the flow's path was given relative, and absolute when
+it was given absolute. Paths given on the command line print as given.
+
+`--screens` names the screens file and is required whenever screens are
+added; there is no default. It takes any `.md` file inside the root; one
+outside it is an error (`the screens file <file> points outside <root>`).
+A screens file whose path from the root contains `#`, `|` or `]` is
+refused, since those end the path in an embed link.
+Missing embed styling frontmatter is added; existing values are preserved.
+Invalid screens and unknown frames leave the drawing untouched.
+A frame's image and its `F3 · Title` label share an Excalidraw group, so
+they move together: clicking either selects both; double-click to select
+one. Human output is one `F3  team-members  548x333` line per frame. The size is
+the embed image size in the drawing. JSON is
+`{ flow, frames: [{ frame, screen, title, x, y, width, height }],
+screensFileUpdated }`. A file or input problem, such as a missing file, an
+unknown screen or frame, or a file that is not a drawing, exits 1 with a
+plain message (JSON adds an `errors` array); usage errors exit 2. Any other
+error is a bug and crashes with a stack trace.
+
+Flow commands refuse to overwrite a drawing or screens file that changed
+while the command was running, and replace files atomically. The check is
+best effort: a save landing in the last instant can still be lost. If the
+screens file changed, the drawing is left as it was, and `flow new` leaves no
+file behind. Close the drawing in Obsidian before running flow commands, or
+retry after a concurrent save.
+
 ## API
 
 The root export runs the commands without a terminal. Each resolves to a
@@ -94,7 +153,8 @@ or exits; `bin/wiredown.js` prints the result. Build the package
 
 - **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
   the script, as `bin/wiredown.js` does. Bad usage and unreadable files
-  give exit code 2; any other error rejects.
+  give exit code 2, and the `flow` commands report file and input problems
+  with exit code 1; any other error rejects.
 - **Check** (`check`): `check(files, options?)` runs the `check` command
   on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
   entry of the JSON document's `files`.
