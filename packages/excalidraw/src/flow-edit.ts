@@ -110,6 +110,12 @@ export function copyOf(e: ExcalidrawElementJson): { node?: string; what: string 
   if (d.role === "arrow") return { what: arrow };
   return { node, what: `${node ?? arrow}'s ${d.role === "screen" ? "frame" : d.role}` };
 }
+/** An element's `groupIds`, innermost first. */
+export const groupsOf = (e: ExcalidrawElementJson) =>
+  Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
+/** Whether `e` is in a group its node is not in: one a person made, which flow commands leave alone. */
+export const inPersonalGroup = (e: ExcalidrawElementJson, node?: ExcalidrawElementJson) =>
+  groupsOf(e).some((g) => !(node ? groupsOf(node) : []).includes(g));
 /**
  * Live copies, as pasted together: bound text with its container, and the
  * copies in a group that holds nothing else; any other copy alone. A
@@ -119,8 +125,6 @@ export function pastedCopies(flow: Flow): ExcalidrawElementJson[][] {
   const live = flow.elements.filter((e) => !e.isDeleted);
   const copies = live.filter((e) => copyOf(e));
   const ids = new Set(copies.map((e) => e.id));
-  const groupsOf = (e: ExcalidrawElementJson) =>
-    Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
   const key = (e: ExcalidrawElementJson): string => {
     if (ids.has(String(e.containerId))) return key(copies.find((c) => c.id === e.containerId)!);
     const group = groupsOf(e)[0];
@@ -257,16 +261,14 @@ export function touch(e: ExcalidrawElementJson) {
  */
 function nodeGroups(flow: Flow, node: ExcalidrawElementJson): string[] {
   const data = identity(node)!;
-  const groups = (e: ExcalidrawElementJson) =>
-    Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
-  const at = data.group ? groups(node).indexOf(data.group) : -1;
-  if (at >= 0) return groups(node).slice(at);
+  const at = data.group ? groupsOf(node).indexOf(data.group) : -1;
+  if (at >= 0) return groupsOf(node).slice(at);
   data.group = id();
   for (const e of [node, ...flow.elements.filter((e) => e.containerId === node.id)]) {
-    e.groupIds = [data.group, ...groups(e)];
+    e.groupIds = [data.group, ...groupsOf(e)];
     touch(e);
   }
-  return groups(node);
+  return groupsOf(node);
 }
 /** An Excalifont text element sized by core's measurer. */
 function textElement(
@@ -649,12 +651,7 @@ export function nodeAttachments(flow: Flow, n: FlowNode) {
       )
         return [];
       if (!d.anchor && !d.id && legacy.length > 1) return [];
-      if (
-        (e.groupIds as string[] | undefined)?.some(
-          (g) => !(n.element.groupIds as string[] | undefined)?.includes(g),
-        )
-      )
-        return [];
+      if (inPersonalGroup(e, n.element)) return [];
       const label = d.role === "label";
       const want = label ? { x: b.x, y: b.y - LABEL_OFFSET } : { x, y };
       const distance = Math.hypot(Number(e.x) - want.x, Number(e.y) - want.y);

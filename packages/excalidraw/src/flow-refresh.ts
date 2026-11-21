@@ -16,8 +16,10 @@ import {
   END_GAP,
   flowFrames,
   flowNodes,
+  groupsOf,
   highlightBounds,
   identity,
+  inPersonalGroup,
   markCentre,
   newerDataVersion,
   nodeAttachments,
@@ -253,12 +255,7 @@ function notesUnder(flow: Flow, anchor: string, old: Rect, now: Rect) {
   const notes = flow.elements.filter((e) => {
     const d = identity(e);
     if (e.isDeleted || d?.role !== "note" || d.anchor !== anchor || far.has(e.id)) return false;
-    if (
-      (e.groupIds as string[] | undefined)?.some(
-        (g) => !(n?.element.groupIds as string[] | undefined)?.includes(g),
-      )
-    )
-      return false;
+    if (inPersonalGroup(e, n?.element)) return false;
     const r = rect(e);
     return r.x < old.x + old.width && r.x + r.width > old.x && r.y > old.y;
   });
@@ -287,7 +284,7 @@ function ungroupedParts(flow: Flow, n: FlowNode) {
     const d = identity(e);
     return (
       !e.isDeleted &&
-      !(e.groupIds as string[] | undefined)?.length &&
+      !groupsOf(e).length &&
       d &&
       (e === n.element ||
         d.anchor === n.element.id ||
