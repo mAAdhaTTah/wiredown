@@ -14,9 +14,11 @@ import {
   connect,
   newFlow,
   parseFlow,
+  refreshFlow,
   screenElements,
   serializeFlow,
   type ExcalidrawElementJson,
+  type ScreenLookup,
 } from "../../src/index";
 import { startObsidian, type Obsidian } from "./obsidian";
 
@@ -111,15 +113,26 @@ const CHECKOUT = [
   "",
 ].join("\n");
 
+/** The screens refresh sees: each block of `source`, laid out now. */
+function lookup(source: string): ScreenLookup {
+  const screens = checkScreens(source).screens;
+  return ({ blockId }) => {
+    const screen = screens.find((s) => s.id === blockId);
+    if (!screen) return { ok: false, message: `no ^${blockId}` };
+    const { width, height, boxes } = screenElements(layoutScreen(screen.tree));
+    return { ok: true, screen: { width, height, boxes } };
+  };
+}
+
 // A drawing as `flow new … cart`, `flow add-screen … done --below F1`,
 // `flow decision`, `flow connect`, `flow note`, `flow highlight` and
 // `flow mark` write it: frames sized from the rendered screens with the embed
 // path from the root, a decision, bound arrows (two between one pair) with
 // bound labels, notes in their node's group, and a highlight and a mark with
 // bound text in the frame's group.
-function commands(): string {
+function commands(source = CHECKOUT): string {
   const flow = newFlow();
-  const screens = checkScreens(CHECKOUT).screens;
+  const screens = checkScreens(source).screens;
   for (const [id, place] of [["cart"], ["done", { below: "F1" }]] as const) {
     const screen = screens.find((s) => s.id === id)!;
     const { width, height } = screenElements(layoutScreen(screen.tree));
@@ -141,6 +154,17 @@ function commands(): string {
   const go = { target: "go", box: cart.boxes.go, screen: cart };
   addHighlight(flow, "F1", go);
   addMark(flow, "F1", { ...go, label: "1" });
+  return serializeFlow(flow);
+}
+
+// The same drawing made when the cart screen had one more line, then brought
+// up to date by `flow refresh`: a new embed size, and the overlays, notes and
+// arrows that moved with it.
+function refreshed(): string {
+  const before = CHECKOUT.replace("window: Cart\n", "window: Cart\n  text: Two items\n");
+  const flow = parseFlow(commands(before));
+  const kinds = refreshFlow(flow, lookup(CHECKOUT)).map((c) => c.kind);
+  if (!kinds.includes("embed")) throw new Error(`refresh changed only ${kinds.join(", ")}`);
   return serializeFlow(flow);
 }
 
@@ -182,6 +206,7 @@ const FLOWS = {
   "flows/review-and-apply.excalidraw.md": FIXTURE,
   "flows/new.excalidraw.md": written(),
   "docs/checkout/flows/commands.excalidraw.md": commands(),
+  "docs/checkout/flows/refreshed.excalidraw.md": refreshed(),
 };
 
 let obsidian: Obsidian;
