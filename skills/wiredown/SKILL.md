@@ -43,9 +43,9 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    `check` and commit the changed `screens.md` with the flow.
 
    ```sh
-   wiredown flow new flows/members.excalidraw.md team-members --json
+   wiredown flow new flows/members.excalidraw.md team-members --screens screens.md --json
    wiredown flow decision flows/members.excalidraw.md 'Remove Erik?' --right-of F1 --json
-   wiredown flow add-screen flows/members.excalidraw.md team-members-after-remove --right-of D1 --json
+   wiredown flow add-screen flows/members.excalidraw.md team-members-after-remove --screens screens.md --right-of D1 --json
    wiredown flow connect flows/members.excalidraw.md F1 D1 'Remove' --json
    wiredown flow connect flows/members.excalidraw.md D1 F2 'Yes' --json
    wiredown flow note flows/members.excalidraw.md D1 'Confirm before removal' --json
@@ -151,8 +151,9 @@ Lint also reports far labels and notes; refresh restores them and frame groups.
 
 Each frame's embed names its screens file by its path from the repository
 root (else the Obsidian vault root): `[[docs/checkout/screens#^cart]]`.
-Flow commands, render and lint follow it, so `--screens` (any `.md` file in
-that root) exists only on `flow new` and `flow add-screen`. A link that only
+Flow commands, render and lint follow it. Only `flow new` and
+`flow add-screen` write it, so they take the screens file with `--screens`
+(required; any `.md` file in that root). A link that only
 ends a path, such as `[[screens#^id]]`, works while one file matches; when
 lint says it matches several, write the path from the root.
 

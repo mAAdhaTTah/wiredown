@@ -51,7 +51,7 @@ JSON: omitted fields include paths, geometry and generated element ids.
 Read actual returned frame ids when continuing an existing drawing.
 
 ```sh
-wiredown flow new flows/members.excalidraw.md team-members --json
+wiredown flow new flows/members.excalidraw.md team-members --screens screens.md --json
 ```
 
 ```json
@@ -67,7 +67,7 @@ wiredown flow decision flows/members.excalidraw.md 'Remove Erik?' --right-of F1 
 ```
 
 ```sh
-wiredown flow add-screen flows/members.excalidraw.md team-members-after-remove --right-of D1 --json
+wiredown flow add-screen flows/members.excalidraw.md team-members-after-remove --screens screens.md --right-of D1 --json
 ```
 
 ```json

@@ -68,7 +68,7 @@ it("executes the documented flow sequence and checks trimmed JSON results", asyn
     expect(commands).toEqual(pairs.map((pair) => pair[1].trim()));
     for (const [index, command] of commands.entries()) {
       const args = argv(command).map((arg) =>
-        arg.startsWith("flows/") ? join(directory, arg) : arg,
+        arg.startsWith("flows/") || arg === "screens.md" ? join(directory, arg) : arg,
       );
       const result = await run(args);
       expect(result.exitCode, result.stderr + result.stdout).toBe(0);
