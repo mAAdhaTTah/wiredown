@@ -51,7 +51,7 @@ export function styleScreens(source: string): string {
   );
 }
 export async function editFlow(
-  command: string,
+  command: "new" | "add-screen",
   file: string,
   ids: string[],
   options: FlowOptions = {},
