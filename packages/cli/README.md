@@ -157,8 +157,9 @@ A frame's image and its `F3 · Title` label share an Excalidraw group, so
 they move together: clicking either selects both; double-click to select
 one. Human output is one `F3  team-members  548x333` line per frame, then one
 `F1 -> F2` line per arrow. The size is the embed image size in the drawing.
-JSON is `{ flow, frames: [{ frame, screen, title, x, y, width, height }],
-screensFileUpdated }`; `flow new` adds `arrows: [{ id, from, to, label }]`.
+JSON is `{ flow, frames: [{ frame, screen, title, id, x, y, width, height }],
+screensFileUpdated }`, where `id` is the image's element id; `flow new` adds
+`arrows: [{ id, from, to, label, x, y, width, height }]`.
 A file or input problem, such as a missing file, an unknown screen or node,
 or a file that is not a drawing, exits 1 with a plain message (JSON adds an
 `errors` array); usage errors exit 2. Any other error is a bug and crashes

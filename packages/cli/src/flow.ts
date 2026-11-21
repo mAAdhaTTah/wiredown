@@ -18,7 +18,13 @@ import {
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
-import type { Flow, FlowChange, ScreenRef, ScreenState } from "@wiredown/excalidraw";
+import type {
+  ExcalidrawElementJson,
+  Flow,
+  FlowChange,
+  ScreenRef,
+  ScreenState,
+} from "@wiredown/excalidraw";
 import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds";
 import {
   CommandError,
@@ -544,7 +550,7 @@ const place = (options: FlowOptions) =>
       : undefined;
 
 /** Positionals each command takes after the file: [required, optional]. */
-const ARITY: Record<string, [number, number, string]> = {
+const ARITY = {
   refresh: [0, 0, "one file"],
   lint: [0, Infinity, "at least one file"],
   highlight: [2, 0, "a file, a frame and a component id"],
