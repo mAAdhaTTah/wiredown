@@ -20,6 +20,7 @@ import {
 import type {
   ExcalidrawElementJson,
   Flow,
+  FlowChange,
   ScreenLookup,
   ScreenRef,
   ScreenState,
@@ -61,6 +62,13 @@ function build() {
   return { flow, hi, mark, arrow, note };
 }
 const byId = (flow: Flow, id: string) => flow.elements.find((e) => e.id === id)!;
+/** A change without the geometry and text id refresh adds to every one. */
+const plain = (changes: FlowChange[]) =>
+  changes.map((c) =>
+    Object.fromEntries(
+      Object.entries(c).filter(([k]) => !["x", "y", "width", "height", "textId"].includes(k)),
+    ),
+  );
 const points = (a: ExcalidrawElementJson) => {
   const [dx, dy] = (a.points as number[][]).at(-1)!;
   return [Number(a.x), Number(a.y), Number(a.x) + dx, Number(a.y) + dy];
@@ -112,7 +120,15 @@ test("a grown screen: lint reports it, refresh fixes it, lint is clean", () => {
   ]);
   const version = Number(img.version);
   const changes = refreshFlow(flow, screens);
-  expect(changes).toEqual([
+  // each change names the element's geometry as refresh left it
+  for (const c of changes) {
+    const e = byId(flow, c.element);
+    expect([c.x, c.y, c.width, c.height]).toEqual([e.x, e.y, e.width, e.height].map(Number));
+  }
+  expect(changes.find((c) => c.kind === "mark")).toMatchObject({
+    textId: flow.elements.find((e) => e.containerId === mark)!.id,
+  });
+  expect(plain(changes)).toEqual([
     {
       frame: "F1",
       kind: "embed",
@@ -211,7 +227,7 @@ test("an overlay whose target is gone is left in place and reported", () => {
   const screens = lookup({ home: { ...grown, boxes: {} }, other });
   const before = structuredClone(byId(flow, hi));
   const changes = refreshFlow(flow, screens);
-  expect(changes.filter((c) => "unresolved" in c)).toEqual([
+  expect(plain(changes.filter((c) => "unresolved" in c))).toEqual([
     {
       frame: "F1",
       kind: "highlight",
@@ -239,7 +255,7 @@ test("an overlay whose frame is gone is reported and left alone", () => {
   const { flow, hi } = build();
   image(flow, "F1").isDeleted = true;
   const screens = lookup({ home, other });
-  expect(refreshFlow(flow, screens)).toContainEqual({
+  expect(plain(refreshFlow(flow, screens))).toContainEqual({
     frame: "F1",
     kind: "highlight",
     element: hi,
@@ -420,7 +436,7 @@ test("overlays follow their frame's image by id; copies and other screens are re
     element: mark,
     message: "mark 3 #invite is on a frame that no longer exists",
   });
-  expect(refreshFlow(flow, screens)).toContainEqual({
+  expect(plain(refreshFlow(flow, screens))).toContainEqual({
     frame: "F1",
     kind: "mark",
     element: mark,
@@ -630,13 +646,15 @@ test("a bent arrow is left alone and reported; a hand-drawn one is untouched", (
   const changes = refreshFlow(flow, lookup({ home: grown, other }));
   const why = "it was bent by hand and no longer meets F1; straighten or move it in the drawing";
   const unresolved = { frame: "F1", kind: "arrow", element: arrow, from: "F1", to: "F2" };
-  expect(changes.filter((c) => c.kind === "arrow")).toEqual([{ ...unresolved, unresolved: why }]);
+  expect(plain(changes.filter((c) => c.kind === "arrow"))).toEqual([
+    { ...unresolved, unresolved: why },
+  ]);
   expect([byId(flow, arrow), byId(flow, "drawnArw")]).toEqual(before);
   // F1 grew under its start: lint reports it every time, and refresh leaves it
   expect(lintFlow(flow, lookup({ home: grown, other }))).toEqual([
     { frame: "F1", element: arrow, message: `arrow F1 -> F2: ${why}` },
   ]);
-  expect(refreshFlow(flow, lookup({ home: grown, other }))).toEqual([
+  expect(plain(refreshFlow(flow, lookup({ home: grown, other })))).toEqual([
     { ...unresolved, unresolved: why },
   ]);
   expect([byId(flow, arrow), byId(flow, "drawnArw")]).toEqual(before);

@@ -59,8 +59,8 @@ export interface Size {
   width: number;
   height: number;
 }
-/** What `refreshFlow` changed, or (with `unresolved`) could not place. */
-export type FlowChange =
+/** A change before refreshFlow adds the element's geometry. */
+type Change =
   | {
       frame: string;
       kind: "embed";
@@ -76,6 +76,8 @@ export type FlowChange =
       element: string;
       target: string;
       label?: string;
+      /** A mark's text element. */
+      textId?: string;
       /** Why the overlay was left in place; absent when it was moved. */
       unresolved?: string;
     }
@@ -91,7 +93,12 @@ export type FlowChange =
     }
   | { frame: string; kind: "note"; element: string }
   | { frame: string; kind: "label"; element: string }
-  | { frame: string; kind: "group"; element: string; part: string };
+  | { frame: string; kind: "group"; element: string; part: string; group: string };
+/**
+ * What `refreshFlow` changed, or (with `unresolved`) could not place, with
+ * the element's position and size as refresh leaves it.
+ */
+export type FlowChange = Change & Rect;
 
 /** Overlays, frames, arrow ends and notes within this many drawing px of their place are current. */
 const TOLERANCE = 1;
@@ -201,13 +208,17 @@ const placed = (p: Placement) =>
   );
 /** The image as refresh leaves it: same top-left, the stale size replaced. */
 const refreshedImage = (s: FrameState) => (s.stale ? { ...s.image, ...s.stale.image } : s.image);
-const overlayChange = (o: Overlay) => ({
-  frame: o.frame,
-  kind: o.role,
-  element: o.element.id,
-  target: o.target,
-  ...(o.label === undefined ? {} : { label: o.label }),
-});
+const overlayChange = (flow: Flow, o: Overlay) => {
+  const text = flow.elements.find((e) => !e.isDeleted && e.containerId === o.element.id);
+  return {
+    frame: o.frame,
+    kind: o.role,
+    element: o.element.id,
+    target: o.target,
+    ...(o.label === undefined ? {} : { label: o.label }),
+    ...(text ? { textId: text.id } : {}),
+  };
+};
 const link = (path: string, blockId: string) => `[[${path}#^${blockId}]]`;
 const overlayName = (o: Overlay) =>
   o.role === "mark" ? `mark ${o.label} #${o.target}` : `highlight #${o.target}`;
@@ -588,7 +599,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
   // which node's overlays and notes to move would be a guess
   const [claim] = claimedNames(flow);
   if (claim) throw new FlowError(claim.message);
-  const out: FlowChange[] = [];
+  const out: Change[] = [];
   const touched = new Set<string>();
   const touchOnce = (e: ExcalidrawElementJson) => {
     if (!touched.has(e.id)) {
@@ -625,7 +636,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
         out.push({ frame: s.frame, kind: "note", element: e.id });
       }
     for (const o of overlays.filter((o) => o.anchor === s.image.id)) {
-      const change = overlayChange(o);
+      const change = overlayChange(flow, o);
       const plan = placeOverlay(flow, o, s as typeof s & { screen: ScreenState }, s.image);
       if (typeof plan === "string") out.push({ ...change, unresolved: plan });
       else if (!plan.every(placed)) {
@@ -645,9 +656,10 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       out.push({ frame: n.node, kind: identity(e)!.role as "label" | "note", element: e.id });
     }
     for (const e of ungroupedParts(flow, n)) {
-      e.groupIds = [identity(n.element)!.group!];
+      const group = identity(n.element)!.group!;
+      e.groupIds = [group];
       touchOnce(e);
-      out.push({ frame: n.node, kind: "group", element: e.id, part: partName(e) });
+      out.push({ frame: n.node, kind: "group", element: e.id, part: partName(e), group });
     }
   }
 
@@ -676,6 +688,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
   }
   const images = new Set(flowFrames(flow).map((f) => f.element.id));
   for (const o of overlays.filter((o) => !images.has(o.anchor ?? "")))
-    out.push({ ...overlayChange(o), unresolved: `${o.frame} no longer exists` });
-  return out;
+    out.push({ ...overlayChange(flow, o), unresolved: `${o.frame} no longer exists` });
+  const byId = new Map(flow.elements.map((e) => [e.id, e]));
+  return out.map((c) => ({ ...c, ...rect(byId.get(c.element)!) }));
 }

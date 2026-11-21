@@ -273,14 +273,18 @@ F2  arrow F1 -> F2 unresolved: it was bent by hand and no longer meets F2; strai
 ```
 
 (`F2  image WxH -> WxH` when only the image's aspect was off.) JSON is
-`{ flow, changes: [...], unresolved: [...] }`, with an `errors` array when a
-screen could not be used. A change is
+`{ flow, changes: [...], unresolved: [...] }`, with `decompressed: true`
+when a compressed drawing was rewritten and an `errors` array when a screen
+could not be used. A change is
 `{ frame, kind: "embed", element, link: { from, to }, image: { from, to } }`
-(sizes are `{ width, height }`) or
-`{ frame, kind: "highlight" | "mark", element, target, label? }`,
-`{ frame, kind: "note", element }` or
+(sizes are `{ width, height }`),
+`{ frame, kind: "highlight" | "mark", element, target, label?, textId? }`
+(`textId` is a mark's text element), `{ frame, kind: "note" | "label", element }`,
+`{ frame, kind: "group", element, part, group }` or
 `{ frame, kind: "arrow", element, from, to }`, where an arrow's `frame` is
 the node it stopped meeting; unresolved ones add `unresolved`, the reason.
+Every change also has `x`, `y`, `width` and `height`, the element's geometry
+as refresh leaves it.
 An overlay belongs to the frame whose image element id it records, whatever
 the frame is now called. Exit 0; 1
 if a frame's embed names no screens file (reported as

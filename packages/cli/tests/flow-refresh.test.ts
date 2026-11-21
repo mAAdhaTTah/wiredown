@@ -55,7 +55,8 @@ test("refresh after the screen grows, then up to date", async () => {
   expect(out).toMatchObject({ flow: file, unresolved: [] });
   expect(out.changes).toHaveLength(1); // the highlight sits above the new row
   const [change] = out.changes;
-  expect(change).toMatchObject({ frame: "F1", kind: "embed" });
+  expect(change).toMatchObject({ frame: "F1", kind: "embed", x: expect.any(Number) });
+  expect(change.width).toBe(change.image.to.width);
   expect(change.link.to.height).toBeGreaterThan(change.link.from.height);
   const after = await readFile(file, "utf8");
   expect(after).not.toBe(before);

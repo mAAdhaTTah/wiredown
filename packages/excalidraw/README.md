@@ -190,13 +190,15 @@ The root export renders nothing; SVG export is in the Node entry,
   grew may overlap its neighbour. It returns `FlowChange`s:
   `{ frame, kind: "embed", element, link, image }` (each a `{ from, to }` of
   `Size`s, `{ width, height }`),
-  `{ frame, kind: "highlight" | "mark", element, target, label?, unresolved? }`,
+  `{ frame, kind: "highlight" | "mark", element, target, label?, textId?, unresolved? }`
+  (`textId` is a mark's text element),
   `{ frame, kind: "note" | "label", element }` for a note moved or a displaced
   label or note returned,
   `{ frame, kind: "arrow", element, from, to, unresolved? }`, and
-  `{ frame, kind: "group", element, part }` for a frame's part put back in its
-  group. `unresolved` says why an overlay, or a bent arrow that no longer meets
-  its node, was left in place. It throws, changing nothing, when two nodes claim
+  `{ frame, kind: "group", element, part, group }` for a frame's part put back
+  in its group. Each also has `x`, `y`, `width` and `height`: the element's
+  geometry as refresh leaves it. `unresolved` says why an overlay, or a bent
+  arrow that no longer meets its node, was left in place. It throws, changing nothing, when two nodes claim
   one name. A flow that `lintFlow` finds nothing in is one `refreshFlow` leaves
   untouched.
 
