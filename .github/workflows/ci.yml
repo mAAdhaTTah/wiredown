@@ -17,6 +17,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      # the browser smoke is the only check that Excalidraw's font worker loads
+      - run: pnpm --filter @wiredown/web exec playwright-core install --with-deps chromium-headless-shell
+      - run: pnpm --filter @wiredown/web smoke
 
   # Run the Node entry on the oldest Node its engines field allows, and on 24.
   excalidraw-node:

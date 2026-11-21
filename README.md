@@ -5,8 +5,8 @@ rendered as hand-drawn Excalidraw sketches, and composed into user-flow
 drawings. It is built to be written mostly by an AI coding agent and reviewed
 by a person in Obsidian and in a Git forge.
 
-Packages are listed below. `@wiredown/web` is built and tested in happy-dom
-but has not yet run on a forge or in a real browser.
+Packages are listed below. `@wiredown/web` has run in headless Chromium
+against Gitea-shaped stand-in pages (`pnpm smoke:web`), but not on a forge.
 
 | Package                     | Purpose                                                                     |
 | --------------------------- | --------------------------------------------------------------------------- |

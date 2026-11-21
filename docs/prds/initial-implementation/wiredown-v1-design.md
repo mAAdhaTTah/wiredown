@@ -228,7 +228,7 @@ name: Framedown.
 | Excalifont metrics match Excalidraw | Prototype measurement | Measured |
 | Variants, wrapping grids, validation work | Prototype fork, 1,024 tests passing | Prototyped |
 | Overlays line up with elements inside embeds | Not tested; embed padding unknown | Open |
-| Forge renderer | Bundle built, never run on a forge | Open |
+| Forge renderer | Bundle run in headless Chromium against Gitea-shaped pages (`pnpm smoke:web`); never run on a forge | Open |
 
 ## Open questions and risks
 
