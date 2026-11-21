@@ -20,7 +20,16 @@ import {
 } from "@wiredown/excalidraw";
 import type { Flow, FlowChange, ScreenRef, ScreenState } from "@wiredown/excalidraw";
 import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds";
-import { formatFindings, json, plural, readSource, unknownScreen, UsageError } from "./output";
+import {
+  CommandError,
+  fileOp,
+  formatFindings,
+  json,
+  plural,
+  readSource,
+  unknownScreen,
+  UsageError,
+} from "./output";
 import type { Finding, Result } from "./output";
 import { NewerFlowError, parseEditableFlow } from "./read-flow";
 import { safeWrite } from "./safe-write";
@@ -210,9 +219,9 @@ async function screenLookup(file: string, flow: Flow) {
   for (const embed of flow.embeds.values()) {
     if (!embed.blockId || files.has(embed.path) || unresolved.has(embed.path)) continue;
     const found = await resolveEmbed(file, embed.path, root);
-    if ("why" in found) {
-      unresolved.set(embed.path, found.why);
-      if (found.ambiguous) ambiguous.add(embed.path);
+    if (!found.ok) {
+      unresolved.set(embed.path, `but ${found.message}`);
+      if (found.reason === "ambiguous") ambiguous.add(embed.path);
     } else {
       files.set(embed.path, await loadScreens(found.path));
       paths.set(embed.path, found.embedPath);
@@ -253,7 +262,8 @@ export async function lintFlowFile(file: string): Promise<LintedFlow> {
     const { lookup } = await screenLookup(file, flow);
     return { file, findings: lintFlow(flow, lookup) };
   } catch (error) {
-    return { file, findings: [{ message: (error as Error).message }] };
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
+    return { file, findings: [{ message: error.message }] };
   }
 }
 /** Findings and a summary line per flow. */
@@ -307,7 +317,7 @@ function changeLine(c: FlowChange): string {
  */
 export async function refreshFlowFile(file: string, options: FlowOptions = {}): Promise<Result> {
   try {
-    const original = await readFile(file, "utf8");
+    const original = await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
     const flow = parseEditableFlow(original);
     const { lookup, errors, unresolved: lost, paths, ambiguous } = await screenLookup(file, flow);
     // a frame whose embed several files match would be a guess: report it
@@ -326,7 +336,8 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
       flow.embeds.set(fileId, { ...embed, path: paths.get(embed.path) ?? embed.path });
     }
     const unresolved = all.filter((c) => "unresolved" in c && c.unresolved);
-    if (changes.length || decompressed) await safeWrite(file, original, serializeFlow(flow));
+    if (changes.length || decompressed)
+      await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
     // each frame whose embed names no file, then each screens file's errors;
     // an error outside any screen affects every screen: report it once
     const reports: { file: string; findings: Finding[] }[] = [
@@ -375,7 +386,8 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
       stderr: reports.map((r) => formatFindings(r.file, r.findings, [])).join(""),
     };
   } catch (error) {
-    const findings: Finding[] = [{ message: (error as Error).message }];
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
+    const findings: Finding[] = [{ message: error.message }];
     return {
       exitCode: 1,
       stdout: options.json

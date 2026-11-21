@@ -177,7 +177,7 @@ function findNode(flow: Flow, name: string): FlowNode {
   const nodes = flowNodes(flow);
   const found = nodes.filter((n) => n.node === name);
   const ids = found.map((n) => n.element.id);
-  if (ids.length > 1) throw new Error(claimed(name, ids));
+  if (ids.length > 1) throw new FlowError(claimed(name, ids));
   if (!found.length)
     throw new FlowError(
       `unknown node "${name}" (nodes: ${nodes.map((n) => n.node).join(", ") || "none"})`,

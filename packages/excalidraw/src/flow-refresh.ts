@@ -4,6 +4,7 @@
 // same block id are never confused.
 import type { Box } from "@wiredown/core";
 import type { ExcalidrawElementJson } from "./elements";
+import { FlowError } from "./flow";
 import type { EmbedLink, Flow } from "./flow";
 import {
   arrowGeometry,
@@ -584,7 +585,7 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
 export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
   // which node's overlays and notes to move would be a guess
   const [claim] = claimedNames(flow);
-  if (claim) throw new Error(claim.message);
+  if (claim) throw new FlowError(claim.message);
   const out: FlowChange[] = [];
   const touched = new Set<string>();
   const touchOnce = (e: ExcalidrawElementJson) => {

@@ -2,7 +2,7 @@ import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
-import { BASE, fixture } from "./helpers";
+import { BASE, fixture, screensIn } from "./helpers";
 
 const BAD = "# Bad\n\n```wiredown\nnonsense: bad\n```\n^bad\n";
 const grow = (s: string) => s.replace("```\n^team", "  text: One more line\n```\n^team");
@@ -19,7 +19,15 @@ async function tree() {
   await writeFile(join(dir, ".hidden/screens.md"), BAD);
   for (const sub of ["a", "b"])
     expect(
-      (await run(["flow", "new", join(dir, sub, "flows/f.excalidraw.md"), "team"])).exitCode,
+      (
+        await run([
+          "flow",
+          "new",
+          join(dir, sub, "flows/f.excalidraw.md"),
+          "team",
+          ...screensIn(join(dir, sub)),
+        ])
+      ).exitCode,
     ).toBe(0);
   const b = join(dir, "b/screens.md");
   await writeFile(b, grow(await readFile(b, "utf8")));

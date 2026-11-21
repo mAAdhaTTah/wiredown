@@ -4,7 +4,7 @@ import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import type { ExcalidrawElementJson } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
-import { BASE, fixture } from "./helpers";
+import { BASE, fixture, screensIn } from "./helpers";
 
 const TEAM = [
   "# Team members",
@@ -28,7 +28,7 @@ const grow = (s: string) => s.replace("Admin\n```", "Admin\n" + ROW);
 async function setup() {
   const dir = await fixture({ "screens.md": TEAM });
   const file = join(dir, "flows/f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
   expect((await run(["flow", "highlight", file, "F1", "invite"])).exitCode).toBe(0);
   return { dir, file, screens: join(dir, "screens.md") };
 }
@@ -115,7 +115,7 @@ test("refresh moves overlays when a component moves, and reports lost ones", asy
 test("refresh with a missing or invalid screen still refreshes the others", async () => {
   const dir = await fixture({ "screens.md": TEAM + "\n" + BASE.replace("^team", "^base") });
   const file = join(dir, "flows/f.excalidraw.md");
-  await run(["flow", "new", file, "team", "base"]);
+  await run(["flow", "new", file, "team", "base", ...screensIn(dir)]);
   const screens = join(dir, "screens.md");
   const source = await readFile(screens, "utf8");
   await writeFile(screens, grow(source).replace("^base", "^renamed"));
@@ -153,9 +153,9 @@ test("refresh with a missing or invalid screen still refreshes the others", asyn
 });
 
 test("flow lint: several files, a dangling arrow, usage", async () => {
-  const { file } = await setup();
+  const { dir, file } = await setup();
   const other = file.replace("f.excalidraw.md", "g.excalidraw.md");
-  await run(["flow", "new", other, "team", "team"]);
+  await run(["flow", "new", other, "team", "team", ...screensIn(dir)]);
   const flow = parseFlow(await readFile(other, "utf8"));
   const f2 = flow.elements.find(
     (e) =>
@@ -181,7 +181,7 @@ test("lint reports compression and refresh rewrites an otherwise current drawing
   const { default: LZString } = await import("lz-string");
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "a.excalidraw.md");
-  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
   const source = await readFile(file, "utf8");
   const compressed = source.replace(
     /```json\n([\s\S]*?)\n```/,
@@ -212,12 +212,16 @@ test("lint follows each embed: the reproduced --screens case, vaults, two spec f
   expect((await run(["flow", "new", a, "members", ...ui])).exitCode).toBe(0);
   expect((await run(["lint", join(dir, "spec-a")])).exitCode).toBe(0);
   // one flow, screens from two files
-  expect((await run(["flow", "add-screen", a, "team"])).exitCode).toBe(0);
+  expect(
+    (await run(["flow", "add-screen", a, "team", ...screensIn(join(dir, "spec-a"))])).exitCode,
+  ).toBe(0);
   expect((await run(["flow", "highlight", a, "F2", "members"])).exitCode).toBe(0);
   expect(await run(["flow", "lint", a])).toMatchObject({ exitCode: 0 });
   // each spec folder's flow resolves its own screens.md
   const b = join(dir, "spec-b/flows/b.excalidraw.md");
-  expect((await run(["flow", "new", b, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", b, "team", ...screensIn(join(dir, "spec-b"))])).exitCode).toBe(
+    0,
+  );
   expect((await run(["flow", "highlight", b, "F1", "invite"])).exitCode).toBe(0);
   expect((await run(["lint", dir])).exitCode).toBe(0);
   await writeFile(join(dir, "spec-b/screens.md"), grow(TEAM));
@@ -231,10 +235,12 @@ test("lint follows each embed: the reproduced --screens case, vaults, two spec f
   const ambiguous = await run(["flow", "lint", b]);
   expect(ambiguous.exitCode).toBe(1);
   expect(ambiguous.stdout).toContain(
-    `${b}: F1: error: embeds [[screens#^team]], but it matches several files: spec-a/screens.md, spec-b/screens.md; name one by its path from ${dir}\n`,
+    `${b}: F1: error: embeds [[screens#^team]], but screens matches several files: spec-a/screens.md, spec-b/screens.md; name one by its path from ${dir}\n`,
   );
   const v = join(dir, "spec-b/flows/v.excalidraw.md");
-  expect((await run(["flow", "new", v, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", v, "team", ...screensIn(join(dir, "spec-b"))])).exitCode).toBe(
+    0,
+  );
   expect(await readFile(v, "utf8")).toContain("[[spec-b/screens#^team|");
   expect((await run(["flow", "lint", v])).exitCode).toBe(0);
 });
@@ -242,7 +248,7 @@ test("lint follows each embed: the reproduced --screens case, vaults, two spec f
 test("an embed whose file is gone is reported for its frame; the rest still refresh", async () => {
   const dir = await fixture({ "screens.md": TEAM, "ui.md": TEAM });
   const file = join(dir, "flows/f.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   await run(["flow", "add-screen", file, "team", "--screens", join(dir, "ui.md")]);
   await rm(join(dir, "ui.md"));
   await writeFile(join(dir, "screens.md"), grow(TEAM));
@@ -268,7 +274,7 @@ test("refresh writes nothing when several files match a frame's embed", async ()
     await writeFile(join(dir, path), one);
   }
   const file = join(dir, "flows/f.excalidraw.md");
-  expect((await run(["flow", "new", file, "one", "one"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "one", "one", ...screensIn(dir)])).exitCode).toBe(0);
   // F1 is stale and could be refreshed; F2's embed matches two files
   const flow = parseFlow(await readFile(file, "utf8"));
   const [[f1, e1], [f2, e2]] = [...flow.embeds];
@@ -279,7 +285,7 @@ test("refresh writes nothing when several files match a frame's embed", async ()
   const result = await run(["flow", "refresh", file]);
   expect(result).toMatchObject({ exitCode: 1, stdout: "" });
   expect(result.stderr).toBe(
-    `${file}: F2: error: embeds [[a/ui#^one]], but it matches several files: a/a/ui.md, b/a/ui.md; name one by its path from ${dir}\n`,
+    `${file}: F2: error: embeds [[a/ui#^one]], but a/ui matches several files: a/a/ui.md, b/a/ui.md; name one by its path from ${dir}\n`,
   );
   expect(await readFile(file, "utf8")).toBe(before);
 });
@@ -291,7 +297,9 @@ test("refresh writes each link it rewrites with the path from the root", async (
   const base = BASE.replace("^team", "^base");
   await writeFile(join(dir, "spec/screens.md"), TEAM + "\n" + base);
   const file = join(dir, "spec/flows/f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team", "base"])).exitCode).toBe(0);
+  expect(
+    (await run(["flow", "new", file, "team", "base", ...screensIn(join(dir, "spec"))])).exitCode,
+  ).toBe(0);
   // links in forms other than the one written: relative, and a trailing part
   const flow = parseFlow(await readFile(file, "utf8"));
   const paths = ["../screens", "screens"];
@@ -317,14 +325,16 @@ test.each(["vault", "git", "neither"])(
     if (kind === "git") await mkdir(join(repo, ".git"));
     const root = kind === "neither" ? join(repo, "spec") : repo;
     const file = join(repo, "spec/flows/f.excalidraw.md");
-    expect((await run(["flow", "new", file, "team", "team"])).exitCode).toBe(0);
+    expect(
+      (await run(["flow", "new", file, "team", "team", ...screensIn(join(repo, "spec"))])).exitCode,
+    ).toBe(0);
     expect((await run(["lint", repo])).exitCode).toBe(0);
     const flow = parseFlow(await readFile(file, "utf8"));
     const [fileId, embed] = [...flow.embeds][1];
     const up = kind === "neither" ? "../../outside" : "../../../outside";
     flow.embeds.set(fileId, { ...embed, path: up });
     await writeFile(file, serializeFlow(flow));
-    const why = `embeds [[${up}#^team]], which points outside ${root}`;
+    const why = `embeds [[${up}#^team]], but ${up} points outside ${root}`;
     const lint = await run(["flow", "lint", file]);
     expect(lint.stdout).toBe(`${file}: F2: error: ${why}\n${file}: 1 error\n`);
     const refresh = await run(["flow", "refresh", file]);
@@ -338,7 +348,7 @@ test.each(["vault", "git", "neither"])(
     flow.embeds.set(fileId, { ...embed, path: link });
     await writeFile(file, serializeFlow(flow));
     expect((await run(["flow", "lint", file])).stdout).toContain(
-      `F2: error: embeds [[${link}#^team]], which points outside ${root}\n`,
+      `F2: error: embeds [[${link}#^team]], but ${link} points outside ${root}\n`,
     );
   },
 );
@@ -347,7 +357,7 @@ test("refresh moves the arrow and the note after a screen grows", async () => {
   const dir = await fixture({ "screens.md": TEAM + "\n" + BASE.replace("^team", "^base") });
   const file = join(dir, "flows/f.excalidraw.md");
   const screens = join(dir, "screens.md");
-  expect((await run(["flow", "new", file, "team", "base"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", "base", ...screensIn(dir)])).exitCode).toBe(0);
   expect((await run(["flow", "note", file, "F1", "Shows the members"])).exitCode).toBe(0);
   expect((await run(["flow", "highlight", file, "F1", "invite"])).exitCode).toBe(0);
   const read = async () => parseFlow(await readFile(file, "utf8")).elements;
@@ -387,7 +397,7 @@ test("refresh moves the arrow and the note after a screen grows", async () => {
 test("lint reports an arrow and a note an older refresh left behind", async () => {
   const dir = await fixture({ "screens.md": TEAM + "\n" + BASE.replace("^team", "^base") });
   const file = join(dir, "flows/f.excalidraw.md");
-  await run(["flow", "new", file, "team", "base"]);
+  await run(["flow", "new", file, "team", "base", ...screensIn(dir)]);
   await run(["flow", "note", file, "F1", "Shows the members of the team"]);
   // the image and its link grow, as refresh used to leave them
   const flow = parseFlow(await readFile(file, "utf8"));

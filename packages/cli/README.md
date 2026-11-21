@@ -146,20 +146,23 @@ A screens file or root found from the flow is printed relative to the
 working directory when the flow's path was given relative, and absolute when
 it was given absolute. Paths given on the command line print as given.
 
-`--screens` takes any `.md` file inside the root; one outside it is an error
-(`the screens file <file> points outside <root>`). Without it, the screens file
-is the `screens.md` in the parent of the flow's directory, else in that
-directory, else in each directory further up to the root. A screens file whose
-path from the root contains `#`, `|` or `]` is refused, since those end the path
-in an embed link. Missing embed styling frontmatter is added; existing values
-are preserved. Invalid screens and unknown nodes leave the drawing untouched. A
-frame's image and its `F3 · Title` label share an Excalidraw group, so they move
-together: clicking either selects both; double-click to select one. Human output
-is one `F3  team-members  548x333` line per frame, then one `F1 -> F2` line per
-arrow. The size is the embed image size in the drawing. JSON is `{ flow, frames:
-[{ frame, screen, title, x, y, width, height }], screensFileUpdated }`; `flow
-new` adds `arrows: [{ id, from, to, label }]`. Operational errors exit 1 (JSON
-adds an `errors` array); usage errors exit 2.
+`--screens` names the screens file and is required whenever screens are
+added; there is no default. It takes any `.md` file inside the root; one
+outside it is an error (`the screens file <file> points outside <root>`).
+A screens file whose path from the root contains `#`, `|` or `]` is
+refused, since those end the path in an embed link.
+Missing embed styling frontmatter is added; existing values are preserved.
+Invalid screens and unknown nodes leave the drawing untouched.
+A frame's image and its `F3 · Title` label share an Excalidraw group, so
+they move together: clicking either selects both; double-click to select
+one. Human output is one `F3  team-members  548x333` line per frame, then one
+`F1 -> F2` line per arrow. The size is the embed image size in the drawing.
+JSON is `{ flow, frames: [{ frame, screen, title, x, y, width, height }],
+screensFileUpdated }`; `flow new` adds `arrows: [{ id, from, to, label }]`.
+A file or input problem, such as a missing file, an unknown screen or node,
+or a file that is not a drawing, exits 1 with a plain message (JSON adds an
+`errors` array); usage errors exit 2. Any other error is a bug and crashes
+with a stack trace.
 
 Flow commands refuse to overwrite a drawing or screens file that changed
 while the command was running, and replace files atomically. The check is
@@ -356,8 +359,8 @@ or exits; `bin/wiredown.js` prints the result. Build the package
 
 - **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
   the script, as `bin/wiredown.js` does. Bad usage and unreadable files
-  give exit code 2, and the `flow` commands report their own errors with
-  exit code 1; any other error rejects.
+  give exit code 2, and the `flow` commands report file and input problems
+  with exit code 1; any other error rejects.
 - **Check** (`check`): `check(files, options?)` runs the `check` command
   on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
   entry of the JSON document's `files`.
