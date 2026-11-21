@@ -1,6 +1,7 @@
 import { EXCALIFONT, fontMeasurer } from "@wiredown/core";
 import { generateNKeysBetween } from "fractional-indexing";
 import type { ExcalidrawElementJson } from "./elements";
+import { FlowError } from "./flow";
 import type { Flow } from "./flow";
 
 // Confirmed gen-flow.mjs / Excalidraw plugin DEFAULT_MD_EMBED_CSS:
@@ -77,11 +78,11 @@ function findFrame(flow: Flow, name: string) {
   const frames = flowFrames(flow);
   const found = frames.filter((f) => f.frame === name);
   if (found.length > 1)
-    throw new Error(
+    throw new FlowError(
       `${name} is claimed by elements ${found.map((f) => f.element.id).join(" and ")}; delete the copy`,
     );
   if (!found.length)
-    throw new Error(
+    throw new FlowError(
       `unknown frame "${name}" (frames: ${frames.map((f) => f.frame).join(", ") || "none"})`,
     );
   return found[0].element;

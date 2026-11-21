@@ -11,6 +11,7 @@ import {
   embedPathFor,
   isRelativeEmbed,
 } from "@wiredown/excalidraw";
+import { CommandError, fileOp } from "./output";
 
 /**
  * The root every embed search from a flow stays within (`url`, a directory
@@ -167,7 +168,7 @@ async function defaultScreens(flowFile: string, root: EmbedRoot) {
     const path = fileURLToPath(new URL("screens.md", dir));
     if (await isFile(path)) return shown(flowFile, path);
   }
-  throw new Error(`no screens.md was found from ${dirname(flowFile)} upward`);
+  throw new CommandError(`no screens.md was found from ${dirname(flowFile)} upward`);
 }
 
 /**
@@ -179,16 +180,16 @@ async function defaultScreens(flowFile: string, root: EmbedRoot) {
 export async function screensToEmbed(flowFile: string, screens: string | undefined) {
   const root = await embedRoot(flowFile);
   const path = screens ?? (await defaultScreens(flowFile, root));
-  await stat(path); // a missing --screens file is reported as such
-  if (!/\.md$/i.test(path)) throw new Error(`the screens file ${path} is not a .md file`);
+  await fileOp(`cannot read the screens file ${path}`, stat(path));
+  if (!/\.md$/i.test(path)) throw new CommandError(`the screens file ${path} is not a .md file`);
   let url = pathToFileURL(resolve(path)).href;
   if (!url.startsWith(root.url)) url = pathToFileURL(await realpath(path)).href;
   if (!url.startsWith(root.url) || !(await inside(path, root)))
-    throw new Error(`the screens file ${path} points outside ${rootPath(root, flowFile)}`);
+    throw new CommandError(`the screens file ${path} points outside ${rootPath(root, flowFile)}`);
   const embedPath = embedPathFor(url, root.url)!;
   // parseEmbed ends the path at # or |, and the link at ]
   if (/[#|\]]/.test(embedPath))
-    throw new Error(
+    throw new CommandError(
       `${path}: a screens file's path cannot contain #, | or ], which end the path in an embed link`,
     );
   return { path, embedPath };

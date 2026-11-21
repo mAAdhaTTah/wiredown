@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
+import { CommandError, fileOp } from "../src/output";
 import { BASE, fixture, VARIANT } from "./helpers";
 
 test("new, add, styling idempotence and hand edits", async () => {
@@ -531,4 +532,25 @@ test("paths found from a relative flow path print relative to the working direct
   } finally {
     process.chdir(cwd);
   }
+});
+
+test("a missing file is reported in plain words", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  const flow = join(dir, "flows/a.excalidraw.md");
+  const missing = await run(["flow", "add-screen", flow, "team"]);
+  expect(missing).toMatchObject({ exitCode: 1, stdout: "" });
+  expect(missing.stderr).toBe(`${flow}: error: cannot read ${flow}: it does not exist\n`);
+  const screens = join(dir, "nope.md");
+  const result = await run(["flow", "new", flow, "team", "--screens", screens]);
+  expect(result.stderr).toBe(
+    `${flow}: error: cannot read the screens file ${screens}: it does not exist\n`,
+  );
+});
+
+test("fileOp reports file system errors and passes others on", async () => {
+  await expect(fileOp("cannot read x", readFile("/nonexistent/x"))).rejects.toThrow(
+    new CommandError("cannot read x: it does not exist"),
+  );
+  const bug = new TypeError("bug");
+  await expect(fileOp("cannot read x", Promise.reject(bug))).rejects.toBe(bug);
 });

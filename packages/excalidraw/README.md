@@ -49,8 +49,8 @@ The root export renders nothing; SVG export is in the Node entry,
   background and no files.
 - **Flows** (`flow`): flows are Obsidian Excalidraw drawings
   (`flows/<name>.excalidraw.md`). `parseFlow(text)` reads one into a
-  `Flow`, `{ elements, appState, files, embeds }`, and throws if the text
-  is not one; `serializeFlow(flow)` writes it back, regenerating
+  `Flow`, `{ elements, appState, files, embeds }`, and throws a
+  `FlowError` if the text is not one; `serializeFlow(flow)` writes it back, regenerating
   `## Text Elements`, `## Embedded Files` and the drawing JSON from the
   scene and keeping everything else (frontmatter, other sections, unknown
   fields) as read. `newFlow()` is an empty drawing. Compressed drawings can
@@ -79,6 +79,7 @@ The root export renders nothing; SVG export is in the Node entry,
   `AddScreenOptions` are `screenId`, `title`, `path` (the embed path), `size`,
   the rendered screen size, and an optional `place`, `{ rightOf: "F2" }` or
   `{ below: "F2" }`; without it the frame goes right of the rightmost frame.
+  An unknown frame, or one two elements claim, throws a `FlowError`.
   `embedSize(width, height)` converts a screen export size to `{ link, image }`
   dimensions. `flowFrames(flow)` finds live images with Wiredown customData, as
   `{ frame, element }`. Legacy labels reserve numbers, but legacy images are not

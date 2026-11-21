@@ -134,8 +134,10 @@ they move together: clicking either selects both; double-click to select
 one. Human output is one `F3  team-members  548x333` line per frame. The size is
 the embed image size in the drawing. JSON is
 `{ flow, frames: [{ frame, screen, title, x, y, width, height }],
-screensFileUpdated }`. Operational errors exit 1 (JSON adds an `errors`
-array); usage errors exit 2.
+screensFileUpdated }`. A file or input problem, such as a missing file, an
+unknown screen or frame, or a file that is not a drawing, exits 1 with a
+plain message (JSON adds an `errors` array); usage errors exit 2. Any other
+error is a bug and crashes with a stack trace.
 
 Flow commands refuse to overwrite a drawing or screens file that changed
 while the command was running, and replace files atomically. The check is
@@ -153,8 +155,8 @@ or exits; `bin/wiredown.js` prints the result. Build the package
 
 - **CLI** (`index`): `run(argv)` runs the CLI on `argv` without node and
   the script, as `bin/wiredown.js` does. Bad usage and unreadable files
-  give exit code 2, and the `flow` commands report their own errors with
-  exit code 1; any other error rejects.
+  give exit code 2, and the `flow` commands report file and input problems
+  with exit code 1; any other error rejects.
 - **Check** (`check`): `check(files, options?)` runs the `check` command
   on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
   entry of the JSON document's `files`.

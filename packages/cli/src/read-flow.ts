@@ -1,6 +1,7 @@
 import { newerDataVersion, parseFlow } from "@wiredown/excalidraw";
+import { CommandError } from "./output";
 
-export class NewerFlowError extends Error {}
+export class NewerFlowError extends CommandError {}
 
 /** Refuse newer metadata before a CLI command interprets or edits a drawing. */
 export function parseEditableFlow(source: string, verb = "edit") {

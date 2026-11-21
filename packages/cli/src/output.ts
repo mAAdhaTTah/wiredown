@@ -15,6 +15,32 @@ export type Finding = Omit<ScreenDiagnostic, "line"> & { line?: number };
 /** A failure before the command could produce a result: exit 2, nothing on stdout. */
 export class UsageError extends Error {}
 
+/** A file or input problem a command reports with exit 1; any other error is a bug. */
+export class CommandError extends Error {}
+
+const REASONS: Record<string, string> = {
+  ENOENT: "it does not exist",
+  EACCES: "permission denied",
+  EPERM: "permission denied",
+  EISDIR: "it is a folder",
+  ENOTDIR: "a folder in its path is a file",
+  EEXIST: "it already exists",
+};
+
+/**
+ * Runs a file operation; a file system error becomes a `CommandError`
+ * reading `<what>: <reason>`, such as `cannot read a.md: it does not exist`.
+ */
+export async function fileOp<T>(what: string, op: Promise<T>): Promise<T> {
+  try {
+    return await op;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (!code || !/^E[A-Z]+$/.test(code)) throw error;
+    throw new CommandError(`${what}: ${REASONS[code] ?? code}`);
+  }
+}
+
 export async function readSource(file: string): Promise<string> {
   try {
     return await readFile(file, "utf8");

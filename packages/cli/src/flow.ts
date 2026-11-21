@@ -4,13 +4,14 @@ import { checkScreens, layoutScreen } from "@wiredown/core";
 import {
   addScreen,
   embedSize,
+  FlowError,
   flowFrames,
   newFlow,
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
 import { screensToEmbed } from "./embeds";
-import { formatFindings, json, unknownScreen, UsageError } from "./output";
+import { CommandError, fileOp, formatFindings, json, unknownScreen, UsageError } from "./output";
 import type { Finding, Result } from "./output";
 import { NewerFlowError, parseEditableFlow } from "./read-flow";
 import { safeWrite } from "./safe-write";
@@ -58,8 +59,10 @@ export async function editFlow(
   let findings: Finding[] = [];
   let findingFile = file;
   try {
-    if (command === "new" && (await exists(file))) throw new Error(`flow already exists: ${file}`);
-    const original = command === "new" ? "" : await readFile(file, "utf8");
+    if (command === "new" && (await exists(file)))
+      throw new CommandError(`flow already exists: ${file}`);
+    const original =
+      command === "new" ? "" : await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
     const flow = command === "new" ? newFlow() : parseEditableFlow(original);
     const frames = [];
     let screensFileUpdated = false;
@@ -68,7 +71,10 @@ export async function editFlow(
     if (ids.length) {
       const embed = await screensToEmbed(file, options.screens);
       screensPath = embed.path;
-      source = await readFile(screensPath, "utf8");
+      source = await fileOp(
+        `cannot read the screens file ${screensPath}`,
+        readFile(screensPath, "utf8"),
+      );
       const checked = checkScreens(source);
       const known = checked.screens.flatMap((s) => (s.id ? [s.id] : []));
       for (const id of ids) {
@@ -80,7 +86,7 @@ export async function editFlow(
         }
         if (findings.length) {
           findingFile = screensPath;
-          throw new Error(findings[0].message);
+          throw new CommandError(findings[0].message);
         }
         if (!screen) throw new Error("screen not found");
 
@@ -104,15 +110,23 @@ export async function editFlow(
     }
     const output = serializeFlow(flow);
     const styled = styleScreens(source);
-    await mkdir(dirname(file), { recursive: true });
-    if (command === "new") await writeFile(file, output, { flag: "wx" });
-    else await safeWrite(file, original, output);
+    await fileOp(
+      `cannot write ${file}`,
+      command === "new"
+        ? mkdir(dirname(file), { recursive: true }).then(() =>
+            writeFile(file, output, { flag: "wx" }),
+          )
+        : safeWrite(file, original, output),
+    );
     if (screensPath && styled !== source) {
-      await safeWrite(screensPath, source, styled).catch(async (error: unknown) => {
+      await fileOp(
+        `cannot write the screens file ${screensPath}`,
+        safeWrite(screensPath, source, styled),
+      ).catch(async (error: unknown) => {
         // Take the flow edit back while the flow still holds our output. Best
         // effort, like safeWrite: a save between the check and the undo is lost.
         if (!(await readFile(file)).equals(Buffer.from(output)))
-          throw new Error(
+          throw new CommandError(
             `${error instanceof Error ? error.message : String(error)} Another program also changed ${file}, so it was left as it is, with the new frames.`,
           );
         if (command === "new") await rm(file);
@@ -129,6 +143,7 @@ export async function editFlow(
         : frames.map((f) => `${f.frame}  ${f.screen}  ${f.width}x${f.height}\n`).join(""),
     };
   } catch (error) {
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
     if (!findings.length) findings = [{ message: (error as Error).message }];
     return {
       exitCode: 1,
