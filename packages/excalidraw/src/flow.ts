@@ -63,9 +63,6 @@ interface Drawing {
   compressed: boolean;
   /** JSON.stringify's indent, or undefined for single-line JSON. */
   indent?: string;
-  /** Compressed form: characters per line and the separator between lines. */
-  chunk: number;
-  separator: string;
   /** Body and everything after it, as read. */
   body: string;
   close: string;
@@ -112,7 +109,6 @@ export function parseFlow(text: string): Flow {
   }
   // compressed drawings hold one-line JSON; written out, they get the plugin's tabs so they diff
   const indent = /^\{\n([ \t]+)/.exec(json)?.[1] ?? (compressed ? "\t" : undefined);
-  const lines = body.split("\n").filter(Boolean);
 
   const ex = /^# Excalidraw Data$/m.exec(before);
   if (!ex) throw new Error('not an Excalidraw drawing: no "# Excalidraw Data" section');
@@ -139,8 +135,6 @@ export function parseFlow(text: string): Flow {
         open: d[1],
         compressed,
         indent,
-        chunk: lines.length > 1 ? lines[0].length : Infinity,
-        separator: body.includes("\n\n") ? "\n\n" : "\n",
         body,
         close: text.slice(closeStart),
         json: JSON.stringify(scene, null, indent),
