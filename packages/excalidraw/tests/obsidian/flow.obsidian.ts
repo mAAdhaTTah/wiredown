@@ -6,7 +6,10 @@ import { checkScreens, layoutScreen } from "@wiredown/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { formatEmbed } from "../../src/flow";
 import {
+  addDecision,
+  addNote,
   addScreen,
+  connect,
   newFlow,
   parseFlow,
   screenElements,
@@ -106,9 +109,11 @@ const CHECKOUT = [
   "",
 ].join("\n");
 
-// A drawing as `flow new … cart` then `flow add-screen … done --below F1`
-// write it: frames from addScreen, sized from the rendered screens, with
-// the embed path from the root.
+// A drawing as `flow new … cart`, `flow add-screen … done --below F1`,
+// `flow decision`, `flow connect` and `flow note` write it: frames sized from
+// the rendered screens with the embed path from the root, a decision, bound
+// arrows (two between one pair) with bound labels, and notes in their node's
+// group.
 function commands(): string {
   const flow = newFlow();
   const screens = checkScreens(CHECKOUT).screens;
@@ -123,7 +128,26 @@ function commands(): string {
       place,
     });
   }
+  addDecision(flow, { text: "Paid?", place: { rightOf: "F1" } });
+  connect(flow, "F1", "D1", { label: "Pay" });
+  connect(flow, "F1", "D1");
+  connect(flow, "D1", "F2", { label: "Yes" });
+  addNote(flow, "F1", "Card details are kept.");
+  addNote(flow, "D1", "Retry on a declined card.");
   return serializeFlow(flow);
+}
+
+/** Which elements each element is bound to, by id. */
+type Bound = Pick<Seen, "id" | "startBinding" | "endBinding" | "boundElements" | "containerId">;
+function bindings(elements: Bound[]) {
+  const end = (b: unknown) => (b as { elementId?: string } | null | undefined)?.elementId ?? null;
+  return elements.map((e) => ({
+    id: e.id,
+    start: end(e.startBinding),
+    end: end(e.endBinding),
+    bound: ((e.boundElements as { id: string }[] | null | undefined) ?? []).map((b) => b.id).sort(),
+    container: e.containerId ?? null,
+  }));
 }
 
 interface Seen {
@@ -132,6 +156,10 @@ interface Seen {
   text?: string;
   groupIds: string[];
   customData?: unknown;
+  startBinding?: unknown;
+  endBinding?: unknown;
+  boundElements?: unknown;
+  containerId?: unknown;
 }
 
 interface Opened {
@@ -178,7 +206,8 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
       return {
         view: view.getViewType(),
         elements: view.excalidrawAPI.getSceneElements().map(
-          ({ id, type, text, groupIds, customData }) => ({ id, type, text, groupIds, customData }),
+          ({ id, type, text, groupIds, customData, startBinding, endBinding, boundElements, containerId }) =>
+            ({ id, type, text, groupIds, customData, startBinding, endBinding, boundElements, containerId }),
         ),
         embeds,
         loaded: Object.keys(view.excalidrawAPI.getFiles()),
@@ -203,6 +232,10 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
     expect(kept(opened.elements)).toEqual(
       kept(flow.elements.filter((e) => !e.isDeleted) as Partial<Seen>[]),
     );
+  });
+
+  it("keeps every arrow and text binding, both ways", () => {
+    expect(bindings(opened.elements)).toEqual(bindings(flow.elements.filter((e) => !e.isDeleted)));
   });
 
   it("resolves and loads every embed parseFlow reads", () => {
@@ -236,5 +269,6 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
     expect(after.map((e) => [e.groupIds, e.customData])).toEqual(
       flow.elements.map((e) => [e.groupIds, e.customData]),
     );
+    expect(bindings(after)).toEqual(bindings(flow.elements));
   });
 });
