@@ -1,0 +1,19 @@
+{
+  "name": "@wiredown/obsidian-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wiredown/core": "workspace:*",
+    "@wiredown/excalidraw": "workspace:*"
+  },
+  "devDependencies": {
+    "obsidian": "^1.12.3",
+    "happy-dom": "21.0.4",
+    "@types/node": "^26.6.6"
+  }
+}
