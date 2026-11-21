@@ -157,7 +157,10 @@ is the source of truth for the flow; the agent and the person both edit it.
     agent-drawn Excalidraw in testing);
   - `flow refresh` updates embed sizes and anything anchored to a screen
     after its layout changes;
-  - `flow lint` catches missing screens, stale sizes, dangling arrows.
+  - `flow move F3 --right-of F2` moves a node with what belongs to it
+    (label, notes, overlays) and re-routes its arrows;
+  - `flow lint` catches missing screens, stale sizes, overlapping nodes,
+    dangling arrows.
 - **Free-form drawing stays available.** The agent can write Excalidraw
   elements directly for anything the commands don't cover.
 - **Element provenance.** New `customData.wiredown` records carry `v: 1`

@@ -29,6 +29,8 @@ export type {
   Unbound,
 } from "./flow-edit";
 export { lintFlow, refreshFlow } from "./flow-refresh";
+export { moveNode } from "./flow-move";
+export type { Moved, MoveTo } from "./flow-move";
 export type {
   FlowChange,
   FlowFinding,

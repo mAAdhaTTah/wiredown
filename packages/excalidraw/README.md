@@ -227,6 +227,19 @@ The root export renders nothing; SVG export is in the Node entry,
   absent from its node is left untouched and does not take a place in the
   note stack.
 
+- **Moving** (`flow-move`): `moveNode(flow, node, to)` moves a frame or
+  decision, `to` being a `MoveTo`: a `Place` (`{ rightOf }` or `{ below }`,
+  placed as a new node would be) or a top-left `{ x, y }`. Its label or text,
+  notes and overlays (what `removeFromFlow` takes with it, but not arrows) move
+  by the same delta; our straight arrows bound to it are re-routed as
+  `refreshFlow` re-routes them, and bent ones are left, those that no longer
+  meet a node returned in `unresolved`. A person's arrows, copies and drawing do
+  not move. It throws, changing nothing, for an unknown node, a name two nodes
+  claim, its own name as `place`, or a place where it would overlap another node
+  (touching edges do not). It returns `Moved`,
+  `{ node, kind, x, y, notes, overlays, arrows, unresolved }`, with
+  `unchanged: true` when nothing moved or was re-routed.
+
 - **Flow rendering** (`flow-render`): the part of the Node entry's
   `renderFlowSvg` that needs no Node. `flowScene(flow, screenSvg, { raster? })`
   resolves to the `FlowScene` to export: the flow's `elements`, `appState` and
