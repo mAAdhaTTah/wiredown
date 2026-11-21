@@ -20,7 +20,14 @@ import {
   serializeFlow,
   styleScreens,
 } from "@wiredown/excalidraw";
-import type { Flow, FlowChange, Removed, ScreenRef, ScreenState } from "@wiredown/excalidraw";
+import type {
+  ExcalidrawElementJson,
+  Flow,
+  FlowChange,
+  Removed,
+  ScreenRef,
+  ScreenState,
+} from "@wiredown/excalidraw";
 import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds";
 import {
   CommandError,
@@ -625,7 +632,10 @@ const ARITY = {
   note: [2, 0, "a file, a node and the note's text"],
   decision: [1, 0, "a file and the decision's text"],
   remove: [1, Infinity, "a file and at least one thing to remove"],
-};
+} satisfies Record<string, [number, number, string]>;
+type FlowCommand = keyof typeof ARITY;
+const isFlowCommand = (command: string | undefined): command is FlowCommand =>
+  Object.hasOwn(ARITY, command ?? "");
 
 export function flowCommand(
   values: Record<string, string | boolean | string[] | undefined>,
