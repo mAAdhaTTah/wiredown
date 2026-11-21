@@ -196,10 +196,11 @@ frame's group, so it moves with the frame. Human output is `F2  highlight  #invi
 
 ```text
 { flow, highlight: { id, frame, screen, target, x, y, width, height } }
-{ flow, mark: { id, frame, screen, target, label, x, y, width, height } }
+{ flow, mark: { id, frame, screen, target, label, textId, x, y, width, height } }
 ```
 
-`target` is the component id; mark coordinates are the circle's top-left.
+`target` is the component id; mark coordinates are the circle's top-left,
+and `textId` is the id of the label's text element inside the circle.
 Unknown frames, decisions, missing or invalid screens, unknown component ids
 and duplicates exit 1 and leave the file untouched. Errors follow the other
 flow commands' findings convention. A second mark with another label is

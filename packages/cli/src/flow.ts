@@ -230,7 +230,9 @@ export async function editOverlay(
       frame,
       screen,
       target,
-      ...(command === "mark" ? { label } : {}),
+      ...(command === "mark"
+        ? { label, textId: flow.elements.find((t) => t.containerId === id)!.id }
+        : {}),
       ...box(elementById(flow, id)),
     };
     await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));

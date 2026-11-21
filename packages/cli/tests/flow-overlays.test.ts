@@ -41,6 +41,8 @@ test("overlays resolve variant ids and use a hand-moved image", async () => {
   expect(value).toMatchObject({ frame: "F1", screen: "team-after", target: "invite", label: "4" });
   const after = parseFlow(await readFile(file, "utf8"));
   const badge = after.elements.find((e) => e.id === value.id)!;
+  const text = after.elements.find((e) => e.id === value.textId)!;
+  expect(text).toMatchObject({ type: "text", containerId: badge.id, text: "4" });
   expect(value.x).toBe(badge.x);
   expect(Number(badge.x) + Number(badge.width) / 2).toBe(b.x - Number(badge.width) / 3);
   expect(Number(badge.y) + Number(badge.height) / 2).toBe(b.y - Number(badge.height) / 3);
