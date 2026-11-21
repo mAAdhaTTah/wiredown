@@ -35,9 +35,10 @@ test("new connects its screens in a row; one screen gets no arrow", async () => 
   expect(result.exitCode).toBe(0);
   const flow = await read(file);
   const ids = arrows(flow).map((a) => a.id);
+  const at = (a: Record<string, unknown>) => ({ x: a.x, y: a.y, width: a.width, height: a.height });
   expect(JSON.parse(result.stdout).arrows).toEqual([
-    { id: ids[0], from: "F1", to: "F2", label: null },
-    { id: ids[1], from: "F2", to: "F3", label: null },
+    { id: ids[0], from: "F1", to: "F2", label: null, ...at(arrows(flow)[0]) },
+    { id: ids[1], from: "F2", to: "F3", label: null, ...at(arrows(flow)[1]) },
   ]);
   expect(node(flow, "F2").boundElements).toEqual(ids.map((id) => ({ id, type: "arrow" })));
   const human = await run([
@@ -71,7 +72,15 @@ test("decision, connect and note: output and the written drawing", async () => {
   const d1 = node(flow, "D1");
   expect(JSON.parse(decision.stdout)).toEqual({
     flow: file,
-    decision: { node: "D1", x: d1.x, y: d1.y, width: 260, height: 170 },
+    decision: {
+      node: "D1",
+      id: d1.id,
+      text: "Confirmed?",
+      x: d1.x,
+      y: d1.y,
+      width: 260,
+      height: 170,
+    },
   });
   expect(d1.x).toBe(Number(node(flow, "F2").x) + Number(node(flow, "F2").width) + 340);
 
@@ -81,7 +90,16 @@ test("decision, connect and note: output and the written drawing", async () => {
   const arrow = arrows(flow).at(-1)!;
   expect(JSON.parse(connected.stdout)).toEqual({
     flow: file,
-    arrow: { id: arrow.id, from: "F2", to: "D1", label: "Submit" },
+    arrow: {
+      id: arrow.id,
+      from: "F2",
+      to: "D1",
+      label: "Submit",
+      x: arrow.x,
+      y: arrow.y,
+      width: arrow.width,
+      height: arrow.height,
+    },
   });
   expect(arrow.endBinding).toMatchObject({ elementId: d1.id });
   expect(flow.elements.at(-1)).toMatchObject({ text: "Submit", containerId: arrow.id });
@@ -90,7 +108,18 @@ test("decision, connect and note: output and the written drawing", async () => {
   expect(noted.exitCode).toBe(0);
   flow = await read(file);
   const note = flow.elements.at(-1)!;
-  expect(JSON.parse(noted.stdout)).toEqual({ flow: file, note: { id: note.id, node: "F1" } });
+  expect(JSON.parse(noted.stdout)).toEqual({
+    flow: file,
+    note: {
+      id: note.id,
+      node: "F1",
+      text: note.text,
+      x: note.x,
+      y: note.y,
+      width: note.width,
+      height: note.height,
+    },
+  });
   expect(note).toMatchObject({
     x: node(flow, "F1").x,
     y: Number(node(flow, "F1").y) + Number(node(flow, "F1").height) + 20,

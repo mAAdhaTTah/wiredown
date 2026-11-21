@@ -6,7 +6,6 @@ import {
   addNote,
   addScreen,
   connect,
-  embedSize,
   FlowError,
   flowFrames,
   flowNodes,
@@ -14,6 +13,7 @@ import {
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
+import type { ExcalidrawElementJson, Flow } from "@wiredown/excalidraw";
 import { screensToEmbed } from "./embeds";
 import { CommandError, fileOp, formatFindings, json, unknownScreen, UsageError } from "./output";
 import type { Finding, Result } from "./output";
@@ -95,7 +95,6 @@ export async function editFlow(
         if (!screen) throw new Error("screen not found");
 
         const rendered = screenElements(layoutScreen(screen.tree));
-        const size = embedSize(rendered.width, rendered.height);
         const title = options.title ?? screen.heading ?? id;
         const frame = addScreen(flow, {
           screenId: id,
@@ -105,7 +104,7 @@ export async function editFlow(
           place: place(options),
         });
         const image = flowFrames(flow).find((f) => f.frame === frame)!.element;
-        frames.push({ frame, screen: id, title, x: image.x, y: image.y, ...size.image });
+        frames.push({ frame, screen: id, title, id: image.id, ...box(image) });
       }
     }
     // flow new scaffolds a path through the row: F1 -> F2 -> F3
@@ -113,7 +112,7 @@ export async function editFlow(
     if (command === "new")
       for (const [i, to] of frames.slice(1).entries()) {
         const from = frames[i].frame;
-        arrows.push({ id: connect(flow, from, to.frame), from, to: to.frame, label: null });
+        arrows.push(arrowOf(flow, connect(flow, from, to.frame), from, to.frame, null));
       }
     const output = serializeFlow(flow);
     const styled = styleScreens(source);
@@ -177,11 +176,18 @@ export async function editFlow(
     };
   }
 }
-interface Arrow {
-  id: string;
-  from: string;
-  to: string;
-  label: string | null;
+/** An element's position and size in the drawing. */
+const box = (e: ExcalidrawElementJson) => ({
+  x: Number(e.x),
+  y: Number(e.y),
+  width: Number(e.width),
+  height: Number(e.height),
+});
+const elementById = (flow: Flow, id: string) => flow.elements.find((e) => e.id === id)!;
+type Arrow = ReturnType<typeof arrowOf>;
+/** What the output reports for an arrow: its element id, ends, label and box. */
+function arrowOf(flow: Flow, id: string, from: string, to: string, label: string | null) {
+  return { id, from, to, label, ...box(elementById(flow, id)) };
 }
 const arrowLine = (a: Arrow) =>
   `${a.from} -> ${a.to}${a.label === null ? "" : `  ${JSON.stringify(a.label)}`}\n`;
@@ -204,16 +210,18 @@ export async function editNodes(
     if (command === "connect") {
       const [from, to] = args;
       const label = args[2] || undefined;
-      const arrow = { id: connect(flow, from, to, { label }), from, to, label: label ?? null };
+      const arrow = arrowOf(flow, connect(flow, from, to, { label }), from, to, label ?? null);
       [value, line] = [arrow, arrowLine(arrow)];
     } else if (command === "note") {
       const [node, text] = args;
       const id = addNote(flow, node, text);
-      [value, line] = [{ id, node }, `${node}  note ${id}\n`];
+      const e = elementById(flow, id);
+      [value, line] = [{ id, node, text: e.text, ...box(e) }, `${node}  note ${id}\n`];
     } else {
       const node = addDecision(flow, { text: args[0], place: place(options) });
       const e = flowNodes(flow).find((n) => n.node === node)!.element;
-      value = { node, x: e.x, y: e.y, width: e.width, height: e.height };
+      const label = flow.elements.find((t) => t.containerId === e.id)!;
+      value = { node, id: e.id, text: label.text, ...box(e) };
       line = `${node}  ${e.width}x${e.height}\n`;
     }
     await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));

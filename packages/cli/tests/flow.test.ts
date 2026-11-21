@@ -239,7 +239,8 @@ test("new creates empty drawings and a measured row, preserving existing files",
   const frames = JSON.parse(row.stdout).frames;
   expect(frames).toHaveLength(3);
   const { checkScreens, layoutScreen } = await import("@wiredown/core");
-  const { embedSize, screenElements } = await import("@wiredown/excalidraw");
+  const { embedSize, flowFrames, screenElements } = await import("@wiredown/excalidraw");
+  const images = flowFrames(parseFlow(await readFile(file, "utf8"))).map((f) => f.element);
   let x = 0;
   for (const [i, id] of ["team", "team-after", "team"].entries()) {
     const screen = checkScreens(BASE + "\n" + VARIANT).screens.find((s) => s.id === id)!;
@@ -249,6 +250,7 @@ test("new creates empty drawings and a measured row, preserving existing files",
       frame: "F" + (i + 1),
       screen: id,
       title: screen.heading,
+      id: images[i].id,
       x,
       y: 0,
       ...size,

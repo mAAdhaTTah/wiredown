@@ -132,8 +132,9 @@ A frame's image and its `F3 · Title` label share an Excalidraw group, so
 they move together: clicking either selects both; double-click to select
 one. Human output is one `F3  team-members  548x333` line per frame, then one
 `F1 -> F2` line per arrow. The size is the embed image size in the drawing.
-JSON is `{ flow, frames: [{ frame, screen, title, x, y, width, height }],
-screensFileUpdated }`; `flow new` adds `arrows: [{ id, from, to, label }]`.
+JSON is `{ flow, frames: [{ frame, screen, title, id, x, y, width, height }],
+screensFileUpdated }`, where `id` is the image's element id; `flow new` adds
+`arrows: [{ id, from, to, label, x, y, width, height }]`.
 A file or input problem, such as a missing file, an unknown screen or node,
 or a file that is not a drawing, exits 1 with a plain message (JSON adds an
 `errors` array); usage errors exit 2. Any other error is a bug and crashes
@@ -153,17 +154,21 @@ relative to the nodes where they are now, so moving them by hand is fine.
 - `wiredown flow decision <flow.excalidraw.md> <text> [--right-of N |
 --below N] [--json]` appends a decision diamond (default: right of the
   rightmost node). Prints `D1  260x170`; JSON is
-  `{ flow, decision: { node, x, y, width, height } }`.
+  `{ flow, decision: { node, id, text, x, y, width, height } }`, where `id`
+  is the diamond's element id and `text` is as written, wrapped.
 - `wiredown flow connect <flow.excalidraw.md> <from> <to> [<label>] [--json]`
   appends a straight arrow between the facing edges of two nodes, bound to
   both, with an optional label. A further arrow between the same pair is
   offset beside the first. Existing arrows are not rerouted. Prints
-  `F2 -> D1  "Submit"`; JSON is `{ flow, arrow: { id, from, to, label } }`
-  (`label` is `null` when absent).
+  `F2 -> D1  "Submit"`; JSON is
+  `{ flow, arrow: { id, from, to, label, x, y, width, height } }` (`label` is
+  `null` when absent; `x`, `y` is the arrow's start).
 - `wiredown flow note <flow.excalidraw.md> <node> <text> [--json]` appends a
   free text note under the node, below the notes still in its stack, wrapped to the
   node's width. The note joins the node's group, so it moves with the node.
-  Prints `F1  note <element-id>`; JSON is `{ flow, note: { id, node } }`.
+  Prints `F1  note <element-id>`; JSON is
+  `{ flow, note: { id, node, text, x, y, width, height } }` (`text` as
+  written, wrapped).
 
 An unknown node (the error lists the nodes that exist), a node name two
 elements claim (a copy pasted before elements recorded their own id: delete
