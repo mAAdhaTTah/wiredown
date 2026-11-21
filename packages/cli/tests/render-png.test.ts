@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { run } from "../src/index";
-import { BASE, fixture, VARIANT } from "./helpers";
+import { BASE, fixture, screensIn, VARIANT } from "./helpers";
 
 /** Pixel size and top-left pixel of an RGBA PNG (no filter changes the first pixel). */
 async function png(path: string) {
@@ -31,7 +31,9 @@ describe("render --format png", { timeout: 30000 }, () => {
     screens = join(dir, "screens.md");
     await writeFile(screens, `${BASE}\n\n${VARIANT}\n`);
     flow = join(dir, "flows", "f.excalidraw.md");
-    expect((await run(["flow", "new", flow, "team", "team-after"])).exitCode).toBe(0);
+    expect(
+      (await run(["flow", "new", flow, "team", "team-after", ...screensIn(dir)])).exitCode,
+    ).toBe(0);
   }, 30000);
   afterAll(() => rm(dir, { recursive: true, force: true }));
 

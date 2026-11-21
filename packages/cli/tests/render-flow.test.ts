@@ -224,7 +224,7 @@ it.each(["svg", "png"])(
   async (format) => {
     const dir = await fixture({ "screens.md": BASE });
     const file = join(dir, "f.excalidraw.md");
-    await run(["flow", "new", file, "team"]);
+    await run(["flow", "new", file, "team", ...screensIn(dir)]);
     const flow = parseFlow(await readFile(file, "utf8"));
     flow.elements[0].customData = { wiredown: { v: "2" } };
     await writeFile(file, serializeFlow(flow));
@@ -253,7 +253,7 @@ it.each(["svg", "png"])(
 it("rejects a drawing's SVG images in PNG output only, and still writes the flow", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "flows", "f.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const flow = parseFlow(await readFile(file, "utf8"));
   const inner = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
   flow.files.drawn = {
@@ -289,13 +289,13 @@ it.skipIf(process.getuid?.() === 0)(
   async () => {
     const dir = await fixture({ "screens.md": BASE });
     const file = join(dir, "flows", "f.excalidraw.md");
-    expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+    expect((await run(["flow", "new", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
     const screens = join(dir, "screens.md");
     await chmod(screens, 0o000);
     try {
       const result = await run(["render", file, "--out", dir]);
       expect(result).toMatchObject({ exitCode: 2, stdout: "" });
-      expect(result.stderr).toContain(`cannot read ${screens}: EACCES`);
+      expect(result.stderr).toContain(`cannot read the screens file ${screens}: permission denied`);
     } finally {
       await chmod(screens, 0o644);
     }

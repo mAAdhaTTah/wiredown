@@ -2,10 +2,17 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import type { Box, CheckedScreen } from "@wiredown/core";
-import { flowFrames, screenElements } from "@wiredown/excalidraw";
+import { FlowError, flowFrames, screenElements } from "@wiredown/excalidraw";
 import { BACKGROUND, renderFlowSvg, renderScreenSvg, svgToPng } from "@wiredown/excalidraw/node";
 import { embeddedScreens } from "./flow";
-import { formatFindings, json, readSource, unknownScreen, UsageError } from "./output";
+import {
+  CommandError,
+  formatFindings,
+  json,
+  readSource,
+  unknownScreen,
+  UsageError,
+} from "./output";
 import type { Finding, Result } from "./output";
 import { NewerFlowError, parseEditableFlow } from "./read-flow";
 
