@@ -97,7 +97,7 @@ listed folder exists. Check each font's licence before serving it.
 
 ### On Gitea (unverified)
 
-The prototypes and notes assume Gitea's custom templates. The usual place,
+The integration assumes Gitea's custom templates. The usual place,
 not checked on a live Gitea, is:
 
 - `dist/` copied to `$GITEA_CUSTOM/public/assets/wiredown/<version>/`,
@@ -133,8 +133,8 @@ in `src/host.ts`:
 | `noteUrl(doc)`    | On a `.md` file view, the raw file is the page URL with `/raw/` for `/src/`.                                                      |
 | `theme(doc)`      | `<html data-theme>` names containing `dark` are dark; `auto` follows the OS.                                                      |
 
-The selectors and theme rule come from the round-2 page-script prototype.
-The file-view and raw URLs are new and come from no prototype.
+The selectors, theme rule, file-view and raw URLs are assumptions covered
+by local fixtures; they still need checking against a live Gitea instance.
 
 ## What it does
 

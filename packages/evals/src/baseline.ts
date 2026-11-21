@@ -7,7 +7,7 @@ import { REPO } from "./paths.ts";
 
 /**
  * The "old" arm's parser: @wiredown/core as first imported from the
- * Sketchdown fork prototype (branch stack/02-core-import), before any change
+ * Sketchdown fork, before any change
  * from the syntax proposal: `(id=…)`, implicit replacement in variants,
  * `(hi)`, content-sized grids, no per-component option checks. The tag
  * `eval-baseline` points at the same commit.

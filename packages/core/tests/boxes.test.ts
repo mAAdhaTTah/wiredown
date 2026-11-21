@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
-import { layout, parse, resolve } from "../src/index";
+import { layout } from "../src/layout";
+import { parse } from "../src/parse";
+import { resolve } from "../src/variants";
 import { fakeMeasure } from "./helpers/fakeMeasure";
 
 it("records real nested boxes, including the whole field, at the drawing origin", () => {

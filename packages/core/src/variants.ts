@@ -1,5 +1,5 @@
 import { parseCheck } from "./components/shared";
-import { nearest, parse, parseOptions } from "./parse";
+import { nearest, parse } from "./parse";
 import type { ParseError, ParseResult, SpecNode } from "./types";
 
 // A variant block draws another screen with a few changes:
@@ -334,46 +334,4 @@ function resolveAt(source: string, o: ResolveOptions, chain: string[]): ParseRes
 /** Parses a block and, if it is a variant, applies it to the screen it extends. */
 export function resolve(source: string, options: ResolveOptions = {}): ParseResult {
   return resolveAt(source, options, []);
-}
-
-// ---------- back to text ----------
-/** Text as written in a spec: "\\#" for a #, and "\\(" for brackets that would be read as options. */
-function escape(text: string): string {
-  const out = text.replace(/#/g, "\\#");
-  const tail = /\(([^()]*)\)\s*$/.exec(out);
-  const cut = tail && !parseOptions(tail[0]).rest ? tail.index : out.length;
-  // a literal backslash before a bracket is doubled, or it would read as an escape
-  const head = out.slice(0, cut).replace(/\\\(/g, "\\\\(");
-  return cut < out.length ? head + "\\" + out.slice(cut) : head;
-}
-
-function line(node: SpecNode): string {
-  const opts = Object.entries(node.opts).map(([k, v]) => (v === 1 ? k : `${k}=${v}`));
-  const shorthand = node.id && /^[a-z][a-z0-9-]*$/.test(node.id) ? `#${node.id}` : "";
-  if (node.id && !shorthand) opts.push(`id=${node.id}`);
-  if (node.type === "field" && node.children[0]) {
-    const inner = node.children[0];
-    return `field: ${node.text} | ${line({ ...inner, id: node.id, opts: { ...inner.opts, ...node.opts } })}`;
-  }
-  const text = [escape(node.text), shorthand, opts.length ? `(${opts.join(", ")})` : ""]
-    .filter(Boolean)
-    .join(" ");
-  return text ? `${node.type}: ${text}` : node.type;
-}
-
-/** The tree as plain spec text: what a resolved variant amounts to. */
-export function serialize(tree: SpecNode, indent = ""): string {
-  const out: string[] = [];
-  for (const node of tree.children) {
-    out.push(indent + line(node));
-    const body = node.type === "field" ? (node.children[0]?.body ?? []) : node.body;
-    for (const b of body) out.push(indent + (node.type === "tree" ? b : b.trim()));
-    if (node.type !== "field")
-      out.push(
-        ...serialize(node, indent + "  ")
-          .split("\n")
-          .filter(Boolean),
-      );
-  }
-  return out.join("\n");
 }

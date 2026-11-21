@@ -71,7 +71,7 @@ describe("screenElements", () => {
     });
   });
 
-  it("uses the prototype's defaults: padding 8, roughness 1", () => {
+  it("uses padding 8 and roughness 1", () => {
     const { width, elements } = screenElements(screen());
     const size = screen().size;
     expect(width).toBe(Math.ceil(size.w + 16));

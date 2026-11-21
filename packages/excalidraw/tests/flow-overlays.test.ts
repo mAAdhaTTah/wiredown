@@ -1,5 +1,6 @@
 import { DEFAULT_THEME, layoutScreen, parse, resolve } from "@wiredown/core";
 import { expect, test } from "vitest";
+import { markCentre } from "../src/flow-edit";
 import {
   addDecision,
   addHighlight,
@@ -7,7 +8,6 @@ import {
   addScreen,
   embedSize,
   flowFrames,
-  markCentre,
   newFlow,
   overlayBox,
   parseFlow,

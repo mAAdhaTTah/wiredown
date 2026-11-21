@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parse } from "../src/index";
+import { parse } from "../src/parse";
 import { VALID_SPECS } from "./fixtures/specs";
 import { prototype } from "./helpers/prototype";
 

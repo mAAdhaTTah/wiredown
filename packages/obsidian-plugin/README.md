@@ -1,6 +1,6 @@
 # Wiredown for Obsidian
 
-Prototype behavior carried over but unverified in this build includes SVG
+Behavior still requiring a manual Obsidian check includes SVG
 export and font embedding, export caching, embed timing and re-entrancy,
 startup readiness, theme filtering, and Obsidian lifecycle integration.
 
@@ -54,7 +54,7 @@ notes immediately, while the drawing handles its embedded images' theme.
 11. Check the developer console for Wiredown, ExcalidrawAutomate, createSVG
     or embed-loader errors, including during note close and plugin unload.
 
-The 60 ms DOM heartbeat and API signature come from the checked prototype.
+The 60 ms DOM heartbeat keeps embeds busy until the API export completes.
 The snapshot window (250 ms plus 150 ms stillness, 2 s cap), font embedding,
 startup readiness, theme filtering, re-entrancy during embeds and lifecycle
 integration still need the manual checks above for this build. Slow exports

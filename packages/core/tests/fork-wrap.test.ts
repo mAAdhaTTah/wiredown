@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { FONT_SIZE, layout, parse } from "../src/index";
-import type { LineOp, TextOp } from "../src/index";
 import { labelAtoms } from "../src/components/label";
+import { layout } from "../src/layout";
+import { parse } from "../src/parse";
+import { FONT_SIZE } from "../src/theme";
+import type { LineOp, TextOp } from "../src/types";
 import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure";
 
 const style = { fontSize: FONT_SIZE, fontFamily: 5 };

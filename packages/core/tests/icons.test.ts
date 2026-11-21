@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { FONT_SIZE, ICON_NAMES, INK, layout, parse } from "../src/index";
-import type { DrawOp, EllipseOp, RectOp, Style, TextOp } from "../src/index";
+import { ICON_NAMES } from "../src/icons";
+import { layout } from "../src/layout";
+import { parse } from "../src/parse";
+import { FONT_SIZE, INK } from "../src/theme";
+import type { DrawOp, EllipseOp, RectOp, Style, TextOp } from "../src/types";
 import { LINE_H, fakeMeasure } from "./helpers/fakeMeasure";
 
 const style: Style = { stroke: "#1e1e1e", fontFamily: 5, roughness: 1, fontSize: FONT_SIZE };

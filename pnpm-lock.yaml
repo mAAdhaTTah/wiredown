@@ -208,12 +208,24 @@ importers:
 
   packages/cli:
     dependencies:
+      '@excalidraw/utils':
+        specifier: 0.1.8
+        version: 0.1.8
+      '@resvg/resvg-js':
+        specifier: 2.6.2
+        version: 2.6.2
       '@wiredown/core':
         specifier: workspace:*
         version: link:../core
       '@wiredown/excalidraw':
         specifier: workspace:*
         version: link:../excalidraw
+      happy-dom:
+        specifier: 21.0.4
+        version: 21.0.4
+      woff2-encoder:
+        specifier: 2.0.0
+        version: 2.0.0
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -249,24 +261,25 @@ importers:
 
   packages/excalidraw:
     dependencies:
-      '@excalidraw/utils':
-        specifier: 0.1.8
-        version: 0.1.8
-      '@resvg/resvg-js':
-        specifier: 2.6.2
-        version: 2.6.2
       '@wiredown/core':
         specifier: workspace:*
         version: link:../core
       fractional-indexing:
         specifier: ^4.0.0
         version: 4.0.0
-      happy-dom:
-        specifier: ^21.0.4
-        version: 21.0.4
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
+    devDependencies:
+      '@excalidraw/utils':
+        specifier: 0.1.8
+        version: 0.1.8
+      '@resvg/resvg-js':
+        specifier: 2.6.2
+        version: 2.6.2
+      happy-dom:
+        specifier: 21.0.4
+        version: 21.0.4
       woff2-encoder:
         specifier: 2.0.0
         version: 2.0.0

@@ -244,7 +244,7 @@ test("notes stack under a frame or decision, wrapped to its width", () => {
   valid(flow);
 });
 
-test("the prototype's fixture gains elements and keeps everything else", () => {
+test("the vendored drawing fixture gains elements and keeps everything else", () => {
   const source = readFileSync(
     new URL("./fixtures/review-and-apply.excalidraw.md", import.meta.url),
     "utf8",

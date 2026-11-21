@@ -11,8 +11,8 @@ by a person in Obsidian and in a Git forge (Gitea first).
 Supporting material in this folder:
 
 - `syntax-proposal.md`: the screen syntax changes, with decisions D1–D3.
-- `prototypes/`: working prototype code to start from (see "Starting
-  points").
+- Historical prototypes informed the build but are not part of this
+  repository (see "Starting points").
 
 ## Goals
 
@@ -107,7 +107,8 @@ Screens are drawn by Excalidraw, from elements Wiredown lays out. Same look
 in every surface; no second renderer to keep in step.
 
 - **Text measurement.** Layout measures in Excalifont with an advance-width
-  table plus measured kerning pairs, generated from the font. The prototype
+  table regenerated from the font plus retained browser-measured kerning
+  pairs, spot-checked by `check-metrics.mjs`. The prototype
   matched Excalidraw's own `measureText` to 0.01 px mean, 0.96 px max.
   Excalifont is OFL-1.1; Wiredown ships derived metrics, and Excalidraw
   inlines the font.
@@ -123,8 +124,11 @@ in every surface; no second renderer to keep in step.
   flows: about 1.15 MB gzipped, loaded only on pages with `wiredown` blocks
   or flows. A Rough.js-only screen renderer (~10 KB) stays a later option if
   page loads prove slow.
-- **Theme.** Excalidraw renders light or dark at export time; each surface
-  renders for its current theme.
+- **Theme.** Headless and web exports use the requested or page theme at
+  export time. Obsidian exports light and applies the same
+  `invert(93%) hue-rotate(180deg)` filter as Excalidraw dark mode. Blocks
+  follow the note theme without re-exporting; this also avoids double
+  inversion inside drawing embeds.
 - **Size.** 59–71 KB per screen SVG with the font inlined, 25–38 KB without.
   Rendered on demand, never committed.
 
@@ -238,12 +242,18 @@ name: Framedown.
 - **Overlay alignment.** Whether image embeds add padding or offset.
 - **Owning a fork alone.** Upstream Sketchdown is young with one maintainer;
   little to lean on.
-- **Excalidraw upgrades.** Two Excalidraw builds are involved (the Obsidian
-  plugin's fork and npm's); their output can diverge.
+- **Excalidraw upgrades.** Three builds are involved: `@excalidraw/utils`
+  0.1.8 for headless export, `@excalidraw/excalidraw` 0.18.1 for the web,
+  and the Obsidian Excalidraw plugin's own fork. Their output can diverge.
+  Flow arrows use the newer binding shape used by the plugin.
 - **Syntax test.** `syntax-proposal.md` "How to test it" runs once P2, P3, P5
   and P7 exist.
 
 ## Starting points
+
+Historical material, outside this repository: these prototypes informed the
+build. Paths below identify their original locations, not repository files.
+
 
 - `prototypes/sketchdown-fork/`: the fork with the Excalidraw path. Includes
   variants (`extends`, `rows:`, `remove:`, `after:`), wrapping grids, `(hi)`
@@ -261,3 +271,8 @@ name: Framedown.
   generation, sync, lint against frontmatter), `gen-embeds.mjs` (writes
   `[[screens#^id|WxH]]` image embeds in the confirmed format),
   `validate-embeds.mjs` (the Excalidraw plugin's own parsing rules).
+
+Deliberate vendored fixtures remain in the repository:
+`packages/core/tests/fixtures/prototype/Sketchdown.md` and
+`packages/evals/fixtures/old/syntax.md`. They preserve compatibility evidence
+and the eval baseline, respectively.

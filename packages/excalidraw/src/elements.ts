@@ -1,4 +1,4 @@
-import { EXCALIFONT, FONT_SIZE, INK, LIGHT_INK } from "@wiredown/core";
+import { EXCALIFONT, EXCALIFONT_FAMILY, FONT_SIZE, INK, LIGHT_INK } from "@wiredown/core";
 import type { Box, DrawOp, LayoutResult } from "@wiredown/core";
 
 // Turns layout ops into plain Excalidraw element JSON, with no Excalidraw
@@ -9,7 +9,7 @@ import type { Box, DrawOp, LayoutResult } from "@wiredown/core";
 // are always for the light theme; Excalidraw darkens them at export.
 
 /** Excalidraw's font family number for Excalifont. */
-export const EXCALIFONT_FAMILY = 5;
+export { EXCALIFONT_FAMILY } from "@wiredown/core";
 /** Largest corner radius of a rounded box (Excalidraw's own default is 32). */
 const CORNER = 8;
 

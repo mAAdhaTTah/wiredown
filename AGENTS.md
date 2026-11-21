@@ -22,17 +22,29 @@ pnpm install
 pnpm format          # Apply formatting
 pnpm format:check
 pnpm lint
-pnpm typecheck
 pnpm build
+pnpm typecheck
 pnpm test
 ```
 
 Build and typecheck recurse through workspace package scripts. The root
-Vitest config discovers package projects in `packages/*`. Type-checking and
-unit tests read workspace packages from source (the `@wiredown/source` export
-condition); build before tests that use built output.
+Vitest config discovers package projects in `packages/*`. In type-checking
+and unit tests, a workspace package import resolves to the package's source
+(the `@wiredown/source` export condition). Node, the bundles and code that
+imports a `dist/` path use the built output. The evals import core's built
+`dist/internal.js`, so build before typecheck and test.
 
 Evals (`packages/evals/evals/*.eval.ts`, `pnpm eval`) call a model through
 `claude -p` and cost money. Run them only by hand when asked; never add them
 to `pnpm test` or CI. Their unit tests (`packages/evals/tests`) are ordinary
 tests and do run in `pnpm test`.
+
+Run `pnpm metrics` to regenerate Excalifont advance widths from the installed
+`@excalidraw/utils` font. After building, run
+`node packages/core/scripts/check-metrics.mjs` with Playwright Chromium
+installed to check sample canvas widths. Kerning retains browser-measured
+ASCII pairs; the generator does not regenerate those measurements.
+
+The Excalidraw main entry has only browser-safe dependencies. Its Node-only
+packages are optional peers, installed by the CLI and as adapter development
+dependencies. Consumers of `@wiredown/excalidraw/node` must install them.

@@ -1,8 +1,7 @@
-// The Excalidraw plugin's own parsing of an .excalidraw.md (regexes copied from
-// the prototype's validate-embeds.mjs, which took them from the plugin at
-// 2.29.0), cross-checked against the scene. Returns the failures.
+// Excalidraw plugin 2.29.0 Markdown parsing rules, cross-checked against
+// the scene. Returns the failures.
 import LZString from "lz-string";
-import { bindingFailures as checkBindings } from "../src/index";
+import { bindingFailures as checkBindings } from "../src/flow-refresh";
 
 type El = Record<string, unknown> & { id: string; type: string };
 
