@@ -4,9 +4,7 @@ import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
 import { CommandError, fileOp } from "../src/output";
-import { BASE, fixture, VARIANT } from "./helpers";
-
-const screensIn = (dir: string) => ["--screens", join(dir, "screens.md")];
+import { BASE, fixture, screensIn, VARIANT } from "./helpers";
 
 test("new, add, styling idempotence and hand edits", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
@@ -165,7 +163,7 @@ test.each(["unknown-screen", "unknown-frame", "bad-block", "later-id", "missing-
         },
       ]);
     if (kind === "unknown-frame")
-      expect(errors[0].message).toContain('unknown frame "F99" (frames: none)');
+      expect(errors[0].message).toContain('unknown node "F99" (nodes: none)');
     if (kind === "bad-block") {
       expect(errors[0]).toMatchObject({ screen: "bad", line: expect.any(Number) });
       const human = await run(["flow", ...args]);
@@ -219,7 +217,12 @@ test("new creates empty drawings and a measured row, preserving existing files",
   const empty = join(dir, "empty/a.excalidraw.md");
   const result = await run(["flow", "new", empty, "--json"]);
   expect(result.exitCode).toBe(0);
-  expect(JSON.parse(result.stdout)).toEqual({ flow: empty, frames: [], screensFileUpdated: false });
+  expect(JSON.parse(result.stdout)).toEqual({
+    flow: empty,
+    frames: [],
+    arrows: [],
+    screensFileUpdated: false,
+  });
   expect(parseFlow(await readFile(empty, "utf8")).elements).toEqual([]);
   const file = join(dir, "flows/row.excalidraw.md");
   const row = await run([
@@ -236,7 +239,8 @@ test("new creates empty drawings and a measured row, preserving existing files",
   const frames = JSON.parse(row.stdout).frames;
   expect(frames).toHaveLength(3);
   const { checkScreens, layoutScreen } = await import("@wiredown/core");
-  const { embedSize, screenElements } = await import("@wiredown/excalidraw");
+  const { embedSize, flowFrames, screenElements } = await import("@wiredown/excalidraw");
+  const images = flowFrames(parseFlow(await readFile(file, "utf8"))).map((f) => f.element);
   let x = 0;
   for (const [i, id] of ["team", "team-after", "team"].entries()) {
     const screen = checkScreens(BASE + "\n" + VARIANT).screens.find((s) => s.id === id)!;
@@ -246,6 +250,7 @@ test("new creates empty drawings and a measured row, preserving existing files",
       frame: "F" + (i + 1),
       screen: id,
       title: screen.heading,
+      id: images[i].id,
       x,
       y: 0,
       ...size,
@@ -446,7 +451,12 @@ test.each(["vault", "git", "neither"])(
   },
 );
 
-test("add-screen refuses newer live metadata before writing", async () => {
+test.each([
+  ["add-screen", "team"],
+  ["decision", "Choice"],
+  ["connect", "F1", "F1"],
+  ["note", "F1", "Note"],
+])("%s refuses newer live metadata before writing", async (...args) => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "a.excalidraw.md");
   expect((await run(["flow", "new", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
@@ -455,7 +465,13 @@ test("add-screen refuses newer live metadata before writing", async () => {
   const source = serializeFlow(flow);
   await writeFile(file, source);
   const screens = await readFile(join(dir, "screens.md"), "utf8");
-  const result = await run(["flow", "add-screen", file, "team", ...screensIn(dir)]);
+  const result = await run([
+    "flow",
+    args[0],
+    file,
+    ...args.slice(1),
+    ...(args[0] === "add-screen" ? screensIn(dir) : []),
+  ]);
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain(
     `${file}: this drawing was written by a newer wiredown (data version 2); upgrade wiredown to edit it`,

@@ -46,6 +46,34 @@ export function pluginFailures(data: string): string[] {
   return fail;
 }
 
+/**
+ * validate-embeds.mjs's binding check: each bound arrow is listed in both
+ * ends' boundElements, and each bound text in its container's.
+ */
+export function bindingFailures(data: string): string[] {
+  const fail: string[] = [];
+  const json = /\n##? Drawing\n```json\n([\s\S]*?)\n```\n%%$/.exec(data)?.[1];
+  if (!json) return ["no uncompressed '## Drawing' block"];
+  const live = (JSON.parse(json) as { elements: El[] }).elements.filter((e) => !e.isDeleted);
+  const byId = new Map(live.map((e) => [e.id, e]));
+  const lists = (target: El | undefined, id: string) =>
+    (target?.boundElements as { id: string }[] | null | undefined)?.some((b) => b.id === id);
+  for (const a of live.filter((e) => e.type === "arrow")) {
+    for (const end of ["startBinding", "endBinding"]) {
+      const target = byId.get(String((a[end] as { elementId?: string } | null)?.elementId));
+      if (!target) fail.push(`arrow ${a.id} ${end}: no element`);
+      else if (!lists(target, a.id))
+        fail.push(`arrow ${a.id} ${end}: ${target.type} ${target.id} does not list it`);
+    }
+  }
+  // and bound text: its container lists it
+  for (const t of live.filter((e) => e.type === "text" && e.containerId)) {
+    if (!lists(byId.get(String(t.containerId)), t.id))
+      fail.push(`text ${t.id}: container ${String(t.containerId)} does not list it`);
+  }
+  return fail;
+}
+
 /** The plugin's view of `## Embedded Files`: fileId → link text. */
 export function pluginFiles(data: string): Map<string, string> {
   const efi = data.indexOf("## Embedded Files\n");

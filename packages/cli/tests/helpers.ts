@@ -25,6 +25,9 @@ export const VARIANT = [
   "^team-after",
 ].join("\n");
 
+/** The `--screens` option naming the `screens.md` in `dir`. */
+export const screensIn = (dir: string) => ["--screens", join(dir, "screens.md")];
+
 /** A fresh temp dir with the given files written into it, removed when the test ends. */
 export async function fixture(files: Record<string, string>): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "wiredown-cli-"));
