@@ -46,10 +46,10 @@ The root export is the whole public API.
   and `(k=v, flag)` group, offering the options in `takes` first for "did
   you mean"; `nearest(word, known)` is the "did you mean" lookup.
 - **Catalog** (`catalog`): `CATALOG`, a `CatalogEntry` for every component
-  and variant directive: its node type, keywords, description and the
-  flags and number options it takes. `COMMON_FLAGS` are the flags every
-  component takes; `catalogEntry(type)` finds a type's entry and
-  `optionsOf(entry)` lists every option it takes.
+  and variant directive: its node type, keywords, description, a minimal
+  `example`, and the flags and number options it takes. `COMMON_FLAGS` are
+  the flags every component takes; `catalogEntry(type)` finds a type's entry
+  and `optionsOf(entry)` lists every option it takes.
 - **Checking** (`check`): `check(source, options)` resolves a block as
   `resolve` does and returns a `CheckResult`: the tree, the errors and
   `warnings` about what draws but is probably a mistake (a misspelt icon,

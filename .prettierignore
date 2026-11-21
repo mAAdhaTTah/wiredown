@@ -17,3 +17,4 @@ packages/excalidraw/tests/fixtures/
 
 # Gitea page structures assumed from the prototypes, kept as written.
 packages/web/tests/fixtures/
+skills/wiredown/reference/syntax.md
