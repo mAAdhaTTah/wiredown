@@ -7,6 +7,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { formatEmbed } from "../../src/flow";
 import {
   addDecision,
+  addHighlight,
+  addMark,
   addNote,
   addScreen,
   connect,
@@ -110,10 +112,11 @@ const CHECKOUT = [
 ].join("\n");
 
 // A drawing as `flow new … cart`, `flow add-screen … done --below F1`,
-// `flow decision`, `flow connect` and `flow note` write it: frames sized from
-// the rendered screens with the embed path from the root, a decision, bound
-// arrows (two between one pair) with bound labels, and notes in their node's
-// group.
+// `flow decision`, `flow connect`, `flow note`, `flow highlight` and
+// `flow mark` write it: frames sized from the rendered screens with the embed
+// path from the root, a decision, bound arrows (two between one pair) with
+// bound labels, notes in their node's group, and a highlight and a mark with
+// bound text in the frame's group.
 function commands(): string {
   const flow = newFlow();
   const screens = checkScreens(CHECKOUT).screens;
@@ -134,6 +137,10 @@ function commands(): string {
   connect(flow, "D1", "F2", { label: "Yes" });
   addNote(flow, "F1", "Card details are kept.");
   addNote(flow, "D1", "Retry on a declined card.");
+  const cart = screenElements(layoutScreen(screens.find((s) => s.id === "cart")!.tree));
+  const go = { target: "go", box: cart.boxes.go, screen: cart };
+  addHighlight(flow, "F1", go);
+  addMark(flow, "F1", { ...go, label: "1" });
   return serializeFlow(flow);
 }
 
