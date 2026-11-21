@@ -109,12 +109,12 @@ the parent of the flow's directory. Readers take:
 - else, as Obsidian does, the one `.md` file in the root whose path ends
   with it (`screens`, `checkout/screens`), not searching `node_modules` or
   folders starting with `.`. More than one is an error naming them
-  (`but it matches several files: a/screens.md, b/screens.md; …`).
+  (`screens matches several files: a/screens.md, b/screens.md; …`).
 
 A path that is absolute, has a `..` segment without starting `./` or `../`,
 or leads outside the root (a symlink included) is rejected:
-`embeds [[../outside#^members]], which points outside <root>`. One flow can
-embed screens from several files.
+`../outside points outside <root>`. One flow can embed screens from several
+files.
 
 A screens file or root found from the flow is printed relative to the
 working directory when the flow's path was given relative, and absolute when

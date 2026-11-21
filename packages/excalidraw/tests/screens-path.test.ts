@@ -53,6 +53,7 @@ test("resolving takes the first candidate that exists, and says when a path leav
     return url.endsWith("/specs/screens.md") || url === "file:///work/specs/invites/screens.md";
   };
   expect(await resolveEmbedPath(flow, "screens", exists, root)).toEqual({
+    ok: true,
     url: "file:///work/specs/invites/screens.md",
   });
   expect(tried).toEqual([
@@ -60,9 +61,13 @@ test("resolving takes the first candidate that exists, and says when a path leav
     "file:///work/specs/invites/flows/screens.md",
     "file:///work/specs/invites/screens.md",
   ]);
-  expect(await resolveEmbedPath(flow, "nope", async () => false, root)).toBeUndefined();
+  expect(await resolveEmbedPath(flow, "nope", async () => false, root)).toEqual({
+    ok: false,
+    reason: "missing",
+  });
   expect(await resolveEmbedPath(flow, "/outside", async () => true, root)).toEqual({
-    outside: true,
+    ok: false,
+    reason: "outside",
   });
 });
 

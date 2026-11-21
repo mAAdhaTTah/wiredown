@@ -399,14 +399,12 @@ test("reading an embed: ./ and ../, the path from the root, then a unique suffix
   const root = await embedRoot(flow);
   const read = async (path: string) => {
     const found = await resolveEmbed(flow, path, root);
-    return "path" in found ? [found.path.slice(dir.length + 1), found.embedPath] : found.why;
+    return found.ok ? [found.path.slice(dir.length + 1), found.embedPath] : found.message;
   };
   expect(await read("../screens")).toEqual(["a/screens.md", "a/screens"]);
   expect(await read("./ui.md")).toEqual(["a/flows/ui.md", "a/flows/ui"]);
-  expect(await read("./screens")).toBe(
-    `but no ./screens.md was found from ${join(dir, "a/flows")}`,
-  );
-  expect(await read("../../../outside")).toBe(`which points outside ${dir}`);
+  expect(await read("./screens")).toBe(`no ./screens.md was found from ${join(dir, "a/flows")}`);
+  expect(await read("../../../outside")).toBe(`../../../outside points outside ${dir}`);
   // the path from the root wins over the files it is a suffix of
   expect(await read("screens")).toEqual(["screens.md", "screens"]);
   expect(await read("a/checkout/screens")).toEqual(["a/checkout/screens.md", "a/checkout/screens"]);
@@ -415,9 +413,9 @@ test("reading an embed: ./ and ../, the path from the root, then a unique suffix
   expect(await read("ui")).toEqual(["a/flows/ui.md", "a/flows/ui"]);
   expect(await read("a/screens")).toEqual(["a/screens.md", "a/screens"]);
   expect(await read("checkout/screens")).toBe(
-    `but it matches several files: a/checkout/screens.md, b/checkout/screens.md; name one by its path from ${dir}`,
+    `checkout/screens matches several files: a/checkout/screens.md, b/checkout/screens.md; name one by its path from ${dir}`,
   );
-  expect(await read("nope")).toBe(`but no nope.md was found in ${dir}`);
+  expect(await read("nope")).toBe(`no nope.md was found in ${dir}`);
 });
 
 test.each(["vault", "git", "neither"])(

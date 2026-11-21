@@ -60,20 +60,20 @@ export function embedCandidates(
 }
 
 /**
- * The first candidate that `exists` (`{ url }`), `{ outside: true }` if the
- * path points outside the root, or undefined. In the browser, `exists` is a
- * fetch.
+ * The first candidate that `exists` (`{ ok: true, url }`), else why not:
+ * `outside` if the path points outside the root, `missing` if no candidate
+ * exists. In the browser, `exists` is a fetch.
  */
 export async function resolveEmbedPath(
   flowUrl: string,
   embedPath: string,
   exists: (url: string) => Promise<boolean>,
   root: string,
-): Promise<{ url: string } | { outside: true } | undefined> {
+): Promise<{ ok: true; url: string } | { ok: false; reason: "missing" | "outside" }> {
   const candidates = embedCandidates(flowUrl, embedPath, root);
-  if (!candidates) return { outside: true };
-  for (const url of candidates) if (await exists(url)) return { url };
-  return undefined;
+  if (!candidates) return { ok: false, reason: "outside" };
+  for (const url of candidates) if (await exists(url)) return { ok: true, url };
+  return { ok: false, reason: "missing" };
 }
 
 /**

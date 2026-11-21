@@ -110,9 +110,10 @@ The root export renders nothing; SVG export is in the Node entry,
   from the root first, then the path from the flow's directory and each one
   above it, nearest first. It is undefined for a path that is absolute, has a
   `..` segment without starting `./` or `../`, or normalises outside the root.
-  `resolveEmbedPath(flowUrl, embedPath, exists, root)` returns `{ url }` for the
-  first candidate that `exists` (a fetch in the browser), `{ outside: true }`,
-  or undefined. The CLI, which can list the root, instead matches a path not
+  `resolveEmbedPath(flowUrl, embedPath, exists, root)` returns
+  `{ ok: true, url }` for the first candidate that `exists` (a fetch in the
+  browser), else `{ ok: false, reason }`, `reason` being `"outside"` or
+  `"missing"`. The CLI, which can list the root, instead matches a path not
   found from the root against the end of every `.md` file's path and refuses
   more than one match. `embedNotFound(embedPath, flowDir, root)` says why a path
   did not resolve: `no ../ui.md was found from <dir>` for a relative path, else
