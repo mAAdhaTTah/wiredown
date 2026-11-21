@@ -47,6 +47,33 @@ The root export renders nothing; SVG export is in the Node entry,
 - **Scene** (`scene`): `sceneOf(elements)` wraps elements in the
   `ExcalidrawScene` object Excalidraw's exporters take, with a white
   background and no files.
+- **Flows** (`flow`): flows are Obsidian Excalidraw drawings
+  (`flows/<name>.excalidraw.md`). `parseFlow(text)` reads one into a
+  `Flow`, `{ elements, appState, files, embeds }`, and throws if the text
+  is not one; `serializeFlow(flow)` writes it back, regenerating
+  `## Text Elements`, `## Embedded Files` and the drawing JSON from the
+  scene and keeping everything else (frontmatter, other sections, unknown
+  fields) as read. `newFlow()` is an empty drawing. Compressed drawings can
+  be read, but writes always use diffable JSON. The flow exposes
+  `compressed` to identify compressed input. Turn off "Compress Excalidraw
+  JSON in Markdown" in the Excalidraw plugin's Saving settings to keep
+  drawings diffable.
+
+  `embeds` maps an image's `fileId` to its `## Embedded Files` link, an
+  `EmbedLink`: `path`, and optionally `blockId` (`#^id`, as for a screen),
+  `heading` (`#Heading`), `width` and `height`; `serializeFlow` writes it
+  in the Obsidian plugin's link grammar. A flow's `source` is a `FlowSource`,
+  opaque to callers: what `serializeFlow` needs to reproduce the parts it
+  does not own.
+
+  ```ts
+  import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
+
+  const flow = parseFlow(text);
+  flow.embeds.set(fileId, { path: "screens", blockId: "home", width, height });
+  const next = serializeFlow(flow); // writes [[screens#^home|WxH]]
+  ```
+
 - **Types**: `ElementOptions`, `ScreenElements`, `ExcalidrawElementJson`
   (an element as a plain object with at least `id` and `type`) and
   `ExcalidrawScene`.
