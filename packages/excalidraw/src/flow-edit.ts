@@ -1,4 +1,4 @@
-import { EXCALIFONT, fontMeasurer } from "@wiredown/core";
+import { DEFAULT_THEME, EXCALIFONT, fontMeasurer } from "@wiredown/core";
 import { generateNKeysBetween } from "fractional-indexing";
 import type { ExcalidrawElementJson } from "./elements";
 import type { Flow } from "./flow";
@@ -70,6 +70,8 @@ interface Identity {
   v?: number;
   id?: string;
   role: string;
+  target?: string;
+  label?: string;
   frame?: string;
   screen?: string;
   node?: string;
@@ -78,7 +80,7 @@ interface Identity {
   group?: string;
   /** An arrow's place among the arrows between its pair when it was made; absent for 0. */
   slot?: number;
-  /** A note's node: the id of its image or diamond element. */
+  /** A note's or overlay's node: the id of its image or diamond element. */
   anchor?: string;
 }
 function dataOf(e: ExcalidrawElementJson): Identity | undefined {
@@ -204,7 +206,7 @@ export function touch(e: ExcalidrawElementJson) {
   e.updated = Date.now();
 }
 /**
- * The `groupIds` a node's notes take, so they move with it: our group and
+ * The `groupIds` a node's notes and overlays take, so they move with it: our group and
  * every group around it, innermost first, so a part stays inside any group a
  * person put the node in. A frame's group is made with the frame; a
  * decision's on first need, inserted innermost on the diamond and its text.
@@ -629,4 +631,148 @@ export function nodeAttachments(flow: Flow, n: FlowNode) {
     y += Number(p.element.height) + NOTE_GAP;
     return want;
   });
+}
+
+export interface OverlayOptions {
+  target: string;
+  box: { x: number; y: number; w: number; h: number };
+  screen: { width: number; height: number };
+}
+
+/** Map export coordinates through the embed padding and the current image size. */
+export function overlayBox(
+  frameImage: ExcalidrawElementJson,
+  screen: OverlayOptions["screen"],
+  box: OverlayOptions["box"],
+) {
+  const size = embedSize(screen.width, screen.height).image;
+  const sx = Number(frameImage.width) / size.width;
+  const sy = Number(frameImage.height) / size.height;
+  // x = image.x + (host padding + box.x) * sx; y = image.y + box.y * sy.
+  // Width and height use their own axis ratio, including distorted images.
+  return {
+    x: Number(frameImage.x) + (MD_HOST_PAD + box.x) * sx,
+    y: Number(frameImage.y) + box.y * sy,
+    width: box.w * sx,
+    height: box.h * sy,
+  };
+}
+/** A live frame's image; rejects unknown frames, copied frame names and decisions. */
+export function frameImage(flow: Flow, frame: string): ExcalidrawElementJson {
+  if (!flowNodes(flow).some((n) => n.node === frame))
+    throw new Error(
+      `unknown frame "${frame}" (frames: ${
+        flowFrames(flow)
+          .map((f) => f.frame)
+          .join(", ") || "none"
+      })`,
+    );
+  const node = findNode(flow, frame);
+  if (node.kind !== "frame") throw new Error(`${frame} is a decision, not a frame`);
+  return node.element;
+}
+function overlayAnchor(flow: Flow, frame: string, options: OverlayOptions, label?: string) {
+  const image = frameImage(flow, frame);
+  const role = label === undefined ? "highlight" : "mark";
+  if (
+    flow.elements.some((e) => {
+      const d = identity(e);
+      return (
+        !e.isDeleted &&
+        d?.role === role &&
+        d.anchor === image.id &&
+        d.target === options.target &&
+        (role === "highlight" || d.label === label)
+      );
+    })
+  )
+    throw new Error(
+      role === "highlight"
+        ? `${frame} already highlights #${options.target}`
+        : `${frame} already marks #${options.target} with ${label}`,
+    );
+  return {
+    box: overlayBox(image, options.screen, options.box),
+    data: {
+      role,
+      frame,
+      screen: identity(image)!.screen!,
+      target: options.target,
+      ...(label === undefined ? {} : { label }),
+      anchor: image.id,
+    },
+    // overlays join the frame's group, so they move with it
+    groupIds: nodeGroups(flow, image),
+  };
+}
+
+/**
+ * Where a mark's badge centre goes for a component whose top-left corner is
+ * (x, y): up and left of the corner by a third of the badge's diameter, so
+ * the badge sits just outside the corner instead of covering what it marks.
+ */
+export function markCentre(x: number, y: number, diameter: number) {
+  return { x: x - diameter / 3, y: y - diameter / 3 };
+}
+
+/** Append an outline with a 4px drawing-coordinate outset; return its element id. */
+export function addHighlight(flow: Flow, frame: string, options: OverlayOptions): string {
+  const { box: b, data, groupIds } = overlayAnchor(flow, frame, options);
+  const e = {
+    ...element(
+      "rectangle",
+      b.x - 4,
+      b.y - 4,
+      b.width + 8,
+      b.height + 8,
+      nextIndices(flow, 1)[0],
+      data,
+      groupIds,
+    ),
+    roundness: { type: 3 },
+    strokeWidth: 2,
+    strokeColor: DEFAULT_THEME.colors.highlight,
+  };
+  flow.elements.push(e);
+  return e.id;
+}
+
+/** Append a circle and bound text just outside the component's top-left corner (markCentre). */
+export function addMark(
+  flow: Flow,
+  frame: string,
+  options: OverlayOptions & { label: string },
+): string {
+  if (!options.label.trim()) throw new Error("mark needs a non-empty label");
+  const { box: b, data, groupIds } = overlayAnchor(flow, frame, options, options.label);
+  const keys = nextIndices(flow, 2);
+  const measured = measurer.measure(options.label, { fontSize: FONT_SIZE, fontFamily: 5 });
+  // Fit text inside the circle's inscribed square, with 5px container padding.
+  const diameter = Math.max(32, Math.ceil(Math.SQRT2 * Math.max(measured.w, measured.h) + 10));
+  const c = markCentre(b.x, b.y, diameter);
+  const badge: ExcalidrawElementJson = {
+    ...element(
+      "ellipse",
+      c.x - diameter / 2,
+      c.y - diameter / 2,
+      diameter,
+      diameter,
+      keys[0],
+      data,
+      groupIds,
+    ),
+    backgroundColor: DEFAULT_THEME.colors.highlight,
+  };
+  const label = textElement(
+    c.x - measured.w / 2,
+    c.y - measured.h / 2,
+    options.label,
+    FONT_SIZE,
+    keys[1],
+    { ...data, role: "label" },
+    { containerId: badge.id, textAlign: "center", verticalAlign: "middle", groupIds },
+  );
+  badge.boundElements = [{ type: "text", id: label.id }];
+  flow.elements.push(badge, label);
+  return badge.id;
 }

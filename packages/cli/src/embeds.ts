@@ -9,8 +9,10 @@ import {
   embedCandidates,
   embedNotFound,
   embedPathFor,
+  frameImage,
   isRelativeEmbed,
 } from "@wiredown/excalidraw";
+import type { Flow } from "@wiredown/excalidraw";
 
 /**
  * The root every embed search from a flow stays within (`url`, a directory
@@ -192,4 +194,17 @@ export async function screensToEmbed(flowFile: string, screens: string | undefin
       `${path}: a screens file's path cannot contain #, | or ], which end the path in an embed link`,
     );
   return { path, embedPath };
+}
+
+/**
+ * The screens file and block id a frame's image embeds, resolved from the
+ * flow. Throws, naming the frame, when there is no such file.
+ */
+export async function frameEmbed(flowFile: string, flow: Flow, frame: string) {
+  const embed = flow.embeds.get(String(frameImage(flow, frame).fileId));
+  if (!embed?.blockId) throw new Error(`${frame}'s image does not embed a screen block`);
+  const found = await resolveEmbed(flowFile, embed.path, await embedRoot(flowFile));
+  if ("why" in found)
+    throw new Error(`${frame} embeds [[${embed.path}#^${embed.blockId}]], ${found.why}`);
+  return { path: found.path, blockId: embed.blockId };
 }

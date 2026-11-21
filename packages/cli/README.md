@@ -175,6 +175,36 @@ are ignored for stacking. Notes allow 60 px horizontal nudges and gaps of
 up to 200 px after the node or the previous note, leaving room for a deleted
 note. Decision notes stack beside the diamond.
 
+`wiredown flow highlight <flow> <frame> <#id> [--json]` outlines a
+component with the focus colour. `wiredown flow mark <flow> <frame> <#id>
+<label> [--json]` places a filled circle with bound text just outside the
+component's top-left corner, up and left of it by a third of the circle's
+width, so it does not cover what it marks. Quote ids in the shell, for
+example `'#invite'`; bare `invite` also works. These commands read the
+screen from the screens file the frame's embed names (see above), without
+changing it; a frame whose embed does not resolve is an error naming the
+frame. An overlay records the id of its frame's image element and joins the
+frame's group, so it moves with the frame. Human output is `F2  highlight  #invite` or
+`F2  mark 3  #members`. JSON shapes are:
+
+```text
+{ flow, highlight: { id, frame, screen, target, x, y, width, height } }
+{ flow, mark: { id, frame, screen, target, label, x, y } }
+```
+
+`target` is the component id; mark coordinates are the circle's top-left.
+Unknown frames, decisions, missing or invalid screens, unknown component ids
+and duplicates exit 1 and leave the file untouched. Errors follow the other
+flow commands' findings convention. A second mark with another label is
+allowed. Overlays use current image position and size, including independent
+axis scales after a distorted resize. Highlights extend 4px beyond the box.
+
+Alignment inside Obsidian embeds is still an open, unverified risk. The
+shared embed constants in `packages/excalidraw/src/flow-edit.ts` assume
+10px host padding on each side, zero above, and a 5px footer; one change
+there corrects both embed sizing and overlay placement. Refreshing overlays
+after screen edits is future work.
+
 ## API
 
 The root export runs the commands without a terminal. Each resolves to a
