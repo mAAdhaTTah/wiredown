@@ -41,11 +41,13 @@ export interface ScreenRef {
   blockId: string;
 }
 /**
- * The current state of the screen an embed names, or why it has none, as
- * the sentence `embeds [[path#^id]], …` goes on: `but no ui.md was found
- * from … upward`, `which points outside …`, `but ui.md has no ^id`.
+ * The current state of the screen an embed names, or why it has none, as a
+ * stand-alone message (`ui.md has no ^id`); findings add the wording:
+ * `embeds [[path#^id]], but <message>`.
  */
-export type ScreenLookup = (embed: ScreenRef) => ScreenState | string;
+export type ScreenLookup = (
+  embed: ScreenRef,
+) => { ok: true; screen: ScreenState } | { ok: false; message: string };
 
 /** Something broken in a flow; `element` is the element id it is about. */
 export interface FlowFinding {
@@ -119,9 +121,9 @@ function frameStates(flow: Flow, screens: ScreenLookup): FrameState[] {
     const blockId = embed.blockId ?? identity(image)!.screen ?? "";
     const found = blockId
       ? screens({ path: embed.path, blockId })
-      : "but it embeds no screen block";
-    if (typeof found === "string") return [{ frame, image, embed, blockId, missing: found }];
-    const screen = found;
+      : { ok: false as const, message: "it embeds no screen block" };
+    if (!found.ok) return [{ frame, image, embed, blockId, missing: found.message }];
+    const { screen } = found;
     const state: FrameState = { frame, image, embed, blockId, screen };
     const want = embedSize(screen.width, screen.height);
     const ratio = want.image.width / want.image.height;
@@ -443,7 +445,7 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
   for (const s of states) {
     const at = { frame: s.frame, element: s.image.id };
     if (!s.screen)
-      out.push({ ...at, message: `embeds ${link(s.embed.path, s.blockId)}, ${s.missing}` });
+      out.push({ ...at, message: `embeds ${link(s.embed.path, s.blockId)}, but ${s.missing}` });
     else if (s.stale) {
       const { width, height } = s.embed;
       const want = `^${s.blockId} now needs ${s.stale.link.width}x${s.stale.link.height}`;
@@ -490,10 +492,10 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
     if (image.isDeleted || image.type !== "image" || framed.has(image.id)) continue;
     const embed = flow.embeds.get(String(image.fileId));
     const found = embed?.blockId && screens({ path: embed.path, blockId: embed.blockId });
-    if (typeof found === "string")
+    if (found && !found.ok)
       out.push({
         element: image.id,
-        message: `an image embeds ${link(embed!.path, embed!.blockId!)}, ${found}`,
+        message: `an image embeds ${link(embed!.path, embed!.blockId!)}, but ${found.message}`,
       });
   }
   const nodeIds = new Set(flowNodes(flow).map((n) => n.element.id));

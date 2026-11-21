@@ -17,7 +17,13 @@ import {
   refreshFlow,
   serializeFlow,
 } from "../src/index";
-import type { ExcalidrawElementJson, Flow, ScreenRef, ScreenState } from "../src/index";
+import type {
+  ExcalidrawElementJson,
+  Flow,
+  ScreenLookup,
+  ScreenRef,
+  ScreenState,
+} from "../src/index";
 import { bindingFailures, pluginFailures } from "./plugin-checks";
 
 const box = { x: 20, y: 30, w: 40, h: 50 };
@@ -32,8 +38,10 @@ const grown: ScreenState = {
 /** Screens by `path#^id`, or by block id for any path. */
 const lookup =
   (screens: Record<string, ScreenState>) =>
-  ({ path, blockId }: ScreenRef): ScreenState | string =>
-    screens[`${path}#^${blockId}`] ?? screens[blockId] ?? `but ${path}.md has no ^${blockId}`;
+  ({ path, blockId }: ScreenRef): ReturnType<ScreenLookup> => {
+    const screen = screens[`${path}#^${blockId}`] ?? screens[blockId];
+    return screen ? { ok: true, screen } : { ok: false, message: `${path}.md has no ^${blockId}` };
+  };
 
 /** F1 (home) -> F2 (other), a highlight and a mark on F1, a note, and a person's text. */
 function build() {
@@ -333,7 +341,7 @@ test("lint reports each live text id the plugin cannot track without renaming it
     { id: "too-long-id", type: "text", x: 0, y: 0 },
     { id: "deleted", type: "text", x: 0, y: 0, isDeleted: true },
   );
-  const findings = lintFlow(flow, () => "none");
+  const findings = lintFlow(flow, () => ({ ok: false, message: "none" }));
   expect(findings).toEqual(
     ["short", "too-long-id"].map((id) => ({
       element: id,

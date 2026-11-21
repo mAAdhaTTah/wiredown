@@ -158,9 +158,12 @@ The root export renders nothing; SVG export is in the Node entry,
   `refreshFlow(flow, screens)` compare a flow with the screens it embeds as
   they lay out now. `screens` is a `ScreenLookup`: asked per embed with a
   `ScreenRef`, `{ path, blockId }` (the path as written in the link, so two
-  screens files with one block id are never confused), it returns a
-  `ScreenState`, `{ width, height, boxes }` from `screenElements`, or a
-  string saying why there is none.
+  screens files with one block id are never confused), it returns
+  `{ ok: true, screen }`, where `screen` is a `ScreenState`,
+  `{ width, height, boxes }` from `screenElements`, or
+  `{ ok: false, message }` saying why there is none. The message stands
+  alone (`ui.md has no ^team`); findings add
+  `embeds [[path#^id]], but <message>`.
 
   `lintFlow` returns `FlowFinding`s, `{ message, frame?, element? }`: missing
   screens, stale embed sizes or image aspect (a uniformly scaled frame is fine),

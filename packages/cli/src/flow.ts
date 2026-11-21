@@ -22,8 +22,8 @@ import type {
   ExcalidrawElementJson,
   Flow,
   FlowChange,
+  ScreenLookup,
   ScreenRef,
-  ScreenState,
 } from "@wiredown/excalidraw";
 import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds";
 import {
@@ -226,29 +226,30 @@ async function screenLookup(file: string, flow: Flow) {
     if (!embed.blockId || files.has(embed.path) || unresolved.has(embed.path)) continue;
     const found = await resolveEmbed(file, embed.path, root);
     if (!found.ok) {
-      unresolved.set(embed.path, `but ${found.message}`);
+      unresolved.set(embed.path, found.message);
       if (found.reason === "ambiguous") ambiguous.add(embed.path);
     } else {
       files.set(embed.path, await loadScreens(found.path));
       paths.set(embed.path, found.embedPath);
     }
   }
-  const cache = new Map<string, ScreenState | string>();
+  const cache = new Map<string, ReturnType<ScreenLookup>>();
   const errors = new Map<string, Finding[]>();
-  const state = ({ path, blockId }: ScreenRef): ScreenState | string => {
+  const state = ({ path, blockId }: ScreenRef): ReturnType<ScreenLookup> => {
     const loaded = files.get(path);
-    if (!loaded) return unresolved.get(path) ?? "but it was not resolved";
+    if (!loaded) return { ok: false, message: unresolved.get(path) ?? "it was not resolved" };
     const { screen, errors: found } = loaded.screen(blockId);
     if (found.length) {
       errors.set(loaded.path, [...(errors.get(loaded.path) ?? []), ...found]);
-      return screen
-        ? `but ^${blockId} in ${loaded.path} has errors`
-        : `but ${loaded.path} has no ^${blockId}`;
+      const message = screen
+        ? `^${blockId} in ${loaded.path} has errors`
+        : `${loaded.path} has no ^${blockId}`;
+      return { ok: false, message };
     }
     const { width, height, boxes } = screenElements(layoutScreen(screen!.tree));
-    return { width, height, boxes };
+    return { ok: true, screen: { width, height, boxes } };
   };
-  const lookup = (embed: ScreenRef) => {
+  const lookup: ScreenLookup = (embed) => {
     const key = `${embed.path}#^${embed.blockId}`;
     if (!cache.has(key)) cache.set(key, state(embed));
     return cache.get(key)!;
@@ -353,7 +354,7 @@ export async function refreshFlowFile(file: string, options: FlowOptions = {}): 
           const embed = flow.embeds.get(String(element.fileId));
           const why = embed && lost.get(embed.path);
           return why
-            ? [{ frame, message: `embeds [[${embed.path}#^${embed.blockId}]], ${why}` }]
+            ? [{ frame, message: `embeds [[${embed.path}#^${embed.blockId}]], but ${why}` }]
             : [];
         }),
       },
