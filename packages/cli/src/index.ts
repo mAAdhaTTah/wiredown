@@ -26,7 +26,7 @@ interface Command {
 /** Each flow command's usage, then what it does, its options and an example. */
 const FLOW: [string, string][] = [
   [
-    "new <flow.excalidraw.md> [<screen-id>...] [--screens <screens.md>] [--json]",
+    "new <flow.excalidraw.md> [<screen-id>... --screens <screens.md>] [--json]",
     `Creates a drawing, empty or with a row of frames, one per screen, each
 connected to the next (F1 -> F2 -> F3).
 
@@ -39,11 +39,11 @@ example:
   ],
   [
     "add-screen <flow.excalidraw.md> <screen-id> --screens <screens.md> [--right-of F2 | --below F2] [--title <text>] [--json]",
-    `Adds a frame for the screen, right of the rightmost frame unless placed.
+    `Adds a frame for the screen, right of the rightmost node unless placed.
 
 options:
-  --right-of <frame> place it right of this frame
-  --below <frame>    place it below this frame
+  --right-of <node>  place it right of this node
+  --below <node>     place it below this node
   --title <text>     the frame's title (default: the screen's heading, then
                      its id)
   --screens <file>   the screens file to embed from (required)

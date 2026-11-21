@@ -4,7 +4,7 @@ import { flowNodes, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import type { Flow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
-import { BASE, fixture, VARIANT } from "./helpers";
+import { BASE, fixture, screensIn, VARIANT } from "./helpers";
 
 const read = async (file: string) => parseFlow(await readFile(file, "utf8"));
 const arrows = (flow: Flow) => flow.elements.filter((e) => e.type === "arrow");
@@ -13,14 +13,25 @@ const node = (flow: Flow, name: string) => flowNodes(flow).find((n) => n.node ==
 async function twoScreens() {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
   const file = join(dir, "flows/f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team", "team-after"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", "team-after", ...screensIn(dir)])).exitCode).toBe(
+    0,
+  );
   return { dir, file };
 }
 
 test("new connects its screens in a row; one screen gets no arrow", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
   const file = join(dir, "flows/row.excalidraw.md");
-  const result = await run(["flow", "new", file, "team", "team-after", "team", "--json"]);
+  const result = await run([
+    "flow",
+    "new",
+    file,
+    "team",
+    "team-after",
+    "team",
+    ...screensIn(dir),
+    "--json",
+  ]);
   expect(result.exitCode).toBe(0);
   const flow = await read(file);
   const ids = arrows(flow).map((a) => a.id);
@@ -29,10 +40,17 @@ test("new connects its screens in a row; one screen gets no arrow", async () => 
     { id: ids[1], from: "F2", to: "F3", label: null },
   ]);
   expect(node(flow, "F2").boundElements).toEqual(ids.map((id) => ({ id, type: "arrow" })));
-  const human = await run(["flow", "new", join(dir, "flows/h.excalidraw.md"), "team", "team"]);
+  const human = await run([
+    "flow",
+    "new",
+    join(dir, "flows/h.excalidraw.md"),
+    "team",
+    "team",
+    ...screensIn(dir),
+  ]);
   expect(human.stdout).toMatch(/^F1 {2}team {2}\d+x\d+\nF2 {2}team {2}\d+x\d+\nF1 -> F2\n$/);
   const single = join(dir, "flows/one.excalidraw.md");
-  const one = await run(["flow", "new", single, "team", "--json"]);
+  const one = await run(["flow", "new", single, "team", ...screensIn(dir), "--json"]);
   expect(JSON.parse(one.stdout).arrows).toEqual([]);
   expect((await read(single)).elements.map((e) => e.type)).toEqual(["text", "image"]);
 });

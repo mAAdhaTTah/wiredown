@@ -130,11 +130,11 @@ function findNode(flow: Flow, name: string): FlowNode {
   const nodes = flowNodes(flow);
   const found = nodes.filter((n) => n.node === name);
   if (found.length > 1)
-    throw new Error(
+    throw new FlowError(
       `${name} is claimed by elements ${found.map((n) => n.element.id).join(" and ")}; delete the copy`,
     );
   if (!found.length)
-    throw new Error(
+    throw new FlowError(
       `unknown node "${name}" (nodes: ${nodes.map((n) => n.node).join(", ") || "none"})`,
     );
   return found[0];
@@ -415,7 +415,7 @@ export function addDecision(flow: Flow, options: AddDecisionOptions): string {
  * they do not overlap: 0, +70, -70, +140, ...
  */
 export function connect(flow: Flow, from: string, to: string, options: ConnectOptions = {}) {
-  if (from === to) throw new Error(`cannot connect "${from}" to itself`);
+  if (from === to) throw new FlowError(`cannot connect "${from}" to itself`);
   const start = findNode(flow, from),
     end = findNode(flow, to);
   const parallel = arrowsBetween(flow, start.element.id, end.element.id);

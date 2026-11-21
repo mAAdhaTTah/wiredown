@@ -105,14 +105,15 @@ The root export renders nothing; SVG export is in the Node entry,
     note, inserted innermost.
 
   A `Place` is `{ rightOf: "F2" }` or `{ below: "D1" }`; without one, a new
-  node goes right of the rightmost node. Unknown nodes throw and change
-  nothing. Existing elements are never moved or restyled; `connect` only
+  node goes right of the rightmost node. Unknown nodes throw a `FlowError`
+  and change nothing. Existing elements are never moved or restyled; `connect` only
   adds the arrow to its two nodes' `boundElements`, as Excalidraw's binding
   requires, and a note may add the group to its node. A person's pasted
   copy of a node (its data's `id` names another element) is not a node:
   nothing attaches to it, placement ignores it, and its name stays taken.
   Two live nodes with one name (data without `id`, or edited by hand) make
-  every command that takes that name throw, naming both element ids.
+  every command that takes that name throw a `FlowError`, naming both
+  element ids.
 
   Every `customData.wiredown` carries `v` (`DATA_VERSION`, now 1); data
   without `v` is version 1, and data with a higher `v` is ignored.

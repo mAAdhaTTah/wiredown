@@ -198,7 +198,7 @@ export async function editNodes(
 ): Promise<Result> {
   const key = command === "connect" ? "arrow" : command;
   try {
-    const original = await readFile(file, "utf8");
+    const original = await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
     const flow = parseEditableFlow(original);
     let value: Record<string, unknown>, line: string;
     if (command === "connect") {
@@ -216,13 +216,14 @@ export async function editNodes(
       value = { node, x: e.x, y: e.y, width: e.width, height: e.height };
       line = `${node}  ${e.width}x${e.height}\n`;
     }
-    await safeWrite(file, original, serializeFlow(flow));
+    await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
     return {
       exitCode: 0,
       stderr: "",
       stdout: options.json ? json({ flow: file, [key]: value }) : line,
     };
   } catch (error) {
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
     const findings: Finding[] = [{ message: (error as Error).message }];
     return {
       exitCode: 1,
@@ -262,6 +263,8 @@ export function flowCommand(
     throw new UsageError(`flow ${command} needs ${arity[2]}`);
   if ((command === "note" || command === "decision") && !rest.at(-1)?.trim())
     throw new UsageError(`flow ${command} needs non-empty text`);
+  if ((command === "new" || command === "add-screen") && rest.length && !values.screens)
+    throw new UsageError(`flow ${command} needs --screens <screens.md> to embed screens from`);
   if (values["right-of"] && values.below)
     throw new UsageError("--right-of and --below are mutually exclusive");
   const placed = command === "add-screen" || command === "decision";
@@ -280,5 +283,5 @@ export function flowCommand(
   };
   if (command === "connect" || command === "note" || command === "decision")
     return editNodes(command, file, rest, options);
-  return editFlow(command, file, rest, options);
+  return editFlow(command as "new" | "add-screen", file, rest, options);
 }

@@ -4,9 +4,7 @@ import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
 import { CommandError, fileOp } from "../src/output";
-import { BASE, fixture, VARIANT } from "./helpers";
-
-const screensIn = (dir: string) => ["--screens", join(dir, "screens.md")];
+import { BASE, fixture, screensIn, VARIANT } from "./helpers";
 
 test("new, add, styling idempotence and hand edits", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
@@ -465,7 +463,13 @@ test.each([
   const source = serializeFlow(flow);
   await writeFile(file, source);
   const screens = await readFile(join(dir, "screens.md"), "utf8");
-  const result = await run(["flow", args[0], file, ...args.slice(1)]);
+  const result = await run([
+    "flow",
+    args[0],
+    file,
+    ...args.slice(1),
+    ...(args[0] === "add-screen" ? screensIn(dir) : []),
+  ]);
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain(
     `${file}: this drawing was written by a newer wiredown (data version 2); upgrade wiredown to edit it`,
