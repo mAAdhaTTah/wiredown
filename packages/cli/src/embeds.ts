@@ -13,6 +13,7 @@ import {
   isRelativeEmbed,
 } from "@wiredown/excalidraw";
 import type { Flow } from "@wiredown/excalidraw";
+import { CommandError, fileOp } from "./output";
 
 /**
  * The root every embed search from a flow stays within (`url`, a directory
@@ -187,9 +188,11 @@ export async function screensToEmbed(flowFile: string, path: string) {
  */
 export async function frameEmbed(flowFile: string, flow: Flow, frame: string) {
   const embed = flow.embeds.get(String(frameImage(flow, frame).fileId));
-  if (!embed?.blockId) throw new Error(`${frame}'s image does not embed a screen block`);
+  if (!embed?.blockId) throw new CommandError(`${frame}'s image does not embed a screen block`);
   const found = await resolveEmbed(flowFile, embed.path, await embedRoot(flowFile));
-  if ("why" in found)
-    throw new Error(`${frame} embeds [[${embed.path}#^${embed.blockId}]], ${found.why}`);
+  if (!found.ok)
+    throw new CommandError(
+      `${frame} embeds [[${embed.path}#^${embed.blockId}]], but ${found.message}`,
+    );
   return { path: found.path, blockId: embed.blockId };
 }

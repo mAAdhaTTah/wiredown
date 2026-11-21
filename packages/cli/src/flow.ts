@@ -16,7 +16,7 @@ import {
   serializeFlow,
 } from "@wiredown/excalidraw";
 import { frameEmbed, screensToEmbed } from "./embeds";
-import { formatFindings, json, unknownScreen, UsageError } from "./output";
+import { CommandError, fileOp, formatFindings, json, unknownScreen, UsageError } from "./output";
 import type { Finding, Result } from "./output";
 import { NewerFlowError, parseEditableFlow } from "./read-flow";
 import { safeWrite } from "./safe-write";
@@ -74,7 +74,7 @@ export async function editFlow(
     let screensPath: string | undefined;
     let source = "";
     if (ids.length) {
-      const embed = await screensToEmbed(file, options.screens);
+      const embed = await screensToEmbed(file, options.screens!);
       const loaded = await loadScreens(embed.path);
       screensPath = loaded.path;
       source = loaded.source;
@@ -171,7 +171,7 @@ export async function editFlow(
 
 /** Load a screens file once, retaining only errors relevant to each selection. */
 export async function loadScreens(path: string) {
-  const source = await readFile(path, "utf8");
+  const source = await fileOp(`cannot read the screens file ${path}`, readFile(path, "utf8"));
   const checked = checkScreens(source);
   return {
     path,
@@ -200,7 +200,7 @@ export async function editOverlay(
   let findings: Finding[] = [];
   let findingFile = file;
   try {
-    const original = await readFile(file, "utf8");
+    const original = await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
     const flow = parseEditableFlow(original);
     const [frame, targetArg, label] = args;
     const target = targetArg.replace(/^#/, "");
@@ -209,13 +209,13 @@ export async function editOverlay(
     findingFile = loaded.path;
     const { screen: found, errors } = loaded.screen(screen);
     findings = errors;
-    if (findings.length) throw new Error(findings[0].message);
+    if (findings.length) throw new CommandError(findings[0].message);
     const rendered = screenElements(layoutScreen(found!.tree));
     const box = rendered.boxes[target];
     if (!box) {
       const ids = Object.keys(rendered.boxes);
       const guess = nearest(target, ids);
-      throw new Error(
+      throw new CommandError(
         `no component "#${target}" on ^${screen} (ids: ${ids.map((id) => "#" + id).join(", ") || "none"})${guess ? `; did you mean "#${guess}"?` : ""}`,
       );
     }
@@ -230,7 +230,7 @@ export async function editOverlay(
       command === "highlight"
         ? { id, frame, screen, target, x: e.x, y: e.y, width: e.width, height: e.height }
         : { id, frame, screen, target, label, x: e.x, y: e.y };
-    await safeWrite(file, original, serializeFlow(flow));
+    await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
     return {
       exitCode: 0,
       stderr: "",
@@ -239,6 +239,7 @@ export async function editOverlay(
         : `${frame}  ${command}${command === "mark" ? " " + label : ""}  #${target}\n`,
     };
   } catch (error) {
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
     if (!findings.length) findings = [{ message: (error as Error).message }];
     return {
       exitCode: 1,

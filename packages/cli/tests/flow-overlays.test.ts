@@ -4,12 +4,12 @@ import { checkScreens, layoutScreen } from "@wiredown/core";
 import { overlayBox, parseFlow, screenElements, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
-import { BASE, fixture, VARIANT } from "./helpers";
+import { BASE, fixture, screensIn, VARIANT } from "./helpers";
 
 test("overlays resolve variant ids and use a hand-moved image", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
   const file = join(dir, "flows/f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team-after"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team-after", ...screensIn(dir)])).exitCode).toBe(0);
   const flow = parseFlow(await readFile(file, "utf8"));
   flow.elements[1].x = 777;
   flow.elements[1].y = -50;
@@ -54,7 +54,7 @@ test.each(["frame", "decision", "screen", "invalid", "component", "highlight", "
   async (kind) => {
     const dir = await fixture({ "screens.md": BASE });
     const file = join(dir, "flows/f.excalidraw.md");
-    await run(["flow", "new", file, "team"]);
+    await run(["flow", "new", file, "team", ...screensIn(dir)]);
     await run(["flow", "decision", file, "Proceed?"]);
     await run(["flow", "highlight", file, "F1", "invite"]);
     await run(["flow", "mark", file, "F1", "invite", "3"]);
@@ -98,7 +98,7 @@ test.each(["frame", "decision", "screen", "invalid", "component", "highlight", "
 test("replacement inherits its target id", async () => {
   const dir = await fixture({ "screens.md": BASE + "\n" + VARIANT });
   const file = join(dir, "f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team-after"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team-after", ...screensIn(dir)])).exitCode).toBe(0);
   expect(await run(["flow", "highlight", file, "F1", "seats"])).toEqual({
     exitCode: 0,
     stderr: "",
@@ -111,7 +111,7 @@ test("removed targets list surviving ids and preserve bytes", async () => {
     BASE + "\n" + VARIANT.replace("replace: seats\n  text: 2 of 5 seats used", "remove: invite");
   const dir = await fixture({ "screens.md": source });
   const file = join(dir, "f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team-after"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team-after", ...screensIn(dir)])).exitCode).toBe(0);
   const before = await readFile(file, "utf8");
   const result = await run(["flow", "highlight", file, "F1", "invite"]);
   expect(result.exitCode).toBe(1);
@@ -142,7 +142,7 @@ test("each frame's overlays use the screens file its embed names", async () => {
     "ui.md": "```wiredown\nwindow: Home #home\n  button: Go #team\n```\n^team",
   });
   const file = join(dir, "flows/f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", ...screensIn(dir)])).exitCode).toBe(0);
   const ui = ["--screens", join(dir, "ui.md")];
   expect((await run(["flow", "add-screen", file, "team", ...ui])).exitCode).toBe(0);
   expect([...parseFlow(await readFile(file, "utf8")).embeds.values()].map((e) => e.path)).toEqual([
@@ -170,7 +170,7 @@ test("each frame's overlays use the screens file its embed names", async () => {
   const ambiguous = await run(["flow", "mark", file, "F2", "home", "1"]);
   expect(ambiguous.exitCode).toBe(1);
   expect(ambiguous.stderr).toBe(
-    `${file}: error: F2 embeds [[ui#^team]], but it matches several files: a/ui.md, b/ui.md; name one by its path from ${dir}\n`,
+    `${file}: error: F2 embeds [[ui#^team]], but ui matches several files: a/ui.md, b/ui.md; name one by its path from ${dir}\n`,
   );
   expect(await readFile(file, "utf8")).toBe(before);
   expect((await run(["flow", "mark", file, "F1", "invite", "1"])).exitCode).toBe(0);
@@ -179,7 +179,7 @@ test("each frame's overlays use the screens file its embed names", async () => {
 test.each(["", "   "])("empty mark label is usage error: %j", async (label) => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "f.excalidraw.md");
-  await run(["flow", "new", file, "team"]);
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const before = await readFile(file, "utf8");
   expect((await run(["flow", "mark", file, "F1", "invite", label])).exitCode).toBe(2);
   expect(await readFile(file, "utf8")).toBe(before);
@@ -190,7 +190,8 @@ test("an embed that points outside the flow's root is refused", async () => {
   await mkdir(join(dir, "spec/flows"), { recursive: true });
   await writeFile(join(dir, "spec/screens.md"), BASE);
   const file = join(dir, "spec/flows/f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team"])).exitCode).toBe(0);
+  const spec = screensIn(join(dir, "spec"));
+  expect((await run(["flow", "new", file, "team", ...spec])).exitCode).toBe(0);
   const flow = parseFlow(await readFile(file, "utf8"));
   const [fileId, embed] = [...flow.embeds][0];
   flow.embeds.set(fileId, { ...embed, path: "../../screens" });
@@ -198,6 +199,6 @@ test("an embed that points outside the flow's root is refused", async () => {
   const result = await run(["flow", "highlight", file, "F1", "invite"]);
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toBe(
-    `${file}: error: F1 embeds [[../../screens#^team]], which points outside ${join(dir, "spec")}\n`,
+    `${file}: error: F1 embeds [[../../screens#^team]], but ../../screens points outside ${join(dir, "spec")}\n`,
   );
 });

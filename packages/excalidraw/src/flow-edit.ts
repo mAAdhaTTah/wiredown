@@ -661,7 +661,7 @@ export function overlayBox(
 /** A live frame's image; rejects unknown frames, copied frame names and decisions. */
 export function frameImage(flow: Flow, frame: string): ExcalidrawElementJson {
   if (!flowNodes(flow).some((n) => n.node === frame))
-    throw new Error(
+    throw new FlowError(
       `unknown frame "${frame}" (frames: ${
         flowFrames(flow)
           .map((f) => f.frame)
@@ -669,7 +669,7 @@ export function frameImage(flow: Flow, frame: string): ExcalidrawElementJson {
       })`,
     );
   const node = findNode(flow, frame);
-  if (node.kind !== "frame") throw new Error(`${frame} is a decision, not a frame`);
+  if (node.kind !== "frame") throw new FlowError(`${frame} is a decision, not a frame`);
   return node.element;
 }
 function overlayAnchor(flow: Flow, frame: string, options: OverlayOptions, label?: string) {
@@ -687,7 +687,7 @@ function overlayAnchor(flow: Flow, frame: string, options: OverlayOptions, label
       );
     })
   )
-    throw new Error(
+    throw new FlowError(
       role === "highlight"
         ? `${frame} already highlights #${options.target}`
         : `${frame} already marks #${options.target} with ${label}`,
@@ -744,7 +744,7 @@ export function addMark(
   frame: string,
   options: OverlayOptions & { label: string },
 ): string {
-  if (!options.label.trim()) throw new Error("mark needs a non-empty label");
+  if (!options.label.trim()) throw new FlowError("mark needs a non-empty label");
   const { box: b, data, groupIds } = overlayAnchor(flow, frame, options, options.label);
   const keys = nextIndices(flow, 2);
   const measured = measurer.measure(options.label, { fontSize: FONT_SIZE, fontFamily: 5 });
