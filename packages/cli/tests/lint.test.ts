@@ -112,7 +112,7 @@ test.skipIf(process.getuid?.() === 0)("exits 2 on a directory it cannot read", a
   try {
     const result = await run(["lint", dir]);
     expect(result).toMatchObject({ exitCode: 2, stdout: "" });
-    expect(result.stderr).toContain(`cannot read ${locked}: EACCES`);
+    expect(result.stderr).toContain(`cannot read ${locked}: permission denied`);
   } finally {
     await chmod(locked, 0o755);
   }

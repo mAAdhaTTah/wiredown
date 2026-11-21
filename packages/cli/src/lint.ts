@@ -4,20 +4,22 @@ import { checkSource, formatChecked } from "./check";
 import type { CheckedFile } from "./check";
 import { formatLinted, lintFlowFile } from "./flow";
 import type { LintedFlow } from "./flow";
-import { json, readSource, UsageError } from "./output";
+import { CommandError, fileOp, json, readSource, UsageError } from "./output";
 import type { Result } from "./output";
 
 export interface LintOptions {
   json?: boolean;
 }
 
+/** A path that cannot be read is a usage error: exit 2. */
+const readable = <T>(path: string, op: Promise<T>) =>
+  fileOp(`cannot read ${path}`, op).catch((error: unknown) => {
+    throw error instanceof CommandError ? new UsageError(error.message) : error;
+  });
+
 /** Markdown files under a directory, skipping node_modules and dot-directories. */
 async function walk(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true }).catch(
-    (error: NodeJS.ErrnoException) => {
-      throw new UsageError(`cannot read ${dir}: ${error.code ?? String(error)}`);
-    },
-  );
+  const entries = await readable(dir, readdir(dir, { withFileTypes: true }));
   const out: string[] = [];
   for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
     const path = join(dir, e.name);
@@ -31,9 +33,7 @@ async function walk(dir: string): Promise<string[]> {
 async function files(paths: string[]): Promise<string[]> {
   const out: string[] = [];
   for (const path of paths) {
-    const info = await stat(path).catch((error: NodeJS.ErrnoException) => {
-      throw new UsageError(`cannot read ${path}: ${error.code ?? String(error)}`);
-    });
+    const info = await readable(path, stat(path));
     out.push(...(info.isDirectory() ? await walk(path) : [path]));
   }
   return [...new Set(out)];
