@@ -342,6 +342,32 @@ nudges stay untouched. Far notes beside a decision are handled the same way. A
 label or note with a group absent from its node is left untouched and does not
 take a place in the note stack.
 
+`wiredown render flows/example.excalidraw.md --out out --json` exports the
+whole drawing to `out/example.svg`. Each frame's screen comes from the
+screens file its embed names, resolved from the flow as the flow commands
+do. `--screen` is only for screens files.
+Missing or invalid screens, and embeds that name no screens file (one
+finding per frame), leave placeholders; the SVG is still written, findings
+are reported, and the command exits 1. Flow JSON is
+`{ file, flow: { svg, width, height }, errors, warnings }`. The size is
+rounded to whole pixels, as a screen's is; the SVG keeps Excalidraw's exact
+size.
+A file that is not an Excalidraw drawing, or a drawing written by a newer
+wiredown, is an error (exit 1) and nothing is written; a screens file an
+embed names that cannot be read exits 2.
+
+Flow embeds include their own Excalifont copy, since nested SVG images cannot
+use the outer SVG's fonts. Each distinct screen is rendered once. This adds
+about 33 KB per screen before data URL encoding, plus the outer font copy.
+A measured three-screen flow was 244,120 bytes with fonts and 77,374
+without. Use `--no-fonts` for smaller files when font portability is
+unnecessary.
+Dark flows use light screen images with Excalidraw's own dark image filter.
+
+Flow renders reject drawing image files unless they contain inline PNG, JPEG,
+GIF, WebP or SVG data URLs; each rejection is a finding (exit 1), and the
+render is still written, as with missing screens.
+
 ## API
 
 The root export runs the commands without a terminal. Each resolves to a
@@ -357,10 +383,11 @@ or exits; `bin/wiredown.js` prints the result. Build the package
   on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
   entry of the JSON document's `files`.
 - **Render** (`render`): `render(file, options?)` runs the `render`
-  command. `RenderOptions` are all optional: `screens` (ids; all screens
-  with an id when empty), `out` (default `.`), `theme` (`"light"` or
-  `"dark"`), `fonts` (default true) and `json`. `RenderedScreen` is one
-  entry of the JSON document's `screens`.
+  command on a screens file or a `*.excalidraw.md` flow. `RenderOptions`
+  are all optional: `screens` (ids, for a screens file; all screens with an
+  id when empty), `out` (default `.`), `theme` (`"light"` or `"dark"`),
+  `fonts` (default true) and `json`. `RenderedScreen` is one entry of the
+  JSON document's `screens`.
 - **Lint** (`lint`, `flow`): `lint(paths, options?)` runs the `lint`
   command on files and directories (`.` when empty). `LintOptions` is
   `{ json? }`; `LintedFlow`, `{ file, findings }`, is one entry of the JSON

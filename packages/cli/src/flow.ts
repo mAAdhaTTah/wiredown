@@ -164,11 +164,12 @@ export async function editFlow(
 
 /** Load a screens file once, retaining only errors relevant to each selection. */
 export async function loadScreens(path: string) {
-  const source = await readFile(path, "utf8");
+  const source = await readSource(path);
   const checked = checkScreens(source);
   return {
     path,
     source,
+    warnings: checked.warnings,
     screen(id: string) {
       const screen = checked.screens.find((s) => s.id === id);
       const errors = screen
@@ -185,13 +186,13 @@ export async function loadScreens(path: string) {
 }
 
 /**
- * The screens lookup lint and refresh take: each embed's path resolved from
- * the flow, each screens file read once, each screen laid out once.
- * `errors` collects, per screens file, why screens asked for are unavailable;
- * `unresolved` holds each embed path that names no file, and why; `paths`
- * the path new embeds of each resolved one's file are written with.
+ * Each screens file a flow's embeds name, resolved from the flow and read
+ * once. `file(path)` is the loaded file an embed path names, or why there is
+ * none; `unresolved` holds each embed path that names no file, and why;
+ * `paths` the path new embeds of each resolved one's file are written with;
+ * `ambiguous` each embed path several files match.
  */
-async function screenLookup(file: string, flow: Flow) {
+export async function embeddedScreens(file: string, flow: Flow) {
   const root = await embedRoot(file);
   const files = new Map<string, Awaited<ReturnType<typeof loadScreens>>>();
   const unresolved = new Map<string, string>();
@@ -208,11 +209,25 @@ async function screenLookup(file: string, flow: Flow) {
       paths.set(embed.path, found.embedPath);
     }
   }
+  return {
+    unresolved,
+    paths,
+    ambiguous,
+    file: (path: string) => files.get(path) ?? unresolved.get(path) ?? "but it was not resolved",
+  };
+}
+
+/**
+ * The screens lookup lint and refresh take: each screen laid out once.
+ * `errors` collects, per screens file, why screens asked for are unavailable.
+ */
+async function screenLookup(file: string, flow: Flow) {
+  const { file: screensFile, unresolved, paths, ambiguous } = await embeddedScreens(file, flow);
   const cache = new Map<string, ScreenState | string>();
   const errors = new Map<string, Finding[]>();
   const state = ({ path, blockId }: ScreenRef): ScreenState | string => {
-    const loaded = files.get(path);
-    if (!loaded) return unresolved.get(path) ?? "but it was not resolved";
+    const loaded = screensFile(path);
+    if (typeof loaded === "string") return loaded;
     const { screen, errors: found } = loaded.screen(blockId);
     if (found.length) {
       errors.set(loaded.path, [...(errors.get(loaded.path) ?? []), ...found]);

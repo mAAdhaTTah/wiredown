@@ -201,13 +201,17 @@ options:
     },
   },
   render: {
-    summary: "render screens to SVG",
+    summary: "render screens or a flow to SVG",
     help: `usage: wiredown render <file.md> [--screen <id>]... [--out <dir>]
                        [--theme light|dark] [--no-fonts] [--json]
 
 Renders every screen with an ^id (or only the given ids) to <dir>/<id>.svg.
 Screens with errors are skipped and reported; the rest still render, and
 the exit code is 1.
+
+A *.excalidraw.md file renders the whole flow to <dir>/<name>.svg; each
+frame's screen comes from the screens file its embed names. --screen is only
+for screens files.
 
 options:
   --screen <id>   render only this screen; repeatable
