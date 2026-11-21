@@ -246,11 +246,11 @@ relative to the nodes where they are now, so moving them by hand is fine.
   Prints `F1  note <element-id>`; JSON is `{ flow, note: { id, node } }`.
 
 An unknown node (the error lists the nodes that exist), a node name two
-elements claim (a copy pasted before elements recorded their own id: delete
-the copy), or connecting a node to itself writes nothing. A copy pasted
-since is left alone: commands use the original. Operational errors exit 1
-(JSON adds an `errors` array, and the command's key is `null`); usage
-errors exit 2.
+elements claim (a copy pasted before elements recorded their own id: remove
+it by its element id with `flow remove`, below), or connecting a node to
+itself writes nothing. A copy pasted since is left alone: commands use the
+original. Operational errors exit 1 (JSON adds an `errors` array, and the
+command's key is `null`); usage errors exit 2.
 
 A new note goes under the notes still in the stack. Notes moved far away
 are ignored for stacking. Notes allow 60 px horizontal nudges and gaps of
@@ -286,7 +286,7 @@ shared embed constants in `packages/excalidraw/src/flow-edit.ts` assume
 10px host padding on each side, zero above, and a 5px footer; one change
 there corrects both embed sizing and overlay placement.
 
-### refresh and lint
+### refresh, lint and remove
 
 `wiredown flow refresh <flow> [--json]` brings a flow up to date after its
 screens change. Each frame's screen comes from the screens file its embed names,
@@ -348,11 +348,13 @@ person's copy of our elements is left where it is.
   them), points outside the flow's root, or whose screen is missing or has
   errors;
 - two frames or decisions claiming one name, a copy pasted before elements
-  recorded their own id: `F2 is claimed by elements <id> and <id>; delete
-the copy` (the flow commands, refresh included, refuse until then);
+  recorded their own id: `F2 is claimed by elements <id> and <id>; remove
+the copy with "wiredown flow remove <flow> <id>"` (the flow commands,
+  refresh included, refuse until then);
 - a person's copy of our elements, once per pasted group: `element <id> is
 a copy of F2's frame; flow commands leave copies alone: delete it in the
-drawing` (or of `F2's note`, `F2's highlight`, `arrow F1 -> F2`, …);
+drawing, or run "wiredown flow remove <flow> <id>"` (or of `F2's note`,
+  `F2's highlight`, `arrow F1 -> F2`, …);
 - a stale frame: its link size is not the screen's current size, or its
   image's aspect ratio no longer matches (more than 1%; scaling a frame
   uniformly is fine);
@@ -360,7 +362,9 @@ drawing` (or of `F2's note`, `F2's highlight`, `arrow F1 -> F2`, …);
   whose component or frame is gone, or one drawn for another screen than
   its frame now embeds;
 - a note whose frame or decision is gone: `note "<first words…>" is on a
-node that no longer exists`;
+node that no longer exists; remove it with "wiredown flow remove <flow>
+<id>"`, and the same hint, with the element id, on overlays whose frame or
+  component is gone and arrows of ours whose node is gone;
 - a note whose top edge lies inside its frame: `note "<first words…>"
 overlaps F1; run "wiredown flow refresh" or move it`;
 - a dangling arrow, ours or hand-drawn: bound to an element that is missing,
@@ -385,6 +389,68 @@ never reported;
 when lint finds nothing, refresh has nothing to do. Exit 1 if any file has
 findings. JSON is `{ files: [{ file, findings }] }`, a
 finding being `{ message, frame?, element? }` (`element` is the element id).
+
+`wiredown flow remove <flow> <what>... [--json]` removes what lint reports
+as stale or wrong, or what is no longer wanted, so a flow is never fixed by
+hand-editing its JSON. Each `<what>` is one of:
+
+| Target                        | Removes                                                                           |
+| ----------------------------- | --------------------------------------------------------------------------------- |
+| `F2`, `D1`                    | the node, its label or text, its notes and overlays, and our arrows to or from it |
+| `'F1->F2'`                    | every arrow of ours from F1 to F2 (not F2 to F1), with labels                     |
+| `'F2#invite'`                 | the highlight on `#invite`                                                        |
+| `'F2#invite:3'`               | the mark labelled `3` on `#invite`, with its text                                 |
+| `F2:note`, `F2:note:2`        | all of the node's notes, or the second from the top                               |
+| an element id (`--json`/lint) | that element of ours and its bound text; for a copy, the copies pasted with it    |
+
+Quote targets with `>` or `#` in the shell. Removing works as Excalidraw
+deletes: elements are marked `isDeleted` with a version bump, their text
+leaves `## Text Elements`, unused embeds leave `## Embedded Files`, and F-
+and D-numbers are never reused. Everything else is untouched, except that
+remaining nodes drop removed arrows from `boundElements`. An arrow a person
+drew bound to a removed node is kept, with that end unbound. An element
+without wiredown data is refused (`element <id> has no wiredown data, so a
+person drew it; …`), so the command never deletes a person's drawing.
+
+A person's copy of our elements (a pasted frame, an Alt-dragged note) is
+theirs: `flow remove F2` leaves it, and a copied arrow bound to F2 is
+unbound like a hand-drawn one. Only its element id, as lint prints it,
+removes it, with the copies pasted with it (its group, its bound text).
+A copy pasted before elements recorded their own id instead makes `F2`
+ambiguous, so `flow remove F2` refuses with lint's message naming both
+elements; `flow remove <flow> <copy's image id>` removes that copy and our
+elements in its group (its pasted label). If the copy has no group of its
+own, its label stays and the output says so; remove the label by its id.
+Overlays and notes whose node is gone are removed by the element id lint
+prints.
+
+Targets are checked first, all or nothing: an unknown one (`unknown node
+"F9" (nodes: F1, F2, D1)`, `no arrow F2->F1 (arrows: F1->F2)`, `F2 has no
+highlight on #x (overlays: F2#invite, F2#seats:2)`, `F2 has 1 note; …`)
+exits 1 and writes nothing. Human output is one line per target, then one
+per unbound arrow:
+
+```text
+removed F2 (frame, 1 note, 2 overlays, 2 arrows)
+removed arrow F1 -> F2
+removed highlight F2 #invite
+removed mark F2 #seats 2
+removed note <id> on F2
+removed 2 notes on F2
+removed label <id> of F2
+removed <id>, a copy of F2's frame, and 1 element pasted with it
+removed <id>, one of the elements claiming F2 (frame)
+left the labels of F2: the copy has no group of its own; remove its label by element id
+unbound a hand-drawn arrow <id> from F2
+```
+
+JSON is `{ flow, removed: [{ kind, element, elements, node?, from?, to?,
+target?, label?, notes?, overlays?, arrows?, copy?, labelLeft?, of? }], unbound:
+[{ element, from }] }`, where `kind` is `frame`, `decision`, `arrow`,
+`highlight`, `mark`, `note`, `label` or `copy` (with `of`, what it copies:
+`F2's frame`), `element` is the element the target named and `elements`
+every element removed. Errors exit 1 with `removed` and
+`unbound` empty and an `errors` array.
 
 Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"
 in the Excalidraw plugin's Saving settings. `flow lint` reports compressed

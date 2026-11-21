@@ -131,6 +131,28 @@ The root export renders nothing; SVG export is in the Node entry,
   role `label`. Duplicate highlights or identical mark labels on one component
   throw; a person's copy of an overlay is not one of ours.
 
+  `removeFromFlow(flow, targets)` removes as Excalidraw deletes: elements are
+  marked `isDeleted` and touched, never spliced out, so numbers stay taken and
+  `serializeFlow` drops their text and unused embeds. A target is a node (`F2`,
+  with its label or text, notes, overlays and our arrows bound to it), an arrow
+  (`F1->F2`: every arrow of ours that way), a highlight (`F2#id`), a mark
+  (`F2#id:label`), notes (`F2:note`, or `F2:note:2` counting from the top) or an
+  element id of ours. An arrow or mark takes its bound text. A person's copy of
+  ours is never removed with a node; its element id removes it and the copies
+  pasted with it (`kind: "copy"`, `of: "F2's frame"`). An element id of one of
+  two nodes claiming a name removes that one, with our elements in its innermost
+  group (a pasted copy's label), or leaves the label (`labelLeft`) when no label
+  is in that group. A person's arrow bound to a removed element gets that
+  binding set to `null`; live elements drop removed ids from `boundElements`.
+  Elements without wiredown data are never removed. Every target is checked
+  first, so an unknown one throws with the flow untouched. It returns
+  `{ removed, unbound }`: each `Removed` is `{ kind, element, elements }` plus,
+  as they apply, `node`, `from`, `to`, `target`, `label`, `notes`, `overlays`,
+  `arrows`, `copy`, `labelLeft` and `of`, and each `Unbound`,
+  `{ element, from }`, is a person's arrow whose end lost its binding. Lint
+  findings about orphaned notes, overlays and arrows, lost overlay targets and
+  pasted copies name the target to remove.
+
   Embed alignment in Obsidian remains unverified. Padding assumptions live
   in `flow-edit.ts`'s existing embed constants: 10px on each side, zero
   above, 5px footer below. Changing those constants corrects sizing and

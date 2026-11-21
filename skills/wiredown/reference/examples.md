@@ -137,6 +137,16 @@ wiredown flow lint flows/members.excalidraw.md --json
 { "files": [{ "findings": [] }] }
 ```
 
+Remove the mark again, as you would one that lint reports:
+
+```sh
+wiredown flow remove flows/members.excalidraw.md 'F2#notice:1' --json
+```
+
+```json
+{ "removed": [{ "kind": "mark", "node": "F2", "target": "notice", "label": "1" }] }
+```
+
 ## Settings form
 
 This can be another screen in the same file.
