@@ -33,6 +33,12 @@ pnpm test
 `pnpm format` applies formatting. Build and typecheck run each package's
 scripts; tests run all package projects through the root Vitest config.
 After a build, `pnpm exec wiredown` runs the CLI from the repository root.
+
+`pnpm test:obsidian` opens flows in real Obsidian with the Excalidraw
+plugin, headless, and checks that the plugin reads them as `parseFlow` does
+and keeps what `serializeFlow` wrote when it saves. It downloads the
+versions pinned in `packages/excalidraw/tests/obsidian/obsidian.ts` on first
+run and needs Linux x64. CI runs it too.
 TypeScript 6 is used because typescript-eslint does not yet support
 TypeScript 7.
 

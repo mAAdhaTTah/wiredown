@@ -24,7 +24,8 @@
   ],
   "scripts": {
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:obsidian": "vitest run --config vitest.obsidian.config.ts"
   },
   "dependencies": {
     "@excalidraw/utils": "0.1.8",
