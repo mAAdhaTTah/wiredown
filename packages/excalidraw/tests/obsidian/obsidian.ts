@@ -108,7 +108,7 @@ export async function startObsidian(files: Record<string, string>): Promise<Obsi
       });
     // Wait for the vault, then leave restricted mode and load the plugin, with
     // compression off as the README asks people to set it.
-    await run(`(async () => {
+    const setup = `(async () => {
       while (!window.app?.workspace?.layoutReady) await new Promise((r) => setTimeout(r, 100));
       await app.plugins.setEnable(true);
       await app.plugins.enablePlugin("${PLUGIN_ID}");
@@ -117,7 +117,17 @@ export async function startObsidian(files: Record<string, string>): Promise<Obsi
         await new Promise((r) => setTimeout(r, 100));
       plugin.settings.compress = false;
       await plugin.saveSettings();
-    })()`);
+    })()`;
+    // Obsidian may load its window once more while it starts, which ends a
+    // pending evaluation; the setup then runs again in the new window.
+    for (;;) {
+      try {
+        await run(setup);
+        break;
+      } catch (e) {
+        if (!String(e).includes("Execution context was destroyed")) throw e;
+      }
+    }
     return {
       run,
       close() {
