@@ -244,11 +244,11 @@ async function renderFlow(
       const found = await resolveEmbedPath(target.url, path, exists, target.root);
       files.set(
         path,
-        !found
-          ? embedNotFound(path, new URL(".", target.url).href, target.root)
-          : "outside" in found
+        found.ok
+          ? checkScreens(fetched.get(found.url)!)
+          : found.reason === "outside"
             ? `it points outside ${target.root}`
-            : checkScreens(fetched.get(found.url)!),
+            : embedNotFound(path, new URL(".", target.url).href, target.root),
       );
     }
     const serializer = new (document.defaultView?.XMLSerializer ?? XMLSerializer)();
