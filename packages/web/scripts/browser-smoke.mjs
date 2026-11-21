@@ -157,7 +157,14 @@ try {
   );
   const flow = join(site, "flows/f.excalidraw.md");
   for (const args of [
-    ["new", flow, "team-members", "team-members-after-remove"],
+    [
+      "new",
+      flow,
+      "team-members",
+      "team-members-after-remove",
+      "--screens",
+      join(site, "screens.md"),
+    ],
     ["highlight", flow, "F1", "invite"],
     ["mark", flow, "F1", "members", "3"],
     ["note", flow, "F2", note],
