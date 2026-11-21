@@ -26,4 +26,10 @@ export { EXCALIFONT } from "./metrics-excalifont";
 export { layoutScreen } from "./screen";
 export type { LayoutScreenOptions } from "./screen";
 export { parseScreens, checkScreens } from "./screens";
-export type { Screen, CheckedScreen, ScreenDiagnostic, CheckScreensResult } from "./screens";
+export type {
+  BlockCheck,
+  Screen,
+  CheckedScreen,
+  ScreenDiagnostic,
+  CheckScreensResult,
+} from "./screens";
