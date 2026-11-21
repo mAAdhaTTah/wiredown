@@ -3,14 +3,14 @@ import { join } from "node:path";
 import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
-import { BASE, fixture, VARIANT } from "./helpers";
+import { BASE, fixture, screensIn, VARIANT } from "./helpers";
 
 /** F1 (team) -> F2 (team-after) -> D1, a note, a highlight and a mark on F2. */
 async function setup() {
   const dir = await fixture({ "screens.md": `${BASE}\n\n${VARIANT}\n` });
   const file = join(dir, "flows/f.excalidraw.md");
   for (const args of [
-    ["new", file, "team", "team-after"],
+    ["new", file, "team", "team-after", ...screensIn(dir)],
     ["decision", file, "Done?"],
     ["connect", file, "F2", "D1", "Yes"],
     ["note", file, "F2", "Seats drop"],
@@ -23,14 +23,16 @@ async function setup() {
 const lint = (file: string) => run(["flow", "lint", file]);
 
 test("removes a frame with everything of ours on it, in one line", async () => {
-  const { file } = await setup();
+  const { dir, file } = await setup();
   expect(await run(["flow", "remove", file, "F2"])).toEqual({
     exitCode: 0,
     stdout: "removed F2 (frame, 1 note, 2 overlays, 2 arrows)\n",
     stderr: "",
   });
   expect(await lint(file)).toMatchObject({ exitCode: 0, stdout: `${file}: 0 errors\n` });
-  expect((await run(["flow", "add-screen", file, "team"])).stdout).toMatch(/^F3 /);
+  expect((await run(["flow", "add-screen", file, "team", ...screensIn(dir)])).stdout).toMatch(
+    /^F3 /,
+  );
 });
 
 test("each kind of target, as lines and as JSON", async () => {

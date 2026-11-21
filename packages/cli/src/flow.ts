@@ -22,7 +22,16 @@ import {
 } from "@wiredown/excalidraw";
 import type { Flow, FlowChange, Removed, ScreenRef, ScreenState } from "@wiredown/excalidraw";
 import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds";
-import { formatFindings, json, plural, readSource, unknownScreen, UsageError } from "./output";
+import {
+  CommandError,
+  fileOp,
+  formatFindings,
+  json,
+  plural,
+  readSource,
+  unknownScreen,
+  UsageError,
+} from "./output";
 import type { Finding, Result } from "./output";
 import { NewerFlowError, parseEditableFlow } from "./read-flow";
 import { safeWrite } from "./safe-write";
@@ -571,10 +580,10 @@ export async function removeFlowItems(
   options: FlowOptions = {},
 ): Promise<Result> {
   try {
-    const original = await readFile(file, "utf8");
+    const original = await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
     const flow = parseEditableFlow(original);
     const { removed, unbound } = removeFromFlow(flow, targets);
-    await safeWrite(file, original, serializeFlow(flow));
+    await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
     return {
       exitCode: 0,
       stderr: "",
@@ -584,7 +593,8 @@ export async function removeFlowItems(
           unbound.map((u) => `unbound a hand-drawn arrow ${u.element} from ${u.from}\n`).join(""),
     };
   } catch (error) {
-    const findings: Finding[] = [{ message: (error as Error).message }];
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
+    const findings: Finding[] = [{ message: error.message }];
     return {
       exitCode: 1,
       stdout: options.json ? json({ flow: file, removed: [], unbound: [], errors: findings }) : "",

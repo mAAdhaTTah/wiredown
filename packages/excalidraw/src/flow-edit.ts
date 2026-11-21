@@ -982,7 +982,9 @@ export function removeFromFlow(
             ? [`${names.get(s!)}->${names.get(t!)}`]
             : [];
         });
-        throw new Error(`no arrow ${from.node}->${to.node} (arrows: ${all.join(", ") || "none"})`);
+        throw new FlowError(
+          `no arrow ${from.node}->${to.node} (arrows: ${all.join(", ") || "none"})`,
+        );
       }
       return {
         kind: "arrow",
@@ -1013,7 +1015,7 @@ export function removeFromFlow(
           return d.role === "mark" ? `${frame}#${d.target}:${d.label}` : `${frame}#${d.target}`;
         });
         const what = label === undefined ? `highlight on #${name}` : `mark ${label} on #${name}`;
-        throw new Error(`${frame} has no ${what} (overlays: ${list.join(", ") || "none"})`);
+        throw new FlowError(`${frame} has no ${what} (overlays: ${list.join(", ") || "none"})`);
       }
       return { ...removeOne(found), node: frame };
     }
@@ -1025,7 +1027,7 @@ export function removeFromFlow(
         .sort((a, b) => Number(a.y) - Number(b.y) || Number(a.x) - Number(b.x));
       const at = note[2] === undefined ? undefined : Number(note[2]);
       if (!notes.length || (at !== undefined && (at < 1 || at > notes.length)))
-        throw new Error(
+        throw new FlowError(
           `${n.node} has ${notes.length || "no"} note${notes.length === 1 ? "" : "s"}` +
             (notes.length ? `; ${target} is not one of ${n.node}:note:1 to :${notes.length}` : ""),
         );
@@ -1042,7 +1044,7 @@ export function removeFromFlow(
     if (named || (/^[FD]\d+$/.test(target) && !byId.has(target)))
       return removeNode(findNode(flow, target));
     const e = byId.get(target);
-    if (!e) throw new Error(`no element "${target}"; name ${TARGETS}`);
+    if (!e) throw new FlowError(`no element "${target}"; name ${TARGETS}`);
     const copy = copyOf(e);
     if (copy) {
       const pasted = pastedCopies(flow).find((set) => set.includes(e))!;
@@ -1055,7 +1057,7 @@ export function removeFromFlow(
       };
     }
     if (!identity(e))
-      throw new Error(
+      throw new FlowError(
         `element ${target} has no wiredown data, so a person drew it; flow remove only removes what flow commands made`,
       );
     const n = flowNodes(flow).find((n) => n.element.id === e.id);
