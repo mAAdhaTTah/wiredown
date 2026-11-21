@@ -6,9 +6,12 @@ import type { Flow } from "./flow";
 
 // Confirmed gen-flow.mjs / Excalidraw plugin DEFAULT_MD_EMBED_CSS:
 // host has 10px horizontal padding; footer has 5px height.
+// The plugin's default Markdown border (mdBorderColor "Black") insets the
+// content 2px on every side, as seen in its rendered SVG in Obsidian.
 // The link height is a maximum, with 40px headroom as in the prototype.
 const MD_HOST_PAD = 10,
   MD_FOOTER = 5,
+  MD_BORDER = 2,
   MAX_HEIGHT_HEADROOM = 40;
 // gen-flow.mjs: gap between nodes, where an arrow leaves a frame, the
 // decision diamond's size, the spacing of parallel arrows, and how far an
@@ -30,8 +33,8 @@ const HAND_NUDGE = 60,
 const measurer = fontMeasurer(EXCALIFONT);
 
 export function embedSize(screenWidth: number, screenHeight: number) {
-  const width = screenWidth + 2 * MD_HOST_PAD,
-    height = screenHeight + MD_FOOTER;
+  const width = screenWidth + 2 * (MD_HOST_PAD + MD_BORDER),
+    height = screenHeight + MD_FOOTER + 2 * MD_BORDER;
   return { link: { width, height: height + MAX_HEIGHT_HEADROOM }, image: { width, height } };
 }
 /** Where a new node goes, relative to an existing node (F2, D1). */
@@ -689,11 +692,12 @@ export function overlayBox(
   const size = embedSize(screen.width, screen.height).image;
   const sx = Number(frameImage.width) / size.width;
   const sy = Number(frameImage.height) / size.height;
-  // x = image.x + (host padding + box.x) * sx; y = image.y + box.y * sy.
+  // x = image.x + (border + host padding + box.x) * sx;
+  // y = image.y + (border + box.y) * sy.
   // Width and height use their own axis ratio, including distorted images.
   return {
-    x: Number(frameImage.x) + (MD_HOST_PAD + box.x) * sx,
-    y: Number(frameImage.y) + box.y * sy,
+    x: Number(frameImage.x) + (MD_BORDER + MD_HOST_PAD + box.x) * sx,
+    y: Number(frameImage.y) + (MD_BORDER + box.y) * sy,
     width: box.w * sx,
     height: box.h * sy,
   };
@@ -788,8 +792,12 @@ export function addMark(
   const { box: b, data, groupIds } = overlayAnchor(flow, frame, options, options.label);
   const keys = nextIndices(flow, 2);
   const measured = measurer.measure(options.label, { fontSize: FONT_SIZE, fontFamily: 5 });
-  // Fit text inside the circle's inscribed square, with 5px container padding.
-  const diameter = Math.max(32, Math.ceil(Math.SQRT2 * Math.max(measured.w, measured.h) + 10));
+  // Excalidraw's own size for an ellipse around bound text (5px padding),
+  // so it does not grow the badge when it opens the drawing.
+  const diameter = Math.max(
+    32,
+    Math.round((Math.ceil(Math.max(measured.w, measured.h)) + 10) * Math.SQRT2),
+  );
   const c = markCentre(b.x, b.y, diameter);
   const at = centredOn(c.x, c.y, diameter, diameter);
   const badge: ExcalidrawElementJson = {

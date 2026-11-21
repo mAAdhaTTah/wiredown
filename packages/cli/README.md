@@ -233,10 +233,12 @@ flow commands' findings convention. A second mark with another label is
 allowed. Overlays use current image position and size, including independent
 axis scales after a distorted resize. Highlights extend 4px beyond the box.
 
-Alignment inside Obsidian embeds is still an open, unverified risk. The
-shared embed constants in `packages/excalidraw/src/flow-edit.ts` assume
-10px host padding on each side, zero above, and a 5px footer; one change
-there corrects both embed sizing and overlay placement.
+Frames are sized for the Excalidraw plugin's default Markdown embed, as
+measured in Obsidian: 10px host padding on each side, a 2px border on every
+side, and a 5px footer. The constants live in
+`packages/excalidraw/src/flow-edit.ts`; one change there corrects both embed
+sizing and overlay placement. With the plugin's border turned off, frames
+are reshaped when the drawing opens and lint reports them (issue #42).
 
 ### refresh and lint
 
