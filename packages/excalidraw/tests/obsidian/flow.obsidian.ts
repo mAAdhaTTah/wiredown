@@ -2,9 +2,17 @@
 // plugin reads them as parseFlow does and that its save keeps what
 // serializeFlow wrote. Run with `pnpm test:obsidian`.
 import { readFileSync } from "node:fs";
+import { checkScreens, layoutScreen } from "@wiredown/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { formatEmbed } from "../../src/flow";
-import { newFlow, parseFlow, serializeFlow, type ExcalidrawElementJson } from "../../src/index";
+import {
+  addScreen,
+  newFlow,
+  parseFlow,
+  screenElements,
+  serializeFlow,
+  type ExcalidrawElementJson,
+} from "../../src/index";
 import { startObsidian, type Obsidian } from "./obsidian";
 
 const FIXTURE = readFileSync(
@@ -77,9 +85,58 @@ function written(): string {
   return serializeFlow(flow);
 }
 
+// A screens file in a subfolder, and a decoy with the same name elsewhere, so
+// the written path from the vault root must pick the right one.
+const CHECKOUT = [
+  "# Cart",
+  "",
+  "```wiredown",
+  "window: Cart",
+  "  button: *Checkout #go",
+  "```",
+  "^cart",
+  "",
+  "# Done",
+  "",
+  "```wiredown",
+  "window: Done",
+  "  text: Thanks",
+  "```",
+  "^done",
+  "",
+].join("\n");
+
+// A drawing as `flow new … cart` then `flow add-screen … done --below F1`
+// write it: frames from addScreen, sized from the rendered screens, with
+// the embed path from the root.
+function commands(): string {
+  const flow = newFlow();
+  const screens = checkScreens(CHECKOUT).screens;
+  for (const [id, place] of [["cart"], ["done", { below: "F1" }]] as const) {
+    const screen = screens.find((s) => s.id === id)!;
+    const { width, height } = screenElements(layoutScreen(screen.tree));
+    addScreen(flow, {
+      screenId: id,
+      title: screen.heading ?? id,
+      path: "docs/checkout/screens",
+      size: { width, height },
+      place,
+    });
+  }
+  return serializeFlow(flow);
+}
+
+interface Seen {
+  id: string;
+  type: string;
+  text?: string;
+  groupIds: string[];
+  customData?: unknown;
+}
+
 interface Opened {
   view: string;
-  elements: { id: string; type: string; text?: string }[];
+  elements: Seen[];
   embeds: Record<string, { link: string; file?: string }>;
   loaded: string[];
 }
@@ -89,11 +146,17 @@ const before = (text: string) => text.slice(0, text.indexOf("## Drawing\n"));
 const FLOWS = {
   "flows/review-and-apply.excalidraw.md": FIXTURE,
   "flows/new.excalidraw.md": written(),
+  "docs/checkout/flows/commands.excalidraw.md": commands(),
 };
 
 let obsidian: Obsidian;
 beforeAll(async () => {
-  obsidian = await startObsidian({ ...FLOWS, "screens.md": SCREENS });
+  obsidian = await startObsidian({
+    ...FLOWS,
+    "screens.md": SCREENS,
+    "docs/checkout/screens.md": CHECKOUT,
+    "archive/docs/checkout/screens.md": CHECKOUT,
+  });
 });
 afterAll(() => obsidian?.close());
 
@@ -114,7 +177,9 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
         embeds[id] = { link: f.linkParts?.original, file: f.file?.path };
       return {
         view: view.getViewType(),
-        elements: view.excalidrawAPI.getSceneElements().map(({ id, type, text }) => ({ id, type, text })),
+        elements: view.excalidrawAPI.getSceneElements().map(
+          ({ id, type, text, groupIds, customData }) => ({ id, type, text, groupIds, customData }),
+        ),
         embeds,
         loaded: Object.keys(view.excalidrawAPI.getFiles()),
       };
@@ -124,14 +189,28 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
   it("opens in the Excalidraw view with the elements parseFlow reads", () => {
     expect(opened.view).toBe("excalidraw");
     const live = flow.elements.filter((e) => !e.isDeleted);
-    expect(opened.elements).toEqual(
-      live.map(({ id, type, text }) => (type === "text" ? { id, type, text } : { id, type })),
+    expect(opened.elements.map(({ id, type, text }) => ({ id, type, text }))).toEqual(
+      live.map(({ id, type, text }) => ({ id, type, text: type === "text" ? text : undefined })),
+    );
+  });
+
+  // Not sizes or places: the plugin re-measures each Markdown embed as
+  // Obsidian renders it, about its centre, and without the wiredown plugin a
+  // screen renders as a code block.
+  it("keeps every element's groups and customData", () => {
+    const kept = (elements: Partial<Seen>[]) =>
+      elements.map(({ id, groupIds, customData }) => ({ id, groupIds, customData }));
+    expect(kept(opened.elements)).toEqual(
+      kept(flow.elements.filter((e) => !e.isDeleted) as Partial<Seen>[]),
     );
   });
 
   it("resolves and loads every embed parseFlow reads", () => {
     const expected = Object.fromEntries(
-      [...flow.embeds].map(([id, link]) => [id, { link: formatEmbed(link), file: "screens.md" }]),
+      [...flow.embeds].map(([id, link]) => [
+        id,
+        { link: formatEmbed(link), file: `${link.path}.md` },
+      ]),
     );
     expect(opened.embeds).toEqual(expected);
     expect(opened.loaded.sort()).toEqual(Object.keys(expected).sort());
@@ -152,6 +231,10 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
     })()`);
     expect(saved).not.toBe(text);
     expect(before(saved)).toBe(before(text));
-    expect(parseFlow(saved).elements.map((e) => e.id)).toEqual(flow.elements.map((e) => e.id));
+    const after = parseFlow(saved).elements;
+    expect(after.map((e) => e.id)).toEqual(flow.elements.map((e) => e.id));
+    expect(after.map((e) => [e.groupIds, e.customData])).toEqual(
+      flow.elements.map((e) => [e.groupIds, e.customData]),
+    );
   });
 });
