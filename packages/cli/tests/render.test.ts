@@ -106,7 +106,7 @@ describe("render", { timeout: 30000 }, () => {
   it("exits 2 on a missing file, with nothing on stdout", async () => {
     const result = await run(["render", "/nonexistent/screens.md", "--json"]);
     expect(result).toMatchObject({ exitCode: 2, stdout: "" });
-    expect(result.stderr).toContain("cannot read /nonexistent/screens.md");
+    expect(result.stderr).toContain("cannot read /nonexistent/screens.md: it does not exist");
   });
 
   it("reports a screen it can't write and keeps the ones it wrote", async () => {

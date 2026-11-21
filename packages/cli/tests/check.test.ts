@@ -68,7 +68,9 @@ describe("check", () => {
     const result = await run(["check", "--json", join(dir, "a.md"), join(dir, "missing.md")]);
     expect(result.exitCode).toBe(2);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toContain("missing.md: ENOENT");
+    expect(result.stderr).toContain(
+      "cannot read " + join(dir, "missing.md") + ": it does not exist",
+    );
   });
 });
 

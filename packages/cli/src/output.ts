@@ -43,10 +43,9 @@ export async function fileOp<T>(what: string, op: Promise<T>): Promise<T> {
 
 export async function readSource(file: string): Promise<string> {
   try {
-    return await readFile(file, "utf8");
+    return await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
   } catch (error) {
-    const reason = (error as NodeJS.ErrnoException).code ?? String(error);
-    throw new UsageError(`cannot read ${file}: ${reason}`);
+    throw error instanceof CommandError ? new UsageError(error.message) : error;
   }
 }
 
