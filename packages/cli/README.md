@@ -196,7 +196,7 @@ frame's group, so it moves with the frame. Human output is `F2  highlight  #invi
 
 ```text
 { flow, highlight: { id, frame, screen, target, x, y, width, height } }
-{ flow, mark: { id, frame, screen, target, label, x, y } }
+{ flow, mark: { id, frame, screen, target, label, x, y, width, height } }
 ```
 
 `target` is the component id; mark coordinates are the circle's top-left.

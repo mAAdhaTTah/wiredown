@@ -15,6 +15,7 @@ import {
   screenElements,
   serializeFlow,
 } from "@wiredown/excalidraw";
+import type { ExcalidrawElementJson, Flow } from "@wiredown/excalidraw";
 import { frameEmbed, screensToEmbed } from "./embeds";
 import { CommandError, fileOp, formatFindings, json, unknownScreen, UsageError } from "./output";
 import type { Finding, Result } from "./output";
@@ -86,7 +87,6 @@ export async function editFlow(
           throw new CommandError(findings[0].message);
         }
         const rendered = screenElements(layoutScreen(screen!.tree));
-        const size = embedSize(rendered.width, rendered.height);
         const title = options.title ?? screen!.heading ?? id;
         const frame = addScreen(flow, {
           screenId: id,
@@ -211,8 +211,8 @@ export async function editOverlay(
     findings = errors;
     if (findings.length) throw new CommandError(findings[0].message);
     const rendered = screenElements(layoutScreen(found!.tree));
-    const box = rendered.boxes[target];
-    if (!box) {
+    const targetBox = rendered.boxes[target];
+    if (!targetBox) {
       const ids = Object.keys(rendered.boxes);
       const guess = nearest(target, ids);
       throw new CommandError(
@@ -220,16 +220,19 @@ export async function editOverlay(
       );
     }
     findingFile = file;
-    const overlay = { target, box, screen: rendered };
+    const overlay = { target, box: targetBox, screen: rendered };
     const id =
       command === "highlight"
         ? addHighlight(flow, frame, overlay)
         : addMark(flow, frame, { ...overlay, label });
-    const e = flow.elements.find((e) => e.id === id)!;
-    const value =
-      command === "highlight"
-        ? { id, frame, screen, target, x: e.x, y: e.y, width: e.width, height: e.height }
-        : { id, frame, screen, target, label, x: e.x, y: e.y };
+    const value = {
+      id,
+      frame,
+      screen,
+      target,
+      ...(command === "mark" ? { label } : {}),
+      ...box(elementById(flow, id)),
+    };
     await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
     return {
       exitCode: 0,
@@ -252,11 +255,18 @@ export async function editOverlay(
     };
   }
 }
-interface Arrow {
-  id: string;
-  from: string;
-  to: string;
-  label: string | null;
+/** An element's position and size in the drawing. */
+const box = (e: ExcalidrawElementJson) => ({
+  x: Number(e.x),
+  y: Number(e.y),
+  width: Number(e.width),
+  height: Number(e.height),
+});
+const elementById = (flow: Flow, id: string) => flow.elements.find((e) => e.id === id)!;
+type Arrow = ReturnType<typeof arrowOf>;
+/** What the output reports for an arrow: its element id, ends, label and box. */
+function arrowOf(flow: Flow, id: string, from: string, to: string, label: string | null) {
+  return { id, from, to, label, ...box(elementById(flow, id)) };
 }
 const arrowLine = (a: Arrow) =>
   `${a.from} -> ${a.to}${a.label === null ? "" : `  ${JSON.stringify(a.label)}`}\n`;
@@ -321,7 +331,7 @@ const place = (options: FlowOptions) =>
       : undefined;
 
 /** Positionals each command takes after the file: [required, optional]. */
-const ARITY: Record<string, [number, number, string]> = {
+const ARITY = {
   highlight: [2, 0, "a file, a frame and a component id"],
   mark: [3, 0, "a file, a frame, a component id and a label"],
   new: [0, Infinity, "a file"],
