@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v5
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm lint
@@ -28,7 +28,7 @@ jobs:
       MISE_NODE_VERSION: ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v5
       - run: node --version
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter "@wiredown/excalidraw..." build
@@ -39,6 +39,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v5
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:obsidian
