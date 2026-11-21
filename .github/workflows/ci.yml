@@ -36,3 +36,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter "@wiredown/excalidraw..." build
       - run: pnpm vitest run --project excalidraw
+
+  # Opens flows in real Obsidian with the Excalidraw plugin.
+  obsidian:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v3
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:obsidian
