@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
+import { formatEmbed } from "../src/flow";
 import {
   addScreen,
   embedSize,
   flowFrames,
-  formatEmbed,
   newerDataVersion,
   newFlow,
   parseFlow,
