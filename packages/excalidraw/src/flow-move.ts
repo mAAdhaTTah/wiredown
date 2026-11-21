@@ -1,3 +1,4 @@
+import { FlowError } from "./flow";
 import type { Flow } from "./flow";
 import type { Place } from "./flow-edit";
 import {
@@ -40,18 +41,18 @@ export interface Moved {
  */
 export function moveNode(flow: Flow, name: string, to: MoveTo): Moved {
   const [claim] = claimedNames(flow);
-  if (claim) throw new Error(claim.message);
+  if (claim) throw new FlowError(claim.message);
   const n = findNode(flow, name);
   const e = n.element;
   const box = rect(e);
   const ref = "rightOf" in to ? to.rightOf : "below" in to ? to.below : undefined;
-  if (ref === name) throw new Error(`cannot place ${name} relative to itself`);
+  if (ref === name) throw new FlowError(`cannot place ${name} relative to itself`);
   const at = "x" in to ? to : placeNode(flow, to, box.width, box.height, n.kind === "decision");
   const where = `${at.x},${at.y}`;
   const now = { ...box, x: at.x, y: at.y };
   const hit = flowNodes(flow).filter((o) => o.element !== e && intersects(rect(o.element), now));
   if (hit.length && (at.x !== box.x || at.y !== box.y))
-    throw new Error(
+    throw new FlowError(
       `${name} at ${where} would overlap ${hit.map((o) => o.node).join(" and ")}; pick another place`,
     );
   const [dx, dy] = [at.x - box.x, at.y - box.y];

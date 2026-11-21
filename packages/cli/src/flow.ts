@@ -31,7 +31,16 @@ import type {
   ScreenRef,
 } from "@wiredown/excalidraw";
 import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds";
-import { formatFindings, json, plural, readSource, unknownScreen, UsageError } from "./output";
+import {
+  CommandError,
+  fileOp,
+  formatFindings,
+  json,
+  plural,
+  readSource,
+  unknownScreen,
+  UsageError,
+} from "./output";
 import type { Finding, Result } from "./output";
 import { NewerFlowError, parseEditableFlow } from "./read-flow";
 import { safeWrite } from "./safe-write";
@@ -634,7 +643,7 @@ export async function moveFlowNode(
   options: FlowOptions = {},
 ): Promise<Result> {
   try {
-    const original = await readFile(file, "utf8");
+    const original = await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
     const flow = parseEditableFlow(original);
     const moved = moveNode(flow, node, to);
     if (moved.unchanged) {
@@ -647,7 +656,7 @@ export async function moveFlowNode(
           : `${message}\n`,
       };
     }
-    await safeWrite(file, original, serializeFlow(flow));
+    await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
     const { unresolved, ...value } = moved;
     return {
       exitCode: 0,
@@ -655,7 +664,8 @@ export async function moveFlowNode(
       stdout: options.json ? json({ flow: file, moved: value, unresolved }) : movedLine(moved),
     };
   } catch (error) {
-    const findings: Finding[] = [{ message: (error as Error).message }];
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
+    const findings: Finding[] = [{ message: error.message }];
     return {
       exitCode: 1,
       stdout: options.json
@@ -709,6 +719,8 @@ export function flowCommand(
     throw new UsageError(`flow ${command} needs ${arity[2]}`);
   if ((command === "note" || command === "decision" || command === "mark") && !rest.at(-1)?.trim())
     throw new UsageError(`flow ${command} needs non-empty text`);
+  if ((command === "new" || command === "add-screen") && rest.length && !values.screens)
+    throw new UsageError(`flow ${command} needs --screens <screens.md> to embed screens from`);
   const placements = [values["right-of"], values.below, values.to].filter(Boolean).length;
   if (placements > 1) throw new UsageError("--right-of, --below and --to are mutually exclusive");
   const placed = command === "add-screen" || command === "decision" || command === "move";

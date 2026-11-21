@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { flowNodes, parseFlow, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
-import { BASE, fixture } from "./helpers";
+import { BASE, fixture, screensIn } from "./helpers";
 
 /**
  * F1 -> F2 -> D1 in a row, a note, a highlight and a mark on F2; in F2's
@@ -14,7 +14,7 @@ async function setup() {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "flows/f.excalidraw.md");
   for (const args of [
-    ["new", file, "team", "team"],
+    ["new", file, "team", "team", ...screensIn(dir)],
     ["decision", file, "Done?"],
     ["connect", file, "F2", "D1", "Yes"],
     ["note", file, "F2", "Seats drop"],
@@ -141,7 +141,7 @@ test("refusals write nothing and follow the findings convention", async () => {
 test("an overlap lint reports is fixed by the move it suggests", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "f.excalidraw.md");
-  expect((await run(["flow", "new", file, "team", "team"])).exitCode).toBe(0);
+  expect((await run(["flow", "new", file, "team", "team", ...screensIn(dir)])).exitCode).toBe(0);
   expect((await run(["flow", "note", file, "F2", "Seats"])).exitCode).toBe(0);
   // a person drags F2's group onto F1
   const flow = parseFlow(await readFile(file, "utf8"));
