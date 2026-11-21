@@ -244,21 +244,24 @@ const place = (options: FlowOptions) =>
       : undefined;
 
 /** Positionals each command takes after the file: [required, optional]. */
-const ARITY: Record<string, [number, number, string]> = {
+const ARITY = {
   new: [0, Infinity, "a file"],
   "add-screen": [1, 0, "a file and one screen id"],
   connect: [2, 1, "a file, two nodes and an optional label"],
   note: [2, 0, "a file, a node and the note's text"],
   decision: [1, 0, "a file and the decision's text"],
-};
+} satisfies Record<string, [number, number, string]>;
+type FlowCommand = keyof typeof ARITY;
+const isFlowCommand = (command: string | undefined): command is FlowCommand =>
+  Object.hasOwn(ARITY, command ?? "");
 
 export function flowCommand(
   values: Record<string, string | boolean | string[] | undefined>,
   args: string[],
 ) {
   const [command, file, ...rest] = args;
-  const arity = Object.hasOwn(ARITY, command ?? "") ? ARITY[command] : undefined;
-  if (!arity) throw new UsageError(`flow needs ${Object.keys(ARITY).join(", ")}`);
+  if (!isFlowCommand(command)) throw new UsageError(`flow needs ${Object.keys(ARITY).join(", ")}`);
+  const arity = ARITY[command];
   if (!file || rest.length < arity[0] || rest.length > arity[0] + arity[1])
     throw new UsageError(`flow ${command} needs ${arity[2]}`);
   if ((command === "note" || command === "decision") && !rest.at(-1)?.trim())
@@ -283,5 +286,5 @@ export function flowCommand(
   };
   if (command === "connect" || command === "note" || command === "decision")
     return editNodes(command, file, rest, options);
-  return editFlow(command as "new" | "add-screen", file, rest, options);
+  return editFlow(command, file, rest, options);
 }
