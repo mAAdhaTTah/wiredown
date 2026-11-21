@@ -45,6 +45,8 @@ test("lint walks a tree: screens and flows in one report", async () => {
     "b/screens.md: 1 screen, 0 errors, 0 warnings",
     expect.stringMatching(/^c\/screens\.md:4: \^bad: error: /),
     "c/screens.md: 1 screen, 1 error, 0 warnings",
+    "notes.md: warning: no wiredown blocks",
+    "notes.md: 0 screens, 0 errors, 1 warning",
     "a/flows/f.excalidraw.md: 0 errors",
     expect.stringMatching(/^b\/flows\/f\.excalidraw\.md: F1: error: stale embed size: /),
     "b/flows/f.excalidraw.md: 1 error",
@@ -52,9 +54,10 @@ test("lint walks a tree: screens and flows in one report", async () => {
   ]);
   const json = JSON.parse((await run(["lint", dir, "--json"])).stdout);
   expect(Object.keys(json)).toEqual(["screens", "flows"]);
-  expect(json.screens.map((s: { file: string }) => s.file)).toEqual(
-    ["a", "b", "c"].map((s) => join(dir, s, "screens.md")),
-  );
+  expect(json.screens.map((s: { file: string }) => s.file)).toEqual([
+    ...["a", "b", "c"].map((s) => join(dir, s, "screens.md")),
+    join(dir, "notes.md"),
+  ]);
   expect(json.screens[0]).toEqual({
     file: join(dir, "a/screens.md"),
     screens: [{ id: "team", heading: "Team members", line: expect.any(Number) }],
@@ -79,7 +82,7 @@ test("lint passes when clean, warnings don't fail, and defaults to .", async () 
   const result = await run(["lint", a, join(dir, "notes.md")]);
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toContain(`${join(a, "more.md")}:2: warning: screen has no ^id`);
-  expect(result.stdout).not.toContain("notes.md");
+  expect(result.stdout).toContain(`${join(dir, "notes.md")}: warning: no wiredown blocks`);
   const cwd = process.cwd();
   process.chdir(a);
   try {
@@ -90,12 +93,14 @@ test("lint passes when clean, warnings don't fail, and defaults to .", async () 
   } finally {
     process.chdir(cwd);
   }
-  expect(await run(["lint", join(dir, "notes.md")])).toEqual({
+  const empty = join(dir, "empty");
+  await mkdir(empty);
+  expect(await run(["lint", empty])).toEqual({
     exitCode: 0,
     stdout: "no screens or flows found\n",
     stderr: "",
   });
-  expect(JSON.parse((await run(["lint", join(dir, "notes.md"), "--json"])).stdout)).toEqual({
+  expect(JSON.parse((await run(["lint", empty, "--json"])).stdout)).toEqual({
     screens: [],
     flows: [],
   });

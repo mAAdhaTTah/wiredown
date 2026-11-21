@@ -40,8 +40,9 @@ async function files(paths: string[]): Promise<string[]> {
 }
 
 /**
- * The CI check: `check` on every Markdown file with a wiredown block and
- * `flow lint` on every `*.excalidraw.md`, in one report. Exit 1 on any screen
+ * The CI check: `check` on every other Markdown file (one with no wiredown
+ * block gets `check`'s warning) and `flow lint` on every `*.excalidraw.md`,
+ * in one report. Exit 1 on any screen
  * error or flow finding; screen warnings don't fail.
  */
 export async function lint(paths: string[], options: LintOptions = {}): Promise<Result> {
@@ -49,10 +50,7 @@ export async function lint(paths: string[], options: LintOptions = {}): Promise<
   const flows: LintedFlow[] = [];
   for (const file of await files(paths.length ? paths : ["."])) {
     if (file.endsWith(".excalidraw.md")) flows.push(await lintFlowFile(file));
-    else {
-      const checked = checkSource(file, await readSource(file));
-      if (checked.screens.length || checked.errors.length) screens.push(checked);
-    }
+    else screens.push(checkSource(file, await readSource(file)));
   }
   const failed = screens.some((s) => s.errors.length) || flows.some((f) => f.findings.length);
   const exitCode = failed ? 1 : 0;

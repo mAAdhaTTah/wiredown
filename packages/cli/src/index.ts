@@ -185,8 +185,8 @@ options:
     help: `usage: wiredown lint [<path>...] [--json]
 
 Walks each path (default: .), skipping node_modules and dot-directories.
-Runs check on every Markdown file with a wiredown block and flow lint on
-every *.excalidraw.md, in one report. Exits 1 on any screen error or flow
+Runs check on every other Markdown file (one with no wiredown block gets
+check's warning) and flow lint on every *.excalidraw.md, in one report. Exits 1 on any screen error or flow
 finding; warnings don't fail.
 
 options:

@@ -90,10 +90,11 @@ so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
 
 `wiredown lint [<path>...] [--json]` is the check for CI. Each path is a file
 or a directory, walked recursively, skipping `node_modules` and
-dot-directories; with no paths it lints `.`. It runs `check` on every
-Markdown file that has a `wiredown` block and `flow lint` on every
+dot-directories; with no paths it lints `.`. It runs `flow lint` on every
 `*.excalidraw.md` (each frame's screens file is the one its embed names,
-resolved as the `flow` commands do). Markdown without wiredown blocks is ignored. The report is `check`'s
+resolved as the `flow` commands do) and `check` on every other Markdown
+file, so one without wiredown blocks gets `check`'s warning. The report is
+`check`'s
 and `flow lint`'s, one after the other; exit 1 if any screen has errors or
 any flow has findings (screen warnings don't fail). With `--json`:
 
