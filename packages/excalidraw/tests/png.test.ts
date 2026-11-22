@@ -233,6 +233,24 @@ describe("local files linked from a drawing's SVG images", { timeout: 30000 }, (
       expect(redPixels((await svgToPng(labelled.svg, { inline: labelled.inline })).png)).toBe(0);
     }
   });
+
+  it("rejects a drawing's raster images that are not plain base64 in PNG output", async () => {
+    for (const dataURL of [
+      "data:image/png;base64,AAAAdata:text/plain;base64,AAAA",
+      "data:image/png;x=data:image/svg+xml,AAAA;base64,AAAA",
+      "data:image/png,AAAA",
+    ]) {
+      const flow = flowWith(dataURL);
+      const id = Object.keys(flow.files)[0];
+      const rendered = await renderFlowSvg(flow, () => undefined, { raster: true });
+      expect(rendered.rejected, dataURL).toEqual([
+        { id, reason: "expected a base64 PNG, JPEG, GIF or WebP data URL" },
+      ]);
+      // without the rejection, svgToPng would refuse the whole SVG
+      await expect(svgToPng(rendered.svg, { inline: rendered.inline })).resolves.toBeDefined();
+      expect((await renderFlowSvg(flow, () => undefined)).rejected, dataURL).toEqual([]);
+    }
+  });
 });
 
 it("renders literal data URLs in flow text", async () => {

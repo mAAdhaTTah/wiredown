@@ -90,7 +90,7 @@ const svgOptions = (options: RenderOptions) => ({
   fonts: options.format === "png" || options.fonts,
 });
 
-/** Write `<base>.svg` or `<base>.png`; a failure is an error finding. */
+/** Write `<base>.svg` or `<base>.png`; a failed write is an error finding. */
 async function writeImage(
   base: string,
   image: { svg: string; width: number; height: number; inline?: ReadonlySet<string> },
@@ -100,32 +100,29 @@ async function writeImage(
 ): Promise<Output | undefined> {
   const format = options.format ?? "svg";
   const path = `${base}.${format}`;
-  const fail = (message: string) => {
-    errors.push({ message, ...(screen ? { screen } : {}) });
-    return undefined;
-  };
   let bytes: string | Uint8Array = image.svg;
   const output: Output = { [format]: path, width: image.width, height: image.height };
   if (format === "png") {
-    try {
-      const png = await svgToPng(image.svg, {
-        scale: options.scale ?? 2,
-        inline: image.inline,
-        ...(options.transparent ? {} : { background: BACKGROUND[options.theme ?? "light"] }),
-      });
-      bytes = png.png;
-      output.pixelWidth = png.width;
-      output.pixelHeight = png.height;
-    } catch (error) {
-      return fail(`can't render ${path}: ${(error as Error).message}`);
-    }
+    // the drawing's unsafe images are already rejected, so any error is a bug
+    const png = await svgToPng(image.svg, {
+      scale: options.scale ?? 2,
+      inline: image.inline,
+      ...(options.transparent ? {} : { background: BACKGROUND[options.theme ?? "light"] }),
+    });
+    bytes = png.png;
+    output.pixelWidth = png.width;
+    output.pixelHeight = png.height;
   }
   try {
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, bytes);
     return output;
   } catch (error) {
-    return fail(`can't write ${path}: ${(error as Error).message}`);
+    errors.push({
+      message: `can't write ${path}: ${(error as Error).message}`,
+      ...(screen ? { screen } : {}),
+    });
+    return undefined;
   }
 }
 

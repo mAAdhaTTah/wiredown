@@ -127,30 +127,21 @@ describe("render --format png", { timeout: 30000 }, () => {
 });
 
 describe("render --format png failures", { timeout: 30000 }, () => {
-  it("reports a rasteriser error as a finding and exits 1", async () => {
+  it("lets a rasteriser error through, as a bug, writing nothing", async () => {
     vi.resetModules();
     vi.doMock("@wiredown/excalidraw/node", async (original) => ({
       ...(await original<object>()),
       svgToPng: () => Promise.reject(new Error("bad SVG")),
     }));
-    const { run: mocked } = await import("../src/index");
-    const work = await fixture({ "screens.md": BASE });
-    const out = join(work, "out");
-    const result = await mocked([
-      "render",
-      join(work, "screens.md"),
-      "--format",
-      "png",
-      "--out",
-      out,
-      "--json",
-    ]);
-    vi.doUnmock("@wiredown/excalidraw/node");
-    expect(result).toMatchObject({ exitCode: 1, stderr: "" });
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      screens: [],
-      errors: [{ screen: "team", message: `can't render ${join(out, "team.png")}: bad SVG` }],
-    });
-    await expect(readdir(out)).rejects.toThrow();
+    try {
+      const { run: mocked } = await import("../src/index");
+      const work = await fixture({ "screens.md": BASE });
+      const out = join(work, "out");
+      const args = ["render", join(work, "screens.md"), "--format", "png", "--out", out];
+      await expect(mocked(args)).rejects.toThrow("bad SVG");
+      await expect(readdir(out)).rejects.toThrow();
+    } finally {
+      vi.doUnmock("@wiredown/excalidraw/node");
+    }
   });
 });

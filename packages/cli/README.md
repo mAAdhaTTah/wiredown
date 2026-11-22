@@ -97,9 +97,10 @@ with no browser, from the same SVG, so they look like it: Excalifont text,
 hand-drawn strokes, the theme's colours and, in flows, the embedded
 screens. The same input gives byte-identical PNGs on the same machine.
 In a PNG, SVG images supplied by the drawing (not its screens) are not
-drawn, since they could make the rasteriser read local files; each is
-reported like any rejected image file (exit 1, the PNG still written).
-Raster images are drawn. In SVG output they stay embedded as inert image
+drawn, since they could make the rasteriser read local files, and neither
+are raster images whose data URL is not plain base64; each is reported
+like any rejected image file (exit 1, the PNG still written). Other raster
+images are drawn. In SVG output all of them stay embedded as inert image
 data.
 
 - `--scale <n>`, a whole number from 1 to 4 (default 2), multiplies the
@@ -137,12 +138,15 @@ embeds use:
 A flow's is `{ file, format, flow: { png, width, height, pixelWidth,
 pixelHeight }, errors, warnings }`. Without `--json` each line is
 `out/team-members.png  528x328  (1056x656 px)`. A PNG that can't be
-rendered or written is an error finding, as for SVG, and the exit code is 1.
+written is an error finding, as for SVG, and the exit code is 1.
 
 Characters missing from Excalifont (`check` warns about them, for example
-`⋯`, `✓` or `▾`) are drawn with a system font that has them, so how they
-look in a PNG depends on the machine's fonts; with no such font, they come
-out as empty boxes. Use text Excalifont has when the PNG matters.
+`⋯`, `✓` or `▾`) change how a whole text element looks in a PNG: resvg
+draws every character of that element in a system font that has the
+missing one, so the text is wider than laid out and can be cut at the
+screen's edge. Which font it picks depends on the machine; with no such
+font, the characters come out as empty boxes. Use text Excalifont has when
+the PNG matters.
 
 ## lint
 

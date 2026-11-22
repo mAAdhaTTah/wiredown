@@ -250,7 +250,7 @@ it.each(["svg", "png"])(
   },
 );
 
-it("rejects a drawing's SVG images in PNG output only, and still writes the flow", async () => {
+it("rejects a drawing's SVG and non-base64 images in PNG output only, and still writes the flow", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "flows", "f.excalidraw.md");
   await run(["flow", "new", file, "team", ...screensIn(dir)]);
@@ -259,11 +259,13 @@ it("rejects a drawing's SVG images in PNG output only, and still writes the flow
   flow.files.drawn = {
     dataURL: "data:image/svg+xml;base64," + Buffer.from(inner).toString("base64"),
   };
+  flow.files.odd = { dataURL: "data:image/png;base64,AAAAdata:text/plain;base64,AAAA" };
   await writeFile(file, serializeFlow(flow));
   const png = await run(["render", file, "--out", dir, "--format", "png"]);
   expect(png.exitCode).toBe(1);
   expect(png.stderr).toContain(
-    `${file}: error: image file drawn: SVG images are not drawn in PNG output`,
+    `${file}: error: image file drawn: SVG images are not drawn in PNG output\n` +
+      `${file}: error: image file odd: expected a base64 PNG, JPEG, GIF or WebP data URL\n`,
   );
   expect((await readFile(join(dir, "f.png"))).subarray(1, 4).toString()).toBe("PNG");
   expect(await run(["render", file, "--out", dir])).toMatchObject({ exitCode: 0, stderr: "" });

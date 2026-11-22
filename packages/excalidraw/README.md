@@ -294,9 +294,10 @@ dependencies load on first render.
   decompresses them to TrueType with `woff2-encoder`, and hands them to
   resvg as font files in a temporary directory. Export with fonts (the
   default) for PNGs: without them text falls back to a system font.
-  Characters Excalifont lacks are drawn with a system font that has them;
-  if none does, resvg draws an empty box, so their look depends on the
-  machine (`check` warns about them). Excalidraw draws images as a `<use>`
+  A text element with a character Excalifont lacks is drawn entirely in a
+  system font that has it, not just that character, so it is wider than
+  laid out; if no font has it, resvg draws an empty box. Its look depends on
+  the machine (`check` warns about these characters). Excalidraw draws images as a `<use>`
   of a `<symbol>`; resvg sizes those wrongly and draws no text inside
   nested SVG images, so `svgToPng` inlines into its symbol each SVG image
   whose data URL is in `inline`, the set `renderFlowSvg` returns for the
@@ -304,8 +305,9 @@ dependencies load on first render.
 
   An SVG image can make resvg read local files (through an image, an
   `feImage`, a pattern), so for PNG output pass `raster: true` to
-  `renderFlowSvg`: the drawing's own SVG images are then listed in
-  `rejected` and not drawn, while its PNG, JPEG, GIF and WebP images are.
+  `renderFlowSvg`: the drawing's own SVG images, and raster images whose
+  data URL is not plain base64, are then listed in `rejected` and not
+  drawn, while its other PNG, JPEG, GIF and WebP images are.
   `svgToPng` throws ("refusing an SVG image that is not one of the trusted
   screens") on any data URL in its tags or CSS other than a trusted
   screen, a raster image or a font. It does not inspect the SVG's other
