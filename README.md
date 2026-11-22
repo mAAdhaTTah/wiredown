@@ -5,8 +5,8 @@ rendered as hand-drawn Excalidraw sketches, and composed into user-flow
 drawings. It is built to be written mostly by an AI coding agent and reviewed
 by a person in Obsidian and in a Git forge.
 
-Packages are listed below. `@wiredown/gitea` has run in headless Chromium
-against Gitea-shaped stand-in pages (`pnpm smoke:gitea`), but not on Gitea.
+Packages are listed below. `@wiredown/gitea` is tested on a real Gitea
+(`pnpm test:gitea`).
 
 | Package                | Purpose                                                                     |
 | ---------------------- | --------------------------------------------------------------------------- |
@@ -14,7 +14,7 @@ against Gitea-shaped stand-in pages (`pnpm smoke:gitea`), but not on Gitea.
 | `@wiredown/excalidraw` | Excalidraw elements and headless SVG and PNG export                         |
 | `@wiredown/cli`        | `wiredown check`, `render` to SVG or PNG, `flow` commands and `lint` for CI |
 | `@wiredown/obsidian`   | Obsidian code-block processor                                               |
-| `@wiredown/gitea`      | Script that renders blocks and flows on Gitea's pages (unverified)          |
+| `@wiredown/gitea`      | Script that renders blocks and flows on Gitea's pages                       |
 
 ## Development
 

@@ -1,12 +1,11 @@
 // What wiredown reads from a Gitea page. Every assumption about Gitea's HTML
-// and URLs is here, and none has been checked on a live Gitea:
+// and URLs is here; `pnpm test:gitea` checks them on Gitea 28.4.0:
 // - A fenced block renders as `pre > code.language-<lang>`, possibly inside
 //   a `.code-block-container` (from the round-2 page script prototype).
 // - A `^id` line after a block renders as the next element, a paragraph
 //   whose whole text is `^id` (same prototype).
 // - Each rendered Markdown document (a file view, a comment, a comment's
-//   preview) is a `.markup` element (checked on Gitea 28.4.0 by
-//   `pnpm test:gitea`).
+//   preview) is a `.markup` element.
 // - The theme is named on `<html data-theme>`; names containing "dark" are
 //   dark, names containing "auto" follow the OS (same prototype).
 // - A file view is `.../src/{branch|tag|commit}/<ref>/<path>` and its raw

@@ -5,24 +5,9 @@ draws `wiredown` code blocks and `.excalidraw.md` flows on Gitea's pages with
 Excalidraw, and loads Excalidraw only on pages that have one. It supports
 Gitea only.
 
-**Status: run in Playwright's headless Chromium (last on 2026-11-17, with
-159.0.8154.6; the smoke check prints the version it runs) against
-Gitea-shaped stand-in pages; never run on a live Gitea.** See "Verify on
-Gitea" below.
-
-The browser run drew two screens (including a variant resolved from the raw
-file) and a flow with both embedded screens, a highlight, a mark and a note,
-in light and dark themes. Excalifont `@font-face` was inlined. The five
-successful pages had no console errors, page errors, failed requests or
-requests to another origin. The architect's initial run requested only the
-loader on the plain page (1 asset request), and about 20 assets on drawing pages.
-The reproducible script prints current counts, which may vary with font
-subsetting. It also checks that a deliberate raw-file HTTP 500 preserves the
-original content and shows a notice (the expected HTTP console error is
-allowed only for that page).
-The flow's note is in Virgil: it is drawn in Excalifont with the fallback
-notice and no Virgil request, and in Virgil when the loader tag lists it in
-`data-fonts` and the site serves its folder.
+**Status: tested on a real Gitea 28.4.0 in headless Chromium by
+`pnpm test:gitea` (see "Gitea end-to-end tests" below), which covers the
+"Verify on Gitea" list except a site-added font.**
 
 ## Files
 
@@ -62,7 +47,7 @@ Sizes (Vite 8.3, `@excalidraw/excalidraw` 0.18.1, React 18.3.1):
 third was measured once in Chromium: the JavaScript a page with two screens
 loaded besides the loader. That page also fetched one 25 KB Excalifont
 file. It matches the design's estimate of about 1.15 MB gzipped. Other
-pages may load somewhat different chunks. The browser smoke check below prints current asset request counts.
+pages may load somewhat different chunks.
 
 ## Installing on Gitea
 
@@ -84,10 +69,10 @@ one such file. If you already have one, add the line from
 ```
 
 `{{AppSubUrl}}` is Gitea's base path, empty unless Gitea is served under a
-sub-path. None of this has been checked on a live Gitea: that Gitea serves
-`$GITEA_CUSTOM/public/assets/` at `/assets/`, that `footer.tmpl` is added to
-every page, that `AppSubUrl` is available in it, or whether a restart is
-needed.
+sub-path. On Gitea 28.4.0, `pnpm test:gitea` checks that Gitea serves
+`$GITEA_CUSTOM/public/assets/` at `/assets/`, adds `footer.tmpl` to every
+page and resolves `AppSubUrl` in it. It copies `dist/` before Gitea starts,
+so whether a running Gitea needs the restart is not checked.
 
 - It must be a classic script, not `type="module"`. The loader finds its
   own URL through `document.currentScript`, and loads the renderer and fonts
@@ -198,17 +183,19 @@ The file-view and raw URLs are new and come from no prototype.
 
 ## Limitations
 
-- Only Gitea is supported, and its page structure is assumed, not verified.
+- Only Gitea is supported; its page structure is checked on Gitea 28.4.0.
 - Flows and file-accurate variants need same-origin access to raw files.
 - Only Excalifont is shipped (see "Other fonts"). Text in another family
   is drawn in Excalifont with a fallback diagnostic under "Not drawn:".
   Helvetica uses the browser's local font, as in Excalidraw.
-- The `^id` of a block in a comment is found only if Gitea renders the
-  `^id` line as the next paragraph; otherwise variants there do not resolve.
+- Ids and variants resolve among the blocks of one Markdown document: a
+  file, a comment or a comment's preview. A variant in one comment cannot
+  extend a screen in another.
 
-## Verify on Gitea (NOT YET RUN)
+## Verify on Gitea
 
-On a Gitea instance, after an install or a Gitea upgrade:
+`pnpm test:gitea` checks all of this on Gitea 28.4.0 except the second half
+of item 8. By hand, on a Gitea instance after an install or a Gitea upgrade:
 
 1. A page with no wireframe requests `wiredown.js` and nothing else from
    wiredown (browser network panel).
@@ -216,8 +203,9 @@ On a Gitea instance, after an install or a Gitea upgrade:
    draws both; the variant shows its change; "Source" opens the code.
 3. A block with an error shows `line N: message` with the file's line, and
    the code.
-4. The same blocks in a pull request comment draw, including after posting
-   a new comment without reloading.
+4. The same blocks in a pull request comment draw, in the comment editor's
+   preview (added without a reload), and in a newly posted comment, which
+   Gitea shows after reloading the page.
 5. A `flows/*.excalidraw.md` file view draws the flow above the Markdown,
    with every screen; renaming a screen id shows it under "Not drawn".
 6. Dark theme: drawings are drawn dark after a reload.
@@ -243,30 +231,23 @@ Drawing-supplied image files must use inline `data:` URLs with media type
 (case-insensitive, base64 or plain). Other URLs, media types, and missing or
 non-string values are dropped and listed under "Not drawn:"; image elements
 remain as placeholders. Generated screen SVGs are unaffected. SVG data URLs
-remain images inside Excalidraw's SVG export: the browser smoke observes no
+remain images inside Excalidraw's SVG export: `pnpm test:gitea` observes no
 external fetch from an SVG's nested external image reference.
 
-### Browser smoke check
+### Gitea end-to-end tests
 
 ```sh
-pnpm smoke:gitea
-# Optional screenshot directory and explicit browser:
-pnpm smoke:gitea --out /tmp/wiredown-shots --browser /path/to/chromium
+pnpm test:gitea
 ```
 
-The root command builds first. After building, the package command is
-`pnpm --filter @wiredown/gitea smoke --out /tmp/wiredown-shots`.
-`--browser` takes precedence over `WIREDOWN_SMOKE_BROWSER`; otherwise
-Playwright uses its installed headless Chromium, honoring
-`PLAYWRIGHT_BROWSERS_PATH` or its standard cache. If none is installed, run
+It builds this package, starts Gitea (`gitea/gitea`, pinned in
+`tests/gitea/gitea.ts`; Renovate bumps it) in Docker with `dist/` copied into
+its custom directory, creates a repository, files and a pull request through
+Gitea's API, and checks the pages in Playwright's headless Chromium. It
+needs Docker and the browser:
 `pnpm --filter @wiredown/gitea exec playwright-core install chromium-headless-shell`.
-Installing dependencies downloads no browser. Screenshots default to a temp
-directory printed at the end; the generated site is always cleaned up.
-
-CI runs this script after `pnpm test`; it is not part of `pnpm test`. Its
-Gitea-shaped HTML stands in for the assumptions in `src/gitea.ts`; it does not verify live
-Gitea selectors, custom templates or Gitea's own CSP. One page is served
-with a strict policy (the example in "Content Security Policy", on every
-response): it must
-draw, with its fonts and styles applied, and only Excalidraw's known font
-subsetting errors are allowed in its console.
+Screenshots go to `wiredown-gitea` in the system temp directory; CI keeps
+them as the `gitea-screenshots` artifact. It is not part of `pnpm test`; CI
+runs it in its own job. One case adds the strict policy from "Content
+Security Policy" to Gitea's responses: the flow must draw with its fonts and
+styles, and only Excalidraw's font subsetting errors are allowed.
