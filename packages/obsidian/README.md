@@ -19,14 +19,15 @@ The CLI writes this frontmatter to `screens.md`:
 
 ```yaml
 excalidraw-font: Helvetica
-excalidraw-css: ".excalidraw-md-host{padding:0 10px!important}.excalidraw-md-footer{height:5px!important}.wiredown-block svg{display:block}"
+excalidraw-css: ".wiredown-block svg{display:block}"
 ```
 
-Helvetica prevents an extra Cascadia font being added to image embeds. The
-CSS fixes the padding and footer Excalidraw gives an embed, and because it
-mentions `svg` the Excalidraw plugin draws no border around the embed, so a
-screen embeds at the same size and place whatever the plugin's settings
-are. The screen SVG itself embeds Excalifont. Exports stay light; CSS
+Helvetica prevents an extra Cascadia font being added to image embeds.
+Because the CSS mentions `svg`, the Excalidraw plugin draws no border
+around the embed, so a screen embeds at the size and place the flow
+commands assume. A custom Markdown embed CSS in the Excalidraw plugin's
+settings can change the padding and footer and so the embed size. The
+screen SVG itself embeds Excalifont. Exports stay light; CSS
 filters dark notes immediately, while the drawing handles its embedded
 images' theme.
 

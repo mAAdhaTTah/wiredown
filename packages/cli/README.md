@@ -296,12 +296,13 @@ allowed. Overlays use current image position and size, including independent
 axis scales after a distorted resize. Highlights extend 4px beyond the box.
 
 Frames are sized for a screen with 10px of host padding on each side, a 5px
-footer and no border. The styling front matter that `flow new` and
-`flow add-screen` add to the screens file makes the Excalidraw plugin draw
-its embeds that way whatever the plugin's settings, so frames keep their
-size when a drawing opens. The constants live in
-`packages/excalidraw/src/flow-edit.ts`; one change there corrects embed
-sizing, overlay placement and the front matter.
+footer and no border: the Excalidraw plugin's default Markdown embed, with
+the border off because the `excalidraw-css` front matter that `flow new` and
+`flow add-screen` add to the screens file mentions `svg`. Frames keep their
+size when a drawing opens unless a person's own embed CSS changes the
+padding or footer. The constants live in
+`packages/excalidraw/src/flow-edit.ts`; one change there corrects both embed
+sizing and overlay placement.
 
 ### refresh and lint
 

@@ -5,10 +5,10 @@ import { FlowError } from "./flow";
 import type { Flow } from "./flow";
 
 // How the Excalidraw plugin draws a Markdown embed by default: 10px of
-// horizontal padding on its host and a 5px footer. styleScreens writes both
-// into the screens file, so a person's plugin settings cannot change them. The
-// plugin draws no border around an embed whose CSS mentions svg, as this CSS
-// does. Measured in Obsidian (test:obsidian).
+// horizontal padding on its host and a 5px footer. It draws no border around
+// an embed whose CSS mentions svg, as the CSS styleScreens writes does.
+// Measured in Obsidian (test:obsidian). A person's own embed CSS can change
+// the padding and footer; that is their choice.
 // The link height is a maximum, with 40px headroom as in the prototype.
 const MD_HOST_PAD = 10,
   MD_FOOTER = 5,
@@ -34,14 +34,11 @@ const measurer = fontMeasurer(EXCALIFONT);
 
 /**
  * The front matter a screens file needs for its screens to embed at the size
- * and place flow commands assume, whatever the Excalidraw plugin's settings.
+ * and place flow commands assume.
  */
 const SCREENS_STYLE = [
   ["excalidraw-font", "Helvetica"],
-  [
-    "excalidraw-css",
-    `".excalidraw-md-host{padding:0 ${MD_HOST_PAD}px!important}.excalidraw-md-footer{height:${MD_FOOTER}px!important}.wiredown-block svg{display:block}"`,
-  ],
+  ["excalidraw-css", '".wiredown-block svg{display:block}"'],
 ];
 /** Adds the styling keys a screens file lacks, preserving the original bytes. */
 export function styleScreens(source: string): string {
