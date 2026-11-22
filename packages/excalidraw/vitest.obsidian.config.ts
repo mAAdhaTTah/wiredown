@@ -9,6 +9,9 @@ export default defineConfig({
   test: {
     root: import.meta.dirname,
     include: ["tests/obsidian/**/*.obsidian.ts"],
+    // One Obsidian at a time: files run in parallel would download and unpack
+    // it into the same cache at once on a first run.
+    fileParallelism: false,
     testTimeout: 60_000,
     hookTimeout: 180_000,
   },
