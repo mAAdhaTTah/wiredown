@@ -7,8 +7,8 @@ Gitea only.
 
 **Status: run in Playwright's headless Chromium (last on 2026-11-17, with
 159.0.8154.6; the smoke check prints the version it runs) against
-Gitea-shaped stand-in pages; never run on a live Gitea.** See "Verify on a
-forge" below.
+Gitea-shaped stand-in pages; never run on a live Gitea.** See "Verify on
+Gitea" below.
 
 The browser run drew two screens (including a variant resolved from the raw
 file) and a flow with both embedded screens, a highlight, a mark and a note,
@@ -264,6 +264,7 @@ directory printed at the end; the generated site is always cleaned up.
 CI runs this script after `pnpm test`; it is not part of `pnpm test`. Its
 Gitea-shaped HTML stands in for the assumptions in `src/gitea.ts`; it does not verify live
 Gitea selectors, custom templates or Gitea's own CSP. One page is served
-with a strict policy (the example in "On Gitea", on every response): it must
+with a strict policy (the example in "Content Security Policy", on every
+response): it must
 draw, with its fonts and styles applied, and only Excalidraw's known font
 subsetting errors are allowed in its console.
