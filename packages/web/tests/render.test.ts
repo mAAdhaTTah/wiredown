@@ -221,7 +221,7 @@ it("draws a flow above the page with each embedded screen as a padded SVG file",
     expect(file.mimeType).toBe("image/svg+xml");
     const svg = atob(file.dataURL.replace("data:image/svg+xml;base64,", ""));
     expect(svg).toMatch(new RegExp(`^<svg [^>]*width="${padded.width}" height="${padded.height}"`));
-    expect(svg).toContain(`<svg x="${(padded.width - 100) / 2}" y="0" `);
+    expect(svg).toContain('<svg x="12" y="2" ');
   }
   expect(images.filter((e: ExcalidrawElementJson) => String(e.fileId) in scene.files)).toHaveLength(
     2,

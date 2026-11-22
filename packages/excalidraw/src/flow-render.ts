@@ -3,7 +3,7 @@
 // supply the screen SVGs and run Excalidraw's exporter themselves.
 import type { ExcalidrawElementJson } from "./elements";
 import type { Flow } from "./flow";
-import { embedSize } from "./flow-edit";
+import { embedSize, SCREEN_INSET } from "./flow-edit";
 import type { ScreenRef } from "./flow-refresh";
 
 /** Space around a whole flow, so labels at its edge aren't cut. A screen pads itself. */
@@ -21,9 +21,8 @@ export function svgSize(svg: string): { width: number; height: number } {
 export function paddedScreenSvg(svg: string): string {
   const size = svgSize(svg);
   const padded = embedSize(size.width, size.height).image;
-  const x = (padded.width - size.width) / 2;
   // This replacement relies on the exporter output starting with "<svg ".
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}">${svg.replace("<svg ", `<svg x="${x}" y="0" `)}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}">${svg.replace("<svg ", `<svg x="${SCREEN_INSET.x}" y="${SCREEN_INSET.y}" `)}</svg>`;
 }
 
 /** A base64 `data:` URL of an SVG document, in any runtime with btoa. */

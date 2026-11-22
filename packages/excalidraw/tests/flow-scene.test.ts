@@ -13,11 +13,11 @@ it("encodes SVG data URLs as Node's Buffer does, for any text", () => {
   expect(svgDataUrl(svg)).toBe("data:image/svg+xml;base64," + Buffer.from(svg).toString("base64"));
 });
 
-it("pads a screen SVG to its embed size, centred horizontally", () => {
+it("pads a screen SVG to its embed size, inset as Obsidian draws it", () => {
   const padded = paddedScreenSvg('<svg version="1.1" width="100" height="50"></svg>');
   const { width, height } = embedSize(100, 50).image;
   expect(padded).toBe(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><svg x="${(width - 100) / 2}" y="0" version="1.1" width="100" height="50"></svg></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><svg x="12" y="2" version="1.1" width="100" height="50"></svg></svg>`,
   );
 });
 
