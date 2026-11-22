@@ -11,5 +11,7 @@ export default defineConfig({
     include: ["tests/gitea/**/*.gitea.ts"],
     testTimeout: 60_000,
     hookTimeout: 180_000,
+    // Drawing waits for the renderer, Excalidraw and fonts to load.
+    expect: { poll: { timeout: 15_000 } },
   },
 });
