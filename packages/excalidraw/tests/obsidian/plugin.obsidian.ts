@@ -7,8 +7,7 @@ import { startObsidian, type Obsidian } from "./obsidian";
 const fence = (source: string, id: string) => `\`\`\`wiredown\n${source}\n\`\`\`\n^${id}\n`;
 const BASE = "window: Base\n  text: Hello #hello";
 const VARIANT = "extends: base\nreplace: hello\n  text: Changed";
-const MISSING_PLUGIN =
-  "Wiredown needs the Excalidraw plugin. Install and enable it, then reopen this note.";
+const MISSING_PLUGIN = "Wiredown needs the Excalidraw plugin. Install and enable it.";
 
 interface Drawn {
   renderer?: string;

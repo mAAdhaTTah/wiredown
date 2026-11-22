@@ -38,8 +38,7 @@ export function findScreen(screens: Screen[], source: string, section?: Section)
   return screens.findIndex((s) => normalized(s.source) === normalized(source));
 }
 
-export const MISSING_PLUGIN =
-  "Wiredown needs the Excalidraw plugin. Install and enable it, then reopen this note.";
+export const MISSING_PLUGIN = "Wiredown needs the Excalidraw plugin. Install and enable it.";
 export function showError(el: HTMLElement, source: string, messages: string[]): void {
   const list = el.ownerDocument.createElement("ul");
   list.className = "wiredown-error";
