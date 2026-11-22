@@ -65,6 +65,8 @@ is preserved in [packages/core/LICENSE](packages/core/LICENSE).
 flows. Copy or symlink `skills/wiredown` into your agent's skills directory;
 the `wiredown` CLI must be on PATH. The directory is self-contained at use
 time. After building, run `pnpm skill` to regenerate its syntax reference:
-the component sections come from core's catalog, and the grammar, escapes
-and variants text is written in `scripts/skill.mjs`, where tests check its
-examples. Tests fail if the committed reference is out of date.
+`reference/syntax.md` (the grammar, escapes and an index) and one file per
+component category under `reference/components/`. The component sections
+come from core's catalog; the categories, grammar, escapes and variants
+text are written in `scripts/skill.mjs`, where tests check its examples.
+Tests fail if the committed reference is out of date.

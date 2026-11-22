@@ -1,16 +1,20 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run } from "@wiredown/cli";
 import { checkScreens, parseScreens } from "@wiredown/core";
 import { expect, it } from "vitest";
 // @ts-expect-error Plain ESM generator shared with the root script.
-import { skillSyntax } from "../../../scripts/skill.mjs";
+import { skillReference } from "../../../scripts/skill.mjs";
 
 const read = (name: string) =>
   readFileSync(new URL(`../../../skills/wiredown/${name}`, import.meta.url), "utf8");
 const skill = read("SKILL.md");
 const examples = read("reference/examples.md");
+const reference = skillReference() as Record<string, string>;
+const syntax = Object.keys(reference)
+  .map((path) => read(`reference/${path}`))
+  .join("\n");
 const shellLines = (text: string) =>
   [...text.matchAll(/```sh\n([\s\S]*?)```/g)].flatMap((match) =>
     match[1]
@@ -23,13 +27,21 @@ const argv = (line: string) =>
   [...line.matchAll(/'([^']*)'|([^\s']+)/g)].map((match) => match[1] ?? match[2]).slice(1);
 
 it("keeps the generated catalog reference current (run pnpm build then pnpm skill)", () => {
-  expect(read("reference/syntax.md"), "run `pnpm build` then `pnpm skill`").toBe(skillSyntax());
+  for (const [path, text] of Object.entries(reference)) {
+    expect(read(`reference/${path}`), "run `pnpm build` then `pnpm skill`").toBe(text);
+  }
+  const components = readdirSync(
+    new URL("../../../skills/wiredown/reference/components", import.meta.url),
+  );
+  expect(components.map((name) => `components/${name}`).sort()).toEqual(
+    Object.keys(reference)
+      .filter((path) => path.startsWith("components/"))
+      .sort(),
+  );
 });
 it("declares the skill and excludes obsolete syntax and tooling", () => {
   expect(skill).toMatch(/^---\nname: wiredown\ndescription: .+\n---/);
-  expect(skill + examples + read("reference/syntax.md")).not.toMatch(
-    /\(hi\)|\(mark=|sketchdown|wireframe-x/i,
-  );
+  expect(skill + examples + syntax).not.toMatch(/\(hi\)|\(mark=|sketchdown|wireframe-x/i);
 });
 it.each(["examples", "skill", "syntax"])("checks every %s block without warnings", (name) => {
   // The skill's variant intentionally uses the base from the reference.
@@ -38,7 +50,7 @@ it.each(["examples", "skill", "syntax"])("checks every %s block without warnings
     name === "examples"
       ? examples
       : name === "syntax"
-        ? read("reference/syntax.md")
+        ? syntax
         : `\`\`\`wiredown\n${base.source}\n\`\`\`\n^${base.id}\n\n${skill}`;
   const result = checkScreens(text);
   expect(result.errors).toEqual([]);

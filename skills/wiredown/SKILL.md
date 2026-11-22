@@ -18,8 +18,10 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    block, its `^block-id` line after exactly one blank line, then prose notes
    about the screen. The id also works directly after the closing fence;
    more blank lines or intervening prose lose it ("screen has no ^id").
-   Read [syntax](reference/syntax.md) for components and options and
-   [examples](reference/examples.md) for complete screens and flow commands.
+   Read [syntax](reference/syntax.md) for the grammar and its index of
+   component categories, then only the category files for the components
+   the screen uses; read [examples](reference/examples.md) for complete
+   screens and flow commands.
    Omit frontmatter on new files; flow commands add embed styling.
 2. Check and fix every error and warning until clean:
 
@@ -191,4 +193,5 @@ Flow commands with `--json` return `frames[].frame` such as `F1`, or
 `decision.node` such as `D1`; reuse these ids, rather than guessing them.
 `flow new` connects supplied screens in a row automatically. See the
 [examples](reference/examples.md) for trimmed command results and the
-[syntax reference](reference/syntax.md) for all components and variant verbs.
+[syntax reference](reference/syntax.md) for the grammar and the component
+categories, variant verbs included.
