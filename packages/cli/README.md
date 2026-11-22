@@ -6,6 +6,7 @@ headlessly in Node, with JSON output for agents.
 ```sh
 wiredown check <file.md>... [--json]
 wiredown lint [<path>...] [--exclude <glob>]... [--json]
+wiredown skill [<dir>] [--json]
 wiredown render <file.md> [--screen <id>]... [--out <dir>] [--format svg|png] [--scale <n>]
                 [--transparent] [--theme light|dark] [--no-fonts] [--json]
 wiredown --help | <command> --help | flow <command> --help | --version
@@ -175,6 +176,19 @@ package is private, the registry needs a read token):
 - uses: actions/setup-node@v4
 - run: npx --yes @wiredown/cli lint
 ```
+
+## skill
+
+`wiredown skill [<dir>] [--json]` installs the agent skill that ships with
+this package (`dist/skills/wiredown`) in a project: it copies it to
+`<dir>/.agents/skills/wiredown` (`dir` defaults to `.`), replacing an
+earlier copy, and links it from `<dir>/.claude/skills/wiredown` and from
+`<dir>/<folder>/skills/wiredown` for every other dot-folder that has a
+`skills` folder, such as `.windsurf`. Run it again after upgrading. Human
+output is the copy's path, then one `<link> -> <copy>` line per link. JSON
+is `{ skill, links }`. A folder that cannot be read is a usage error (exit
+2); a failed write exits 1, with the message on stderr (JSON:
+`{ skill: null, links, errors }`, `links` being those already written).
 
 ## flow
 
@@ -482,8 +496,10 @@ or exits; `bin/wiredown.js` prints the result. Build the package
   command on files and directories (`.` when empty). `LintOptions` is
   `{ json?, exclude? }` (`exclude`: globs, as `--exclude`); `LintedFlow`, `{ file, findings }`, is one entry of the JSON
   document's `flows`.
-- **Output** (`output`): `UsageError`, which `check`, `lint` and `render`
-  throw for an unreadable file and `run` turns into exit code 2. `Finding`
+- **Skill** (`skill`): `skill(dir, options?)` runs the `skill` command.
+  `SkillOptions` is `{ json? }`.
+- **Output** (`output`): `UsageError`, which `check`, `lint`, `render` and
+  `skill` throw for an unreadable file and `run` turns into exit code 2. `Finding`
   is a finding as above; a flow's names a `frame` and an `element` instead
   of a `screen`. `Result` is what every command returns.
 

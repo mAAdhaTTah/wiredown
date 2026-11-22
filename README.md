@@ -62,9 +62,18 @@ is preserved in [packages/core/LICENSE](packages/core/LICENSE).
 ## Agent skill
 
 [skills/wiredown](skills/wiredown/SKILL.md) guides agents writing screens and
-flows. Copy or symlink `skills/wiredown` into your agent's skills directory;
-the `wiredown` CLI must be on PATH. The directory is self-contained at use
-time. After building, run `pnpm skill` to regenerate its syntax reference:
+flows; the `wiredown` CLI must be on PATH. The directory is self-contained
+at use time, and `@wiredown/cli` ships a copy in `dist/skills/wiredown`.
+Install it in a project in one of these ways:
+
+- `wiredown skill` copies the CLI's copy to `.agents/skills/wiredown` and
+  links it from `.claude/skills` and other agent folders (see the
+  [CLI README](packages/cli/README.md#skill)).
+- `npx skills add mAAdhaTTah/wiredown` installs it from this repository.
+- With `@wiredown/cli` a dependency of the project,
+  `npx skills experimental_sync` links the installed package's copy.
+
+After building, run `pnpm skill` to regenerate its syntax reference:
 `reference/syntax.md` (the grammar, escapes and an index) and one file per
 component category under `reference/components/`. The component sections
 come from core's catalog; the categories, grammar, escapes and variants

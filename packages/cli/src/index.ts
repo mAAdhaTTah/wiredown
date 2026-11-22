@@ -7,12 +7,14 @@ import { lint } from "./lint";
 import { UsageError } from "./output";
 import type { Result } from "./output";
 import { render } from "./render";
+import { skill } from "./skill";
 
-export { check, lint, render, UsageError };
+export { check, lint, render, skill, UsageError };
 export type { CheckOptions, CheckedFile } from "./check";
 export type { LintedFlow } from "./flow";
 export type { LintOptions } from "./lint";
 export type { Output, RenderOptions, RenderedScreen } from "./render";
+export type { SkillOptions } from "./skill";
 export type { Finding, Result } from "./output";
 
 type Values = Record<string, string | boolean | string[] | undefined>;
@@ -269,6 +271,26 @@ options:
         fonts: values["no-fonts"] !== true,
         json: values.json === true,
       });
+    },
+  },
+  skill: {
+    summary: "install the agent skill in a project",
+    help: `usage: wiredown skill [<dir>] [--json]
+
+Copies the agent skill that ships with this wiredown to
+<dir>/.agents/skills/wiredown (default dir: .), replacing an earlier copy.
+Links it from <dir>/.claude/skills and from every other dot-folder of <dir>
+that has a skills folder, such as .windsurf/skills. Run it again after
+upgrading wiredown.
+
+options:
+  --json      print one JSON document instead
+  -h, --help  show this help
+`,
+    options: { json: { type: "boolean" } },
+    run(values, positionals) {
+      if (positionals.length > 1) throw new UsageError("skill takes at most one folder");
+      return skill(positionals[0] ?? ".", { json: values.json === true });
     },
   },
 };
