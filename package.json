@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "skill": "node scripts/skill.mjs",
-    "smoke:gitea": "pnpm build && pnpm --filter @wiredown/gitea smoke"
+    "test:gitea": "pnpm --filter \"@wiredown/gitea...\" build && pnpm --filter @wiredown/gitea test:gitea"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",

@@ -17,9 +17,6 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
-      # the browser smoke is the only check that Excalidraw's font worker loads
-      - run: pnpm --filter @wiredown/gitea exec playwright-core install --with-deps chromium-headless-shell
-      - run: pnpm --filter @wiredown/gitea smoke
 
   # Run the Node entry on the oldest Node its engines field allows, and on 24.
   excalidraw-node:
@@ -46,3 +43,19 @@ jobs:
       - uses: jdx/mise-action@v3
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:obsidian
+
+  # Installs the built bundle in a real Gitea (Docker) and checks its pages in
+  # headless Chromium; the only check that Excalidraw's font worker loads.
+  gitea:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v3
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @wiredown/gitea exec playwright-core install --with-deps chromium-headless-shell
+      - run: pnpm test:gitea
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gitea-screenshots
+          path: /tmp/wiredown-gitea/
