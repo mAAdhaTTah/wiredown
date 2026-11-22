@@ -1,16 +1,16 @@
 ---
 name: wiredown
-description: Use the wiredown CLI to write or revise wireframes/screens for a PRD or spec in screens.md and user-flow drawings in .excalidraw.md files.
+description: Use the wiredown CLI to write or revise wireframes/screens in Markdown screens files and user-flow drawings in .excalidraw.md files.
 ---
 
 # Wiredown
 
 Wiredown draws low-fidelity screens from text and connects them in editable
-flow drawings. Use it to illustrate a PRD or spec while keeping screen states
-in one place.
+flow drawings, keeping screen states in one place. You need a shell and the
+`wiredown` CLI on PATH.
 
-Keep `screens.md` and `flows/<name>.excalidraw.md` next to the PRD or spec
-they illustrate. You need a shell and the `wiredown` CLI on PATH.
+Every command takes its files as paths. The `screens.md` and
+`flows/members.excalidraw.md` below are example paths.
 
 ## Workflow
 
@@ -100,13 +100,13 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    wiredown flow move flows/members.excalidraw.md F2 --below D1 --json
    ```
 
-7. Before committing, lint the spec directory (the default is the current
-   directory). Markdown files without `wiredown` blocks, such as the PRD
-   itself, each get a "no wiredown blocks" warning; skip them with
-   `--exclude`, a glob matched against paths from the working directory.
+7. Before committing, lint the directories that hold the screens and flows
+   (the default is the current directory). Other Markdown files there each
+   get a "no wiredown blocks" warning; skip them with `--exclude`, a glob
+   matched against paths from the working directory.
 
    ```sh
-   wiredown lint --exclude prd.md --json
+   wiredown lint docs --exclude 'docs/**/README.md' --json
    ```
 
 ## Authoring rules
