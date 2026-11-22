@@ -281,7 +281,7 @@ importers:
         specifier: 21.0.4
         version: 21.0.4
       woff2-encoder:
-        specifier: ^2.0.0
+        specifier: 2.0.0
         version: 2.0.0
 
   packages/gitea:
