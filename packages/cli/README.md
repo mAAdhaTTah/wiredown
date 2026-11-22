@@ -5,7 +5,8 @@ headlessly in Node, with JSON output for agents.
 
 ```sh
 wiredown check <file.md>... [--json]
-wiredown lint [<path>...] [--json]
+wiredown lint [<path>...] [--exclude <glob>]... [--json]
+wiredown skill [<dir>] [--json]
 wiredown render <file.md> [--screen <id>]... [--out <dir>] [--format svg|png] [--scale <n>]
                 [--transparent] [--theme light|dark] [--no-fonts] [--json]
 wiredown --help | <command> --help | flow <command> --help | --version
@@ -150,9 +151,12 @@ the PNG matters.
 
 ## lint
 
-`wiredown lint [<path>...] [--json]` is the check for CI. Each path is a file
-or a directory, walked recursively, skipping `node_modules` and
-dot-directories; with no paths it lints `.`. It runs `flow lint` on every
+`wiredown lint [<path>...] [--exclude <glob>]... [--json]` is the check for
+CI. Each path is a file or a directory, walked recursively, skipping
+`node_modules` and dot-directories; with no paths it lints `.`. Each
+`--exclude` glob is matched against paths relative to the working
+directory; a matching file is skipped and a matching folder is not walked,
+for example `--exclude 'docs/**/prd.md'` for specs that have no screens. It runs `flow lint` on every
 `*.excalidraw.md` (each frame's screens file is the one its embed names,
 resolved as the `flow` commands do) and `check` on every other Markdown
 file, so one without wiredown blocks gets `check`'s warning. The report is
@@ -172,6 +176,19 @@ package is private, the registry needs a read token):
 - uses: actions/setup-node@v4
 - run: npx --yes @wiredown/cli lint
 ```
+
+## skill
+
+`wiredown skill [<dir>] [--json]` installs the agent skill that ships with
+this package (`dist/skills/wiredown`) in a project: it copies it to
+`<dir>/.agents/skills/wiredown` (`dir` defaults to `.`), replacing an
+earlier copy, and links it from `<dir>/.claude/skills/wiredown` and from
+`<dir>/<folder>/skills/wiredown` for every other dot-folder that has a
+`skills` folder, such as `.windsurf`. Run it again after upgrading. Human
+output is the copy's path, then one `<link> -> <copy>` line per link. JSON
+is `{ skill, links }`. A folder that cannot be read is a usage error (exit
+2); a failed write exits 1, with the message on stderr (JSON:
+`{ skill: null, links, errors }`, `links` being those already written).
 
 ## flow
 
@@ -477,10 +494,12 @@ or exits; `bin/wiredown.js` prints the result. Build the package
   `boxes`, one entry of its `screens`.
 - **Lint** (`lint`, `flow`): `lint(paths, options?)` runs the `lint`
   command on files and directories (`.` when empty). `LintOptions` is
-  `{ json? }`; `LintedFlow`, `{ file, findings }`, is one entry of the JSON
+  `{ json?, exclude? }` (`exclude`: globs, as `--exclude`); `LintedFlow`, `{ file, findings }`, is one entry of the JSON
   document's `flows`.
-- **Output** (`output`): `UsageError`, which `check`, `lint` and `render`
-  throw for an unreadable file and `run` turns into exit code 2. `Finding`
+- **Skill** (`skill`): `skill(dir, options?)` runs the `skill` command.
+  `SkillOptions` is `{ json? }`.
+- **Output** (`output`): `UsageError`, which `check`, `lint`, `render` and
+  `skill` throw for an unreadable file and `run` turns into exit code 2. `Finding`
   is a finding as above; a flow's names a `frame` and an `element` instead
   of a `screen`. `Result` is what every command returns.
 

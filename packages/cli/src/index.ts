@@ -7,12 +7,14 @@ import { lint } from "./lint";
 import { UsageError } from "./output";
 import type { Result } from "./output";
 import { render } from "./render";
+import { skill } from "./skill";
 
-export { check, lint, render, UsageError };
+export { check, lint, render, skill, UsageError };
 export type { CheckOptions, CheckedFile } from "./check";
 export type { LintedFlow } from "./flow";
 export type { LintOptions } from "./lint";
 export type { Output, RenderOptions, RenderedScreen } from "./render";
+export type { SkillOptions } from "./skill";
 export type { Finding, Result } from "./output";
 
 type Values = Record<string, string | boolean | string[] | undefined>;
@@ -182,7 +184,7 @@ options:
   },
   lint: {
     summary: "check screens and lint flows, for CI",
-    help: `usage: wiredown lint [<path>...] [--json]
+    help: `usage: wiredown lint [<path>...] [--exclude <glob>]... [--json]
 
 Walks each path (default: .), skipping node_modules and dot-directories.
 Runs check on every other Markdown file (one with no wiredown block gets
@@ -190,12 +192,17 @@ check's warning) and flow lint on every *.excalidraw.md, in one report. Exits 1 
 finding; warnings don't fail.
 
 options:
-  --json      print one JSON document instead
-  -h, --help  show this help
+  --exclude <glob>  skip files and folders whose path from the working
+                    directory matches, such as 'docs/**/prd.md'; repeatable
+  --json            print one JSON document instead
+  -h, --help        show this help
 `,
-    options: { json: { type: "boolean" } },
+    options: { exclude: { type: "string", multiple: true }, json: { type: "boolean" } },
     run(values, paths) {
-      return lint(paths, { json: values.json === true });
+      return lint(paths, {
+        json: values.json === true,
+        exclude: values.exclude as string[] | undefined,
+      });
     },
   },
   render: {
@@ -264,6 +271,26 @@ options:
         fonts: values["no-fonts"] !== true,
         json: values.json === true,
       });
+    },
+  },
+  skill: {
+    summary: "install the agent skill in a project",
+    help: `usage: wiredown skill [<dir>] [--json]
+
+Copies the agent skill that ships with this wiredown to
+<dir>/.agents/skills/wiredown (default dir: .), replacing an earlier copy.
+Links it from <dir>/.claude/skills and from every other dot-folder of <dir>
+that has a skills folder, such as .windsurf/skills. Run it again after
+upgrading wiredown.
+
+options:
+  --json      print one JSON document instead
+  -h, --help  show this help
+`,
+    options: { json: { type: "boolean" } },
+    run(values, positionals) {
+      if (positionals.length > 1) throw new UsageError("skill takes at most one folder");
+      return skill(positionals[0] ?? ".", { json: values.json === true });
     },
   },
 };

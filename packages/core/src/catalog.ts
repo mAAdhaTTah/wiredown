@@ -14,6 +14,8 @@ export interface CatalogEntry {
   /** What a user writes before the colon; the first is the usual one. */
   keywords: string[];
   description: string;
+  /** Minimal syntax, resolved against a base screen for directives. */
+  example: string;
   /** Holds components indented under it. */
   container: boolean;
   /** Takes text after the colon or on continuation lines. */
@@ -52,6 +54,10 @@ const FIELD_LIKE = {
 const directive = (type: DirectiveType, description: string, container: boolean): CatalogEntry => ({
   type,
   keywords: [type],
+  example:
+    type === "extends"
+      ? "extends: base"
+      : `extends: base\n${type}: target${container ? "\n  text: Updated" : type === "rows" ? "\n  Anna | Active" : ""}`,
   description,
   container,
   content: true,
@@ -63,6 +69,7 @@ const directive = (type: DirectiveType, description: string, container: boolean)
 export const CATALOG: readonly CatalogEntry[] = [
   {
     type: "button",
+    example: "button: *Save",
     keywords: ["button", "btn"],
     description: "A button; a leading * makes it primary, an {icon} alone makes it square.",
     container: false,
@@ -72,6 +79,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "dropdown",
+    example: "dropdown: *Sweden | Norway",
     keywords: ["dropdown", "select", "combo", "combobox"],
     description: "A closed dropdown showing the starred (or first) of its | items.",
     container: false,
@@ -81,6 +89,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "checkbox",
+    example: "checkbox: [x] Email | [ ] SMS",
     keywords: ["checkbox", "check", "checkboxes"],
     description: "Checkboxes, one per | item: [x] checked, [ ] not.",
     container: false,
@@ -90,6 +99,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "text",
+    example: "text: Team settings",
     keywords: ["text", "label"],
     description: "Plain text; each continuation line is another line.",
     container: false,
@@ -99,6 +109,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "grid",
+    example: "grid\nName | Status\nAnna | Active",
     keywords: ["grid", "table", "datagrid"],
     description:
       "A table; one row per line, cells split on | (or commas), the first row the header.",
@@ -109,6 +120,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "tabs",
+    example: "tabs: *Profile | Security\n  text: Your profile",
     keywords: ["tabs", "tab"],
     description:
       "Tabs from | items, the starred one active, with a panel for the components under it.",
@@ -119,6 +131,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "box",
+    example: "box: Details\n  text: Account",
     keywords: ["box", "panel", "group"],
     description: "A frame around the components under it, with an optional title bar.",
     container: true,
@@ -128,6 +141,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "row",
+    example: "row:\n  button: Save",
     keywords: ["row"],
     description: "The components under it side by side.",
     container: true,
@@ -137,6 +151,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "icon",
+    example: "icon: user",
     keywords: ["icon"],
     description: "One icon by name.",
     container: false,
@@ -146,24 +161,28 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "input",
+    example: "input: Anna",
     keywords: ["input", "textbox"],
     description: "A one-line text field; a trailing {icon} is a button at its end.",
     ...FIELD_LIKE,
   },
   {
     type: "search",
+    example: "search: Find members",
     keywords: ["search"],
     description: "A search field with a leading search icon.",
     ...FIELD_LIKE,
   },
   {
     type: "password",
+    example: "password: secret",
     keywords: ["password"],
     description: "A password field; its text is masked.",
     ...FIELD_LIKE,
   },
   {
     type: "textarea",
+    example: "textarea: Delivery instructions",
     keywords: ["textarea"],
     description: "A multi-line text field.",
     container: false,
@@ -173,6 +192,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "h1",
+    example: "heading: Members",
     keywords: ["heading", "h1"],
     description: "A heading.",
     container: false,
@@ -182,6 +202,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "h2",
+    example: "h2: Profile",
     keywords: ["h2", "subheading"],
     description: "A smaller heading.",
     container: false,
@@ -191,6 +212,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "columns",
+    example: "columns:\n  box: Navigation",
     keywords: ["columns", "cols"],
     description: "The components under it side by side, all as tall as the tallest, touching.",
     container: true,
@@ -200,6 +222,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "nav",
+    example: "nav: *Home | Members | Settings",
     keywords: ["nav", "navigation"],
     description: "A vertical navigation list; * marks the active item, - a divider.",
     container: false,
@@ -209,6 +232,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "avatar",
+    example: "avatar: AS",
     keywords: ["avatar"],
     description: "A circle with initials, or a user icon when empty.",
     container: false,
@@ -218,6 +242,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "details",
+    example: "details: Name | Anna",
     keywords: ["details", "properties"],
     description: "A detail list: one 'label | value' pair per line.",
     container: false,
@@ -227,30 +252,35 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "window",
+    example: "window: Settings\n  text: Profile",
     keywords: ["window"],
     description: "A desktop window with a title bar.",
     ...FRAME,
   },
   {
     type: "dialog",
+    example: "dialog: Remove member?\n  buttons: Cancel | *Remove",
     keywords: ["dialog", "modal"],
     description: "A dialog with a title bar, a close control and a shadow.",
     ...FRAME,
   },
   {
     type: "browser",
+    example: "browser: Team | example.com\n  text: Members",
     keywords: ["browser"],
     description: "A browser window: 'title | address'.",
     ...FRAME,
   },
   {
     type: "phone",
+    example: "phone: Members\n  text: Anna",
     keywords: ["phone"],
     description: "A phone screen with a status bar and an optional app bar title.",
     ...FRAME,
   },
   {
     type: "buttons",
+    example: "buttons: Cancel | *Save",
     keywords: ["buttons"],
     description: "Buttons from | items, side by side on the right, as in a dialog footer.",
     container: false,
@@ -260,6 +290,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "link",
+    example: "link: Forgot password?",
     keywords: ["link"],
     description: "A line of link text.",
     container: false,
@@ -269,6 +300,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "paragraph",
+    example: "paragraph: Review your account settings before saving.",
     keywords: ["paragraph", "p", "lorem"],
     description: "Wrapped text; empty or 'lorem' gives placeholder text.",
     container: false,
@@ -278,6 +310,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "radio",
+    example: "radio: *Daily | Weekly",
     keywords: ["radio", "radios", "option"],
     description: "Radio buttons, one per | item: * or (o) selects one.",
     container: false,
@@ -287,6 +320,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "toggle",
+    example: "toggle: [on] Notifications",
     keywords: ["toggle", "switch"],
     description: "Switches, one per | item: [on], [off] or * for on.",
     container: false,
@@ -296,6 +330,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "slider",
+    example: "slider: 40%",
     keywords: ["slider", "range"],
     description: "A slider at a percentage: 'slider: 40%'.",
     container: false,
@@ -305,6 +340,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "alert",
+    example: "alert: {info} Saved",
     keywords: ["alert", "message", "notice"],
     description: "A tinted message box.",
     container: false,
@@ -314,6 +350,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "progress",
+    example: "progress: 60%",
     keywords: ["progress"],
     description: "A progress bar at a percentage; other text goes above it.",
     container: false,
@@ -323,6 +360,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "tooltip",
+    example: "tooltip: More information",
     keywords: ["tooltip", "hint"],
     description: "A small dark box with a pointer.",
     container: false,
@@ -332,6 +370,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "image",
+    example: "image: 320x180 Team photo",
     keywords: ["image", "img", "picture"],
     description: "A crossed image placeholder: 'image: 320x180 Caption'.",
     container: false,
@@ -341,6 +380,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "placeholder",
+    example: "placeholder: 240x40 Date picker",
     keywords: ["placeholder"],
     description:
       "A dashed box for something the syntax can't draw: 'placeholder: 240x40 Date picker'.",
@@ -351,6 +391,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "form",
+    example: "form: Profile\n  field: Name | input: Anna",
     keywords: ["form"],
     description: "A box whose fields line up after one label column.",
     container: true,
@@ -360,6 +401,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "field",
+    example: "field: Name | input: Anna",
     keywords: ["field"],
     description:
       "A label before one component: 'field: Name | input: Anna'. Without the |, field: is an input.",
@@ -370,6 +412,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "section",
+    example: "section: Members (count=3)\n  text: Anna",
     keywords: ["section"],
     description: "A header line with a count and a chevron over the components under it.",
     container: true,
@@ -379,6 +422,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "breadcrumb",
+    example: "breadcrumb: Home > Members > Anna",
     keywords: ["breadcrumb", "breadcrumbs", "crumbs"],
     description: "'Home > Users > Anna': links with chevrons; the starred or last is current.",
     container: false,
@@ -388,6 +432,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "pagination",
+    example: "pagination: < 1 *2 3 >",
     keywords: ["pagination", "pager", "pages"],
     description: "'< 1 *2 3 … 10 >': a box per page, the starred one filled.",
     container: false,
@@ -397,6 +442,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "menu",
+    example: "menu: Copy | Ctrl+C",
     keywords: ["menu", "contextmenu"],
     description: "A menu: one 'label | shortcut' item per line, - for a divider.",
     container: false,
@@ -406,6 +452,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "tree",
+    example: "tree: {folder} Project\n  + {folder} docs",
     keywords: ["tree"],
     description: "A tree from indented lines: '+ name' closed, '- name' open, * selects.",
     container: false,
@@ -415,6 +462,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "spin",
+    example: "spin: 12",
     keywords: ["spin", "number", "stepper"],
     description: "A number field with up and down arrows.",
     ...FIELD_LIKE,
