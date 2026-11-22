@@ -234,7 +234,7 @@ importers:
         specifier: 0.1.8
         version: 0.1.8
       '@resvg/resvg-js':
-        specifier: 2.6.2
+        specifier: ^2.6.2
         version: 2.6.2
       '@wiredown/core':
         specifier: workspace:*
@@ -249,7 +249,7 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       woff2-encoder:
-        specifier: 2.0.0
+        specifier: ^2.0.0
         version: 2.0.0
 
 packages:
