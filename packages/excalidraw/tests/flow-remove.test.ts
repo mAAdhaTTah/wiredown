@@ -120,7 +120,7 @@ test("a frame takes its label, notes, overlays and arrows; a person's arrow is u
   ]);
   expect(d1.boundElements).toHaveLength(2); // its text and F1's arrow
   sound(flow);
-  // numbers are never reused
+  // numbers are not reused while the deleted elements are in the drawing
   addScreen(flow, { screenId: "c", title: "c", path: "screens", size: home });
   expect(flowNodes(flow).map((n) => n.node)).toEqual(["F1", "D1", "F3"]);
 });
@@ -340,7 +340,7 @@ test("a copy from before elements recorded their id: removed by its image's id",
   const [label, image] = paste(flow, { legacy: true });
   const before = structuredClone(flow.elements);
   const original = node(flow, "F2");
-  const claimed = `F2 is claimed by elements ${original.id} and copy0001; remove the copy with "wiredown flow remove <flow> <id>"`;
+  const claimed = `F2 is claimed by elements ${original.id} and copy0001; remove the copy with "wiredown flow remove <flow> ${original.id}" or "wiredown flow remove <flow> copy0001"`;
   expect(lintFlow(flow, screens).map((f) => f.message)).toEqual([claimed]);
   expect(() => removeFromFlow(flow, ["F2"])).toThrow(claimed);
   expect(() => removeFromFlow(flow, ["F2#invite"])).toThrow(claimed);

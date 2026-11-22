@@ -387,8 +387,9 @@ person's copy of our elements is left where it is.
   them), points outside the flow's root, or whose screen is missing or has
   errors;
 - two frames or decisions claiming one name, a copy pasted before elements
-  recorded their own id: `F2 is claimed by elements <id> and <id>; remove
-the copy with "wiredown flow remove <flow> <id>"` (the flow commands,
+  recorded their own id: `F2 is claimed by elements <a> and <b>; remove
+the copy with "wiredown flow remove <flow> <a>" or "wiredown flow remove
+<flow> <b>"` (the flow commands,
   refresh included, refuse until then);
 - a person's copy of our elements, once per pasted group: `element <id> is
 a copy of F2's frame; flow commands leave copies alone: delete it in the
@@ -445,8 +446,10 @@ hand-editing its JSON. Each `<what>` is one of:
 
 Quote targets with `>` or `#` in the shell. Removing works as Excalidraw
 deletes: elements are marked `isDeleted` with a version bump, their text
-leaves `## Text Elements`, unused embeds leave `## Embedded Files`, and F-
-and D-numbers are never reused. Everything else is untouched, except that
+leaves `## Text Elements` and unused embeds leave `## Embedded Files`.
+Their F- and D-numbers stay taken until the drawing is saved in Obsidian,
+whose Excalidraw plugin drops deleted elements; after that, the next frame
+or decision can reuse a removed number. Everything else is untouched, except that
 remaining nodes drop removed arrows from `boundElements`. An arrow a person
 drew bound to a removed node is kept, with that end unbound. An element
 without wiredown data is refused (`element <id> has no wiredown data, so a

@@ -134,8 +134,9 @@ The root export renders nothing; SVG export is in the Node entry,
   throw; a person's copy of an overlay is not one of ours.
 
   `removeFromFlow(flow, targets)` removes as Excalidraw deletes: elements are
-  marked `isDeleted` and touched, never spliced out, so numbers stay taken and
-  `serializeFlow` drops their text and unused embeds. A target is a node (`F2`,
+  marked `isDeleted` and touched, never spliced out, and `serializeFlow` drops
+  their text and unused embeds. Their numbers stay taken only until the
+  Excalidraw plugin saves the drawing, which drops deleted elements. A target is a node (`F2`,
   with its label or text, notes, overlays and our arrows bound to it), an arrow
   (`F1->F2`: every arrow of ours that way), a highlight (`F2#id`), a mark
   (`F2#id:label`), notes (`F2:note`, or `F2:note:2` counting from the top) or an

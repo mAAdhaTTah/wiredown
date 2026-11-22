@@ -15,10 +15,12 @@ import {
   addScreen,
   connect,
   embedSize,
+  flowNodes,
   lintFlow,
   newFlow,
   parseFlow,
   refreshFlow,
+  removeFromFlow,
   screenElements,
   serializeFlow,
   styleScreens,
@@ -176,6 +178,40 @@ function refreshed(): string {
   return serializeFlow(flow);
 }
 
+// The commands' drawing with an arrow a person drew from F1 to F2, after
+// `flow remove … F2 'F1#go:1' D1:note`: deleted elements kept with isDeleted,
+// the person's arrow unbound from F2, F2's embed dropped.
+function removed(): string {
+  const flow = parseFlow(commands());
+  const [f1, f2] = ["F1", "F2"].map((n) => flowNodes(flow).find((f) => f.node === n)!.element);
+  const [x, y] = [Number(f1.x) + Number(f1.width) / 2, Number(f1.y) + Number(f1.height)];
+  const dy = Number(f2.y) - y;
+  flow.elements.push(
+    element("Hand0001", "arrow", {
+      index: "b9",
+      x,
+      y,
+      width: 0,
+      height: dy,
+      points: [
+        [0, 0],
+        [0, dy],
+      ],
+      lastCommittedPoint: null,
+      startBinding: { elementId: f1.id, mode: "orbit", fixedPoint: [0.5, 1] },
+      endBinding: { elementId: f2.id, mode: "orbit", fixedPoint: [0.5, 0] },
+      startArrowhead: null,
+      endArrowhead: "arrow",
+      elbowed: false,
+    }),
+  );
+  for (const n of [f1, f2]) (n.boundElements as unknown[]).push({ id: "Hand0001", type: "arrow" });
+  const after = parseFlow(serializeFlow(flow));
+  const { unbound } = removeFromFlow(after, ["F2", "F1#go:1", "D1:note"]);
+  if (unbound.length !== 1) throw new Error(`unbound ${JSON.stringify(unbound)}`);
+  return serializeFlow(after);
+}
+
 /** Which elements each element is bound to, by id. */
 type Bound = Pick<Seen, "id" | "startBinding" | "endBinding" | "boundElements" | "containerId">;
 function bindings(elements: Bound[]) {
@@ -232,6 +268,7 @@ const FLOWS = {
   "flows/new.excalidraw.md": written(),
   "docs/checkout/flows/commands.excalidraw.md": commands(),
   "docs/checkout/flows/refreshed.excalidraw.md": refreshed(),
+  "docs/checkout/flows/removed.excalidraw.md": removed(),
 };
 
 let obsidian: Obsidian;
@@ -375,12 +412,13 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
     })()`);
     expect(saved).not.toBe(text);
     expect(before(saved)).toBe(before(text));
+    // the plugin's save drops deleted elements
     const after = parseFlow(saved).elements;
-    expect(after.map((e) => e.id)).toEqual(flow.elements.map((e) => e.id));
+    expect(after.map((e) => e.id)).toEqual(live.map((e) => e.id));
     expect(after.map((e) => [e.groupIds, e.customData])).toEqual(
-      flow.elements.map((e) => [e.groupIds, e.customData]),
+      live.map((e) => [e.groupIds, e.customData]),
     );
-    expect(bindings(after)).toEqual(bindings(flow.elements));
+    expect(bindings(after)).toEqual(bindings(live as Bound[]));
     expect(parseFlow(saved).compressed).toBe(false);
   });
 
@@ -388,5 +426,14 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
     expect(images(parseFlow(saved).elements as Partial<Seen>[])).toEqual(images(live));
     expect(lintFlow(parseFlow(saved), screens)).toEqual([]);
     expect(refreshFlow(parseFlow(saved), screens)).toEqual([]);
+  });
+
+  // so a removed frame's number is free again
+  it.runIf(path.endsWith("/removed.excalidraw.md"))("drops removed elements on save", () => {
+    const after = parseFlow(saved);
+    expect(after.elements.filter((e) => e.isDeleted)).toEqual([]);
+    const size = { width: 100, height: 50 };
+    const added = addScreen(after, { screenId: "done", title: "Done", path: "screens", size });
+    expect(added).toBe("F2");
   });
 });
