@@ -125,24 +125,26 @@ reported under "Not drawn:" as drawn in a fallback font, so no request is
 made for a font that is not there. The renderer does not check that a
 listed folder exists.
 
-### Content Security Policy (unverified)
+### Content Security Policy
 
-A strict Content Security Policy works if it allows, from the page's own
-origin, scripts (module scripts and dynamic `import()`), `fetch` and workers,
-and allows inline styles and `data:` images and fonts: the renderer adds a
-`<style>` element, and each drawing is an SVG with its font inlined and its
-screens as `data:` images. For example:
+Gitea 28.4.0 sends no Content Security Policy by default. A strict policy
+works if it allows, from the page's own origin, scripts (module scripts and
+dynamic `import()`), `fetch` and workers, and allows inline styles and
+`data:` images and fonts: the renderer adds a `<style>` element, and each
+drawing is an SVG with its font inlined and its screens as `data:` images.
+Gitea's own pages also run inline scripts, so `script-src` needs
+`'unsafe-inline'` for Gitea. For example:
 
 ```text
-default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-img-src 'self' data:; font-src 'self' data:
+default-src 'self'; script-src 'self' 'unsafe-inline';
+style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:
 ```
 
 It needs no `'unsafe-eval'`. Without it, Excalidraw cannot subset the font
 (its subsetting code compiles with `new Function`): it logs console errors,
 in its worker and then on the page, and inlines the whole font instead, so
 drawings look the same and are larger. Excalidraw has no option to skip
-subsetting. Gitea's own policy was not checked.
+subsetting. `pnpm test:gitea` checks this policy on a real Gitea.
 
 ## What it assumes about the page
 

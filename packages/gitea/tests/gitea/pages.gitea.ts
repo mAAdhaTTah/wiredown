@@ -144,7 +144,10 @@ async function open(context: BrowserContext, path: string): Promise<Visit> {
   page.on("console", (m) => {
     if (m.type() === "error") errors.push(`console error: ${m.text()}`);
   });
-  page.on("requestfailed", (r) => errors.push(`request failed: ${r.url()}`));
+  // wiredown's own requests; Gitea cancels some of its own when it reloads
+  page.on("requestfailed", (r) => {
+    if (/\/assets\/wiredown\/|\/raw\//.test(r.url())) errors.push(`request failed: ${r.url()}`);
+  });
   page.on("request", (r) => {
     const url = new URL(r.url());
     if (!["data:", "blob:"].includes(url.protocol) && url.origin !== gitea.url)
@@ -279,24 +282,6 @@ it("draws blocks in a pull request comment, and in a comment's preview", async (
   await form.getByText("Preview", { exact: true }).click();
   await expect.poll(() => form.locator(".wiredown-block svg.wiredown-svg").count()).toBe(2);
   await form.getByRole("button", { name: "Comment", exact: true }).click();
-  // DIAGNOSTIC, to remove: what the page shows after posting.
-  await new Promise((r) => setTimeout(r, 5000));
-  await visit.page.screenshot({ path: join(SHOTS, "pr-posted.png"), fullPage: true });
-  console.log(
-    "after posting:",
-    visit.page.url(),
-    JSON.stringify(
-      await visit.page
-        .locator('[id^="issuecomment-"]')
-        .evaluateAll((els) =>
-          els.map(
-            (e) =>
-              `${e.id} ${e.className} blocks=${e.querySelectorAll(".wiredown-block").length} code=${e.querySelectorAll("code.language-wiredown").length} done=${e.querySelectorAll("[data-wiredown]").length}`,
-          ),
-        ),
-    ),
-    JSON.stringify(visit.errors),
-  );
   await expect.poll(() => comment.count()).toBe(4);
   await visit.page.waitForLoadState("load");
   expect(visit.errors).toEqual([]);
@@ -329,9 +314,10 @@ it("leaves a flow as it was with a notice when its raw file fails", async () => 
   await page.close();
 });
 
-// The README's example policy: no 'unsafe-eval'.
+// The README's example policy: no 'unsafe-eval'. Gitea's own inline scripts
+// need 'unsafe-inline'.
 const STRICT_CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:";
+  "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:";
 // Under it Excalidraw cannot subset its font: the worker fails, then the page
 // does, and the whole font is inlined. Only these errors are allowed, and the
 // page error only from the subsetting worker.
