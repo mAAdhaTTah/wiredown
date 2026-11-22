@@ -2,8 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Window } from "happy-dom";
 import { expect, it } from "vitest";
-import { gitea, rawRoot, rawUrl } from "../src/gitea";
-import { DONE } from "../src/host";
+import { DONE, findBlocks, findFlow, noteUrl, rawRoot, rawUrl, theme } from "../src/gitea";
 
 // The fixtures' structure is assumed from the prototypes, not captured from a live Gitea.
 export function page(fixture: string, url: string, dark = false): Document {
@@ -21,22 +20,22 @@ const FLOW = "https://git.example/me/app/src/branch/main/docs/flows/review.excal
 
 it("finds wiredown blocks, their ^id paragraphs and the element to replace", () => {
   const document = page("file-view.html", FILE);
-  const blocks = gitea.findBlocks(document);
+  const blocks = findBlocks(document);
   expect(blocks.map((b) => [b.element.tagName, b.element.className, b.id, b.source])).toEqual([
     ["DIV", "code-block-container", "base", "text: Hello #hello"],
     ["PRE", "", "variant", "extends: base\nreplace: hello\n  text: Changed"],
   ]);
   blocks[0]!.element.setAttribute(DONE, "");
-  expect(gitea.findBlocks(document).map((b) => b.id)).toEqual(["variant"]);
+  expect(findBlocks(document).map((b) => b.id)).toEqual(["variant"]);
 });
 
 it("finds blocks outside file views, without an id", () => {
   const document = page("comment.html", "https://git.example/me/app/pulls/3");
-  expect(gitea.findBlocks(document)).toEqual([
+  expect(findBlocks(document)).toEqual([
     { element: document.querySelector("pre"), source: "text: In a comment" },
   ]);
-  expect(gitea.noteUrl(document)).toBeUndefined();
-  expect(gitea.findFlow(document)).toBeUndefined();
+  expect(noteUrl(document)).toBeUndefined();
+  expect(findFlow(document)).toBeUndefined();
 });
 
 it("derives raw URLs from file view URLs, under a sub-path too", () => {
@@ -61,28 +60,28 @@ it("takes the raw root at the ref's first segment, the shortest plausible root",
 });
 
 it("gives a Markdown file view's raw URL for variants", () => {
-  expect(gitea.noteUrl(page("file-view.html", FILE))).toBe(
+  expect(noteUrl(page("file-view.html", FILE))).toBe(
     "https://git.example/me/app/raw/branch/main/docs/screens.md",
   );
-  expect(gitea.noteUrl(page("file-view.html", FILE.replace(".md", ".txt")))).toBeUndefined();
+  expect(noteUrl(page("file-view.html", FILE.replace(".md", ".txt")))).toBeUndefined();
 });
 
 it("detects a flow page and its raw URL, once", () => {
   const document = page("flow-view.html", FLOW);
-  const flow = gitea.findFlow(document)!;
+  const flow = findFlow(document)!;
   expect(flow.element.classList.contains("file-view")).toBe(true);
   expect(flow.url).toBe(
     "https://git.example/me/app/raw/branch/main/docs/flows/review.excalidraw.md",
   );
   expect(flow.root).toBe("https://git.example/me/app/raw/branch/main/");
   flow.element.setAttribute(DONE, "");
-  expect(gitea.findFlow(document)).toBeUndefined();
-  expect(gitea.findFlow(page("file-view.html", FILE))).toBeUndefined();
+  expect(findFlow(document)).toBeUndefined();
+  expect(findFlow(page("file-view.html", FILE))).toBeUndefined();
 });
 
 it("reads the theme from html[data-theme], following the OS for auto", () => {
-  expect(gitea.theme(page("file-view.html", FILE))).toBe("dark");
-  expect(gitea.theme(page("comment.html", FILE))).toBe("light");
-  expect(gitea.theme(page("flow-view.html", FLOW))).toBe("light");
-  expect(gitea.theme(page("flow-view.html", FLOW, true))).toBe("dark");
+  expect(theme(page("file-view.html", FILE))).toBe("dark");
+  expect(theme(page("comment.html", FILE))).toBe("light");
+  expect(theme(page("flow-view.html", FLOW))).toBe("light");
+  expect(theme(page("flow-view.html", FLOW, true))).toBe("dark");
 });

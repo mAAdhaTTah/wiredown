@@ -14,7 +14,7 @@ but has not yet run on a forge or in a real browser.
 | `@wiredown/excalidraw`      | Excalidraw elements and headless SVG and PNG export                         |
 | `@wiredown/cli`             | `wiredown check`, `render` to SVG or PNG, `flow` commands and `lint` for CI |
 | `@wiredown/obsidian-plugin` | Obsidian code-block processor                                               |
-| `@wiredown/web`             | Browser script that renders blocks and flows on Gitea pages (unverified)    |
+| `@wiredown/web`             | Script that renders blocks and flows on Gitea's pages (unverified)          |
 
 ## Development
 

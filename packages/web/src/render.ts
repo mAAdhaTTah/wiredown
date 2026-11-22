@@ -1,5 +1,5 @@
-// Draws the loader's targets in place. Host-neutral: page knowledge comes
-// from the Host, and Excalidraw's exporter is passed in.
+// Draws the loader's targets in place. What it knows of the page comes in
+// the targets (gitea.ts reads it), and Excalidraw's exporter is passed in.
 import { checkScreens, FENCE_KEYWORD, layoutScreen } from "@wiredown/core";
 import type { CheckedScreen, CheckScreensResult, ScreenDiagnostic } from "@wiredown/core";
 import {
@@ -14,7 +14,7 @@ import {
   screenElements,
 } from "@wiredown/excalidraw";
 import type { ExcalidrawElementJson } from "@wiredown/excalidraw";
-import type { Block, FlowTarget, Host, Theme } from "./host";
+import type { Block, FlowTarget, Theme } from "./gitea";
 import { notice } from "./loader";
 import type { Targets } from "./loader";
 
@@ -48,7 +48,6 @@ const STYLE = `.wiredown-block{margin:0.5em 0}
 
 export async function render(
   targets: Targets,
-  host: Host,
   exportSvg: ExportSvg,
   document: Document,
   /** Comma-separated font folders the site added next to Excalifont. */
@@ -60,8 +59,9 @@ export async function render(
     style.textContent = STYLE;
     document.head.append(style);
   }
-  const theme = host.theme(document);
-  if (targets.blocks.length) await renderBlocks(targets.blocks, host, exportSvg, document, theme);
+  const { theme } = targets;
+  if (targets.blocks.length)
+    await renderBlocks(targets.blocks, targets.noteUrl, exportSvg, document, theme);
   if (targets.flow) await renderFlow(targets.flow, exportSvg, document, theme, fonts);
 }
 
@@ -161,13 +161,12 @@ function fitted(svg: SVGSVGElement): SVGSVGElement {
 
 async function renderBlocks(
   blocks: Block[],
-  host: Host,
+  url: string | undefined,
   exportSvg: ExportSvg,
   document: Document,
   theme: Theme,
 ) {
   let note: string | undefined;
-  const url = host.noteUrl(document);
   if (url) {
     try {
       note = await fetchText(url, document);

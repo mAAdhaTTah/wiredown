@@ -1,5 +1,4 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { gitea } from "../src/gitea";
 import { LOAD_FAILED, rendererUrl, start } from "../src/loader";
 import type { Renderer } from "../src/loader";
 
@@ -13,7 +12,7 @@ afterEach(() => {
 
 function run(load: (url: string) => Promise<Renderer>) {
   const spy = vi.fn(load);
-  stop = start({ document, host: gitea, rendererUrl: "https://cdn.example/r.js", load: spy });
+  stop = start({ document, rendererUrl: "https://cdn.example/r.js", load: spy });
   return spy;
 }
 const renderer = (): Renderer => ({ render: vi.fn(async () => {}) });
@@ -51,13 +50,22 @@ it("passes the loader tag's extra fonts to the renderer", async () => {
   const load = async () => r;
   stop = start({
     document,
-    host: gitea,
     rendererUrl: "https://cdn.example/r.js",
     load,
     fonts: "Virgil",
   });
   await vi.waitFor(() => expect(r.render).toHaveBeenCalledOnce());
-  expect(vi.mocked(r.render).mock.calls[0]![2]).toBe("Virgil");
+  expect(vi.mocked(r.render).mock.calls[0]![1]).toBe("Virgil");
+});
+
+it("passes the page's theme to the renderer", async () => {
+  document.documentElement.dataset.theme = "gitea-dark";
+  document.body.innerHTML = block("text: a");
+  const r = renderer();
+  run(async () => r);
+  await vi.waitFor(() => expect(r.render).toHaveBeenCalledOnce());
+  expect(vi.mocked(r.render).mock.calls[0]![0].theme).toBe("dark");
+  delete document.documentElement.dataset.theme;
 });
 
 it("loads the renderer next to the loader, so a pinned version gets its own", () => {

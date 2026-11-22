@@ -1,5 +1,4 @@
 // dist/wiredown-renderer.js: imported by the loader on pages with wireframes.
-import type { Host } from "./host";
 import type { Targets } from "./loader";
 import { render as renderTargets } from "./render";
 import type { ExportSvg } from "./render";
@@ -32,8 +31,8 @@ export const exportSvg: ExportSvg = async (scene, { theme, padding }) => {
   });
 };
 
-export function render(targets: Targets, host: Host, fonts?: string): Promise<void> {
-  return renderTargets(targets, host, exportSvg, document, fonts).catch((error) =>
+export function render(targets: Targets, fonts?: string): Promise<void> {
+  return renderTargets(targets, exportSvg, document, fonts).catch((error) =>
     console.warn("wiredown:", error),
   );
 }

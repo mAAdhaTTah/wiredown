@@ -1,9 +1,9 @@
 # @wiredown/web
 
-A browser script for Markdown hosts that allow custom JavaScript. It draws
-`wiredown` code blocks and `.excalidraw.md` flows on a page with Excalidraw,
-and loads Excalidraw only on pages that have one. Gitea is the only host it
-knows.
+A script for Gitea, added to every page through Gitea's custom templates. It
+draws `wiredown` code blocks and `.excalidraw.md` flows on Gitea's pages with
+Excalidraw, and loads Excalidraw only on pages that have one. It supports
+Gitea only.
 
 **Status: built and tested in happy-dom only. It has never run on a Gitea
 instance or in a real browser.** See "Verify on a forge" below.
@@ -107,10 +107,9 @@ subsetting. Gitea's own policy was not checked.
 
 ## What it assumes about the page
 
-Everything host-specific is in `src/gitea.ts`, behind the `Host` interface
-in `src/host.ts`:
+Everything it reads from the page is in `src/gitea.ts`:
 
-| `Host` method     | Gitea assumption                                                                                                                  |
+| Function          | Gitea assumption                                                                                                                  |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `findBlocks(doc)` | A block is `pre > code.language-wiredown`, maybe in `.code-block-container`; a following paragraph whose text is `^id` is its id. |
 | `findFlow(doc)`   | The URL is a file view ending in `.excalidraw.md`; its rendered Markdown is `.file-view.markup`.                                  |

@@ -2,7 +2,7 @@ import { checkScreens, layoutScreen } from "@wiredown/core";
 import { addScreen, embedSize, newFlow, screenElements, serializeFlow } from "@wiredown/excalidraw";
 import type { ExcalidrawElementJson } from "@wiredown/excalidraw";
 import { afterEach, expect, it, vi } from "vitest";
-import type { Block, Host } from "../src/host";
+import type { Block } from "../src/gitea";
 import { fetchText, render, resolveBlocks } from "../src/render";
 import type { ExportSvg } from "../src/render";
 
@@ -37,16 +37,6 @@ function blocks(...items: [string, string?][]): Block[] {
   });
 }
 
-function host(overrides: Partial<Host> = {}): Host {
-  return {
-    findBlocks: () => [],
-    findFlow: () => undefined,
-    noteUrl: () => undefined,
-    theme: () => "light",
-    ...overrides,
-  };
-}
-
 /** Same-origin fetches served from a map; anything else is a 404. */
 function serve(files: Record<string, string>) {
   const fetch = vi.fn(async (url: string) =>
@@ -62,7 +52,7 @@ const texts = (exportSvg: ReturnType<typeof fakeExport>) =>
 it("replaces a block with its drawing, keeping the source under it", async () => {
   const [block] = blocks([base, "base"]);
   const exportSvg = fakeExport();
-  await render({ blocks: [block!] }, host({ theme: () => "dark" }), exportSvg, document);
+  await render({ blocks: [block!], theme: "dark" }, exportSvg, document);
   const container = document.body.firstElementChild!;
   expect(container.className).toBe("wiredown-block");
   expect(container.querySelector(":scope > svg")!.getAttribute("class")).toBe("wiredown-svg");
@@ -85,7 +75,7 @@ it.each([true, false])(
     ];
     const all = blocks(...(first ? items : items.reverse()));
     const exportSvg = fakeExport();
-    await render({ blocks: all }, host(), exportSvg, document);
+    await render({ blocks: all, theme: "light" }, exportSvg, document);
     expect(document.querySelectorAll(".wiredown-block > svg")).toHaveLength(2);
     expect(texts(exportSvg)).toContain("Changed");
   },
@@ -98,8 +88,7 @@ it("resolves variants against the page's Markdown file, with file lines", async 
   const all = blocks([base], ["extends: base\nreplace: nope\n  text: x"]);
   const exportSvg = fakeExport();
   await render(
-    { blocks: all },
-    host({ noteUrl: () => "http://localhost:3000/raw/screens.md" }),
+    { blocks: all, theme: "light", noteUrl: "http://localhost:3000/raw/screens.md" },
     exportSvg,
     document,
   );
@@ -117,8 +106,7 @@ it("falls back to the page's blocks when a block is not in the file", async () =
   const all = blocks([base, "base"], [variant, "variant"]);
   const exportSvg = fakeExport();
   await render(
-    { blocks: all },
-    host({ noteUrl: () => "http://localhost:3000/raw/a.md" }),
+    { blocks: all, theme: "light", noteUrl: "http://localhost:3000/raw/a.md" },
     exportSvg,
     document,
   );
@@ -128,7 +116,7 @@ it("falls back to the page's blocks when a block is not in the file", async () =
 it("shows errors as line N: message with the source visible, and does not export", async () => {
   const [block] = blocks(["box\n  bogus: x"]);
   const exportSvg = fakeExport();
-  await render({ blocks: [block!] }, host(), exportSvg, document);
+  await render({ blocks: [block!], theme: "light" }, exportSvg, document);
   const container = document.querySelector(".wiredown-block")!;
   expect(container.querySelector(".wiredown-error li")!.textContent).toMatch(/^line \d+: /);
   expect(container.querySelector(":scope > pre")).toBe(block!.element);
@@ -138,7 +126,7 @@ it("shows errors as line N: message with the source visible, and does not export
 
 it("shows warnings under the drawing", async () => {
   const [block] = blocks(["text: {warnin} ⋯"]);
-  await render({ blocks: [block!] }, host(), fakeExport(), document);
+  await render({ blocks: [block!], theme: "light" }, fakeExport(), document);
   const warnings = [...document.querySelectorAll(".wiredown-warning li")].map(
     (li) => li.textContent,
   );
@@ -154,7 +142,9 @@ it("contains an exporter failure: the block stays, with a notice and one warning
   const exportSvg = vi.fn<ExportSvg>(async () => {
     throw new Error("canvas exploded");
   });
-  await expect(render({ blocks: [a!, b!] }, host(), exportSvg, document)).resolves.toBeUndefined();
+  await expect(
+    render({ blocks: [a!, b!], theme: "light" }, exportSvg, document),
+  ).resolves.toBeUndefined();
   expect(a!.element.outerHTML).toBe(html);
   expect(a!.element.parentElement).toBe(document.body);
   expect(a!.element.nextElementSibling!.textContent).toBe(
@@ -206,7 +196,7 @@ it("draws a flow above the page with each embedded screen as a padded SVG file",
   serve({ [FLOW_URL]: flowFile(), [SCREENS_URL]: fence("text: One", "one") });
   const target = flowTarget();
   const exportSvg = fakeExport(100, 50);
-  await render({ blocks: [], flow: target }, host({ theme: () => "dark" }), exportSvg, document);
+  await render({ blocks: [], flow: target, theme: "dark" }, exportSvg, document);
   // One export for "one" (light), one for the whole drawing (page theme).
   expect(exportSvg.mock.calls.map(([, o]) => o)).toEqual([
     { theme: "light", padding: 0 },
@@ -258,7 +248,7 @@ it("finds each embed's screens file by the shared rule, fetching candidates in o
   });
   const target = flowTarget();
   const exportSvg = fakeExport();
-  await render({ blocks: [], flow: target }, host(), exportSvg, document);
+  await render({ blocks: [], flow: target, theme: "light" }, exportSvg, document);
   expect(fetch.mock.calls.map(([url]) => url)).toEqual([
     FLOW_URL,
     // the path from the repository's raw root first
@@ -288,7 +278,7 @@ it("contains a flow that cannot be read", async () => {
   serve({ [FLOW_URL]: "not a drawing" });
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   const target = flowTarget();
-  await render({ blocks: [], flow: target }, host(), fakeExport(), document);
+  await render({ blocks: [], flow: target, theme: "light" }, fakeExport(), document);
   expect(target.element.previousElementSibling!.className).toBe("wiredown-notice");
   expect(target.element.previousElementSibling!.textContent).toMatch(/^Could not draw this flow: /);
   expect(target.element.textContent).toBe("rendered markdown");
@@ -303,7 +293,7 @@ it("reports rejected images and unshipped fonts before export", async () => {
   serve({ [FLOW_URL]: serializeFlow(flow) });
   const target = flowTarget();
   const exportSvg = fakeExport();
-  await render({ blocks: [], flow: target }, host(), exportSvg, document);
+  await render({ blocks: [], flow: target, theme: "light" }, exportSvg, document);
   expect(document.querySelector(".wiredown-notice")!.textContent).toContain("image file remote:");
   expect(document.querySelector(".wiredown-notice")!.textContent).toContain(
     "text in font 100 is drawn in a fallback font",
@@ -323,7 +313,7 @@ it("draws Excalidraw's other fonts in Excalifont unless the site added them", as
   const notes = async (fonts?: string) => {
     document.body.innerHTML = "";
     const exportSvg = fakeExport();
-    await render({ blocks: [], flow: flowTarget() }, host(), exportSvg, document, fonts);
+    await render({ blocks: [], flow: flowTarget(), theme: "light" }, exportSvg, document, fonts);
     return {
       families: exportSvg.mock.calls[0][0].elements.map((e) => e.fontFamily),
       notice: document.querySelector(".wiredown-notice")?.textContent ?? "",
@@ -346,7 +336,7 @@ it("says when a flow is out of date with its screens, and draws it as it was", a
   const notice = async (screens: string) => {
     document.body.innerHTML = "";
     serve({ [FLOW_URL]: serializeFlow(flow), [SCREENS_URL]: screens });
-    await render({ blocks: [], flow: flowTarget() }, host(), fakeExport(), document);
+    await render({ blocks: [], flow: flowTarget(), theme: "light" }, fakeExport(), document);
     expect(document.querySelector(".wiredown-flow svg")).not.toBeNull();
     return document.querySelector(".wiredown-notice")?.textContent;
   };

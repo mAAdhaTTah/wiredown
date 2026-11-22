@@ -1,23 +1,26 @@
 // The small script every page loads. It looks for wireframes and, only when
 // there are some, imports the renderer that sits next to it.
-import { DONE } from "./host";
-import type { Block, FlowTarget, Host } from "./host";
+import { DONE, findBlocks, findFlow, noteUrl, theme } from "./gitea";
+import type { Block, FlowTarget, Theme } from "./gitea";
 
+/** What the loader found on the page, for the renderer. */
 export interface Targets {
   blocks: Block[];
   flow?: FlowTarget;
+  theme: Theme;
+  /** The raw Markdown file the page shows, if it shows one (see noteUrl). */
+  noteUrl?: string;
 }
 
 /** The renderer module's interface (wiredown-renderer.js). */
 export interface Renderer {
   /** Draws the targets in place. Never rejects. */
   /** `fonts` lists extra font folders the site serves (data-fonts). */
-  render(targets: Targets, host: Host, fonts?: string): Promise<void>;
+  render(targets: Targets, fonts?: string): Promise<void>;
 }
 
 export interface LoaderOptions {
   document: Document;
-  host: Host;
   /** URL of wiredown-renderer.js; see rendererUrl. */
   rendererUrl: string;
   /** Imports the renderer; a dynamic import() by default. */
@@ -48,14 +51,21 @@ export function notice(element: Element, text: string, where: "before" | "after"
  * and previews that arrive after load). Returns a function that stops watching.
  */
 export function start(options: LoaderOptions): () => void {
-  const { document, host } = options;
+  const { document } = options;
   const load =
     options.load ?? ((url: string) => import(/* @vite-ignore */ url) as Promise<Renderer>);
   let renderer: Promise<Renderer> | undefined;
   const scan = () => {
-    const blocks = host.findBlocks(document);
-    const flow = host.findFlow(document);
+    const blocks = findBlocks(document);
+    const flow = findFlow(document);
     if (!blocks.length && !flow) return;
+    const note = blocks.length ? noteUrl(document) : undefined;
+    const targets: Targets = {
+      blocks,
+      ...(flow ? { flow } : {}),
+      theme: theme(document),
+      ...(note ? { noteUrl: note } : {}),
+    };
     for (const block of blocks) block.element.setAttribute(DONE, "");
     flow?.element.setAttribute(DONE, "");
     if (!renderer) {
@@ -64,7 +74,7 @@ export function start(options: LoaderOptions): () => void {
     }
     renderer
       .then(
-        (r) => r.render(flow ? { blocks, flow } : { blocks }, host, options.fonts),
+        (r) => r.render(targets, options.fonts),
         () => {
           for (const block of blocks) notice(block.element, LOAD_FAILED);
           if (flow) notice(flow.element, LOAD_FAILED, "before");

@@ -1,5 +1,5 @@
-// Gitea adapter. Every assumption about Gitea's HTML and URLs is here, and
-// none has been checked on a live Gitea:
+// What wiredown reads from a Gitea page. Every assumption about Gitea's HTML
+// and URLs is here, and none has been checked on a live Gitea:
 // - A fenced block renders as `pre > code.language-<lang>`, possibly inside
 //   a `.code-block-container` (from the round-2 page script prototype).
 // - A `^id` line after a block renders as the next element, a paragraph
@@ -15,8 +15,34 @@
 //   `/` cannot be told from the path after it, so the root is taken at the
 //   ref's first segment: the shortest plausible root.
 import { FENCE_KEYWORD } from "@wiredown/core";
-import { DONE } from "./host";
-import type { Block, FlowTarget, Host, Theme } from "./host";
+
+export type Theme = "light" | "dark";
+
+/** A rendered `wiredown` code block. */
+export interface Block {
+  /** The element the drawing replaces; it is kept under the drawing. */
+  element: HTMLElement;
+  /** The block's text, as written between the fences. */
+  source: string;
+  /** The block's `^id`, when the page shows one after the block. */
+  id?: string;
+}
+
+/** A page that shows a rendered `.excalidraw.md` file. */
+export interface FlowTarget {
+  /** The rendered Markdown; the drawing is shown above it. */
+  element: HTMLElement;
+  /** Same-origin URL of the file's raw text. */
+  url: string;
+  /**
+   * Same-origin URL, ending in `/`, of the repository's raw-content root:
+   * the search for the flow's screens files never goes above it.
+   */
+  root: string;
+}
+
+/** Set on an element once wiredown has handled it, so it is not handled twice. */
+export const DONE = "data-wiredown";
 
 const CODE = `pre > code.language-${FENCE_KEYWORD}`;
 const FILE_VIEW = ".file-view.markup";
@@ -45,37 +71,45 @@ function fileView(
   return { element, url };
 }
 
-export const gitea: Host = {
-  findBlocks(document) {
-    const blocks: Block[] = [];
-    for (const code of document.querySelectorAll<HTMLElement>(CODE)) {
-      const pre = code.parentElement!;
-      const element = pre.closest<HTMLElement>(".code-block-container") ?? pre;
-      if (element.hasAttribute(DONE)) continue;
-      const id = ID.exec(element.nextElementSibling?.textContent?.trim() ?? "")?.[1];
-      blocks.push({
-        element,
-        source: (code.textContent ?? "").replace(/\n$/, ""),
-        ...(id ? { id } : {}),
-      });
-    }
-    return blocks;
-  },
-  findFlow(document): FlowTarget | undefined {
-    const view = fileView(document, /\.excalidraw\.md$/i);
-    const root = view && rawRoot(view.url);
-    return view && root && !view.element.hasAttribute(DONE) ? { ...view, root } : undefined;
-  },
-  noteUrl(document) {
-    return fileView(document, /\.(md|markdown)$/i)?.url;
-  },
-  theme(document): Theme {
-    const name = document.documentElement.dataset.theme ?? "";
-    if (name.includes("dark")) return "dark";
-    if (name.includes("auto"))
-      return document.defaultView?.matchMedia?.("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    return "light";
-  },
-};
+/** The page's `wiredown` blocks that are not drawn yet. */
+export function findBlocks(document: Document): Block[] {
+  const blocks: Block[] = [];
+  for (const code of document.querySelectorAll<HTMLElement>(CODE)) {
+    const pre = code.parentElement!;
+    const element = pre.closest<HTMLElement>(".code-block-container") ?? pre;
+    if (element.hasAttribute(DONE)) continue;
+    const id = ID.exec(element.nextElementSibling?.textContent?.trim() ?? "")?.[1];
+    blocks.push({
+      element,
+      source: (code.textContent ?? "").replace(/\n$/, ""),
+      ...(id ? { id } : {}),
+    });
+  }
+  return blocks;
+}
+
+/** The flow the page shows, if it shows one that is not drawn yet. */
+export function findFlow(document: Document): FlowTarget | undefined {
+  const view = fileView(document, /\.excalidraw\.md$/i);
+  const root = view && rawRoot(view.url);
+  return view && root && !view.element.hasAttribute(DONE) ? { ...view, root } : undefined;
+}
+
+/**
+ * Same-origin URL of the raw Markdown file the page shows, when it shows
+ * one file, so variants resolve as the CLI resolves them.
+ */
+export function noteUrl(document: Document): string | undefined {
+  return fileView(document, /\.(md|markdown)$/i)?.url;
+}
+
+/** The page's current theme. */
+export function theme(document: Document): Theme {
+  const name = document.documentElement.dataset.theme ?? "";
+  if (name.includes("dark")) return "dark";
+  if (name.includes("auto"))
+    return document.defaultView?.matchMedia?.("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  return "light";
+}
