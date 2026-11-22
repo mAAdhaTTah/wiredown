@@ -1,5 +1,5 @@
 {
-  "name": "@wiredown/obsidian-plugin",
+  "name": "@wiredown/obsidian",
   "version": "0.0.0",
   "private": true,
   "type": "module",

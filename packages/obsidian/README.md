@@ -12,7 +12,7 @@ commands. Variants resolve against block ids in the same note.
 ## Manual private installation
 
 From the repository root, run `pnpm install` and `pnpm build`. Copy the
-contents of `packages/obsidian-plugin/dist/` into
+contents of `packages/obsidian/dist/` into
 `<vault>/.obsidian/plugins/wiredown/` (main.js, manifest.json, styles.css).
 Reload Obsidian and enable Wiredown in Community plugins. Repeat after
 updates. No versions.json is required for manual installation; private BRAT

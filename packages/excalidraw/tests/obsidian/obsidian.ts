@@ -14,7 +14,7 @@ import { join } from "node:path";
 const OBSIDIAN_VERSION = "1.15.1";
 const PLUGIN_VERSION = "2.29.0";
 const PLUGIN_ID = "obsidian-excalidraw-plugin";
-const WIREDOWN = new URL("../../../obsidian-plugin/dist/", import.meta.url);
+const WIREDOWN = new URL("../../../obsidian/dist/", import.meta.url);
 const WIREDOWN_FILES = ["main.js", "manifest.json", "styles.css"];
 
 const cache = join(tmpdir(), "wiredown-obsidian");
@@ -58,7 +58,7 @@ async function installPlugins(vault: string): Promise<void> {
   for (const name of WIREDOWN_FILES) {
     const file = new URL(name, WIREDOWN);
     if (!existsSync(file))
-      throw new Error(`${file.pathname} is missing: build @wiredown/obsidian-plugin first`);
+      throw new Error(`${file.pathname} is missing: build @wiredown/obsidian first`);
     copyFileSync(file, join(wiredown, name));
   }
   writeFileSync(

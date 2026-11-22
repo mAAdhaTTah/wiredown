@@ -7,13 +7,13 @@ by a person in Obsidian and in a Git forge.
 
 Implemented packages are listed below; `@wiredown/web` is planned.
 
-| Package                     | Purpose                                                                     |
-| --------------------------- | --------------------------------------------------------------------------- |
-| `@wiredown/core`            | Parser, variants, layout, text metrics, and validation                      |
-| `@wiredown/excalidraw`      | Excalidraw elements and headless SVG and PNG export                         |
-| `@wiredown/cli`             | `wiredown check`, `render` to SVG or PNG, `flow` commands and `lint` for CI |
-| `@wiredown/obsidian-plugin` | Obsidian code-block processor                                               |
-| `@wiredown/web`             | Rendering for Markdown hosts, starting with Gitea                           |
+| Package                | Purpose                                                                     |
+| ---------------------- | --------------------------------------------------------------------------- |
+| `@wiredown/core`       | Parser, variants, layout, text metrics, and validation                      |
+| `@wiredown/excalidraw` | Excalidraw elements and headless SVG and PNG export                         |
+| `@wiredown/cli`        | `wiredown check`, `render` to SVG or PNG, `flow` commands and `lint` for CI |
+| `@wiredown/obsidian`   | Obsidian code-block processor                                               |
+| `@wiredown/web`        | Rendering for Markdown hosts, starting with Gitea                           |
 
 ## Development
 

@@ -7,5 +7,5 @@ export default defineProject({
     conditions: ["@wiredown/source", ...defaultClientConditions],
     alias: { obsidian: new URL("./tests/obsidian.ts", import.meta.url).pathname },
   },
-  test: { name: "obsidian-plugin", environment: "happy-dom", include: ["tests/**/*.test.ts"] },
+  test: { name: "obsidian", environment: "happy-dom", include: ["tests/**/*.test.ts"] },
 });
