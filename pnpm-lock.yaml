@@ -236,9 +236,15 @@ importers:
 
   packages/core:
     devDependencies:
+      '@excalidraw/excalidraw':
+        specifier: ^0.18.1
+        version: 0.18.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
+      playwright-core:
+        specifier: ^1.65.1
+        version: 1.65.1
 
   packages/evals:
     dependencies:
@@ -256,7 +262,7 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6))
       vitest-evals:
-        specifier: 0.18.1
+        specifier: ^0.18.1
         version: 0.18.1(tinyrainbow@3.2.0)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)))(zod@4.6.7)
 
   packages/excalidraw:
@@ -287,7 +293,7 @@ importers:
   packages/gitea:
     devDependencies:
       '@excalidraw/excalidraw':
-        specifier: 0.18.1
+        specifier: ^0.18.1
         version: 0.18.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/node':
         specifier: ^26.6.6
@@ -305,7 +311,7 @@ importers:
         specifier: ^21.0.4
         version: 21.0.4
       playwright-core:
-        specifier: 1.65.1
+        specifier: ^1.65.1
         version: 1.65.1
       react:
         specifier: ^18.3.1

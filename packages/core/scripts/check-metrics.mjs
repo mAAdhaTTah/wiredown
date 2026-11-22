@@ -1,14 +1,16 @@
 // Compare table widths with the browser canvas used by Excalidraw.
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { chromium } from "playwright-core";
 import { EXCALIFONT } from "../dist/metrics-excalifont.js";
 import { fontMeasurer } from "../dist/metrics.js";
 
-const require = createRequire(new URL("../../gitea/package.json", import.meta.url));
-const { chromium } = require("playwright-core");
-const dir = join(dirname(require.resolve("@excalidraw/excalidraw")), "fonts/Excalifont");
+const dir = join(
+  dirname(fileURLToPath(import.meta.resolve("@excalidraw/excalidraw"))),
+  "fonts/Excalifont",
+);
 const faces = readdirSync(dir)
   .filter((f) => f.endsWith(".woff2"))
   .map(
