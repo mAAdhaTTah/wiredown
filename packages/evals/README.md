@@ -50,10 +50,11 @@ Each case records:
 - the final file, every prompt and reply, wall time, tokens and cost as
   `claude -p --output-format json` reports them.
 
-The vitest-evals reporter shows four 0–1 scores per case:
-`CleanFirstAttempt`, `CleanWithinCap`, `FixEfficiency` (1 / (1 + fix
-rounds)) and `StructureOk`. They are measures, not pass/fail
-(`judgeThreshold: null`); a case fails only when the pipeline itself breaks.
+The vitest-evals reporter shows two 0–1 scores per case: `FixEfficiency`
+(1 when clean on the first attempt, 1 / (1 + fix rounds) after fixes, 0 when
+not clean within the cap) and `StructureOk`. They are measures, not
+pass/fail (`judgeThreshold: null`); a case fails only when the pipeline
+itself breaks.
 
 **The eval does not judge whether the requested change was made
 correctly.** A clean check and `structureOk` say the file parses and has the

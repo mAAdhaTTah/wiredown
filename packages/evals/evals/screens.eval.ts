@@ -45,7 +45,6 @@ interface CaseInput {
 /** The run's measures and its final file; prompts and replies go in the events. */
 type CaseOutput = {
   firstAttemptErrors: number | null;
-  firstClean: boolean;
   fixRounds: number | null;
   cap: number;
   attempts: number;
@@ -66,7 +65,6 @@ const harness = createHarness<CaseInput, CaseOutput>({
     return {
       output: {
         firstAttemptErrors: result.firstAttemptErrors,
-        firstClean: result.firstClean,
         fixRounds: result.fixRounds,
         cap: config.cap,
         attempts: result.attempts.length,
@@ -102,22 +100,17 @@ type Ctx = JudgeContext<CaseInput, CaseOutput>;
 
 // Scores are measures, not pass/fail: judgeThreshold is null below.
 const judges = [
-  createJudge<Ctx>("CleanFirstAttempt", ({ output }) => ({
-    score: output.firstClean ? 1 : 0,
-    metadata: { rationale: `first-attempt errors: ${output.firstAttemptErrors ?? "no file"}` },
-  })),
-  createJudge<Ctx>("CleanWithinCap", ({ output }) => ({
-    score: output.fixRounds === null ? 0 : 1,
+  // 1 when clean on the first attempt, 1/2 after one fix round, and so on;
+  // 0 when not clean within the cap
+  createJudge<Ctx>("FixEfficiency", ({ output }) => ({
+    score: output.fixRounds === null ? 0 : 1 / (1 + output.fixRounds),
     metadata: {
       rationale:
         output.fixRounds === null
-          ? `not clean after ${output.cap} fix round(s)`
+          ? `not clean after ${output.cap} fix round(s); ` +
+            `first-attempt errors: ${output.firstAttemptErrors ?? "no file"}`
           : `clean after ${output.fixRounds} fix round(s)`,
     },
-  })),
-  // 1 when clean on the first attempt, 1/2 after one fix round, and so on
-  createJudge<Ctx>("FixEfficiency", ({ output }) => ({
-    score: output.fixRounds === null ? 0 : 1 / (1 + output.fixRounds),
   })),
   // structural only (ids kept, a variant of the base): it does not judge
   // whether the requested change was made
