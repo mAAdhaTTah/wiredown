@@ -161,6 +161,9 @@ is the source of truth for the flow; the agent and the person both edit it.
     after its layout changes;
   - `flow move F3 --right-of F2` moves a node with what belongs to it
     (label, notes, overlays) and re-routes its arrows;
+  - `flow remove F2`, `flow remove 'F1->F2'` (also an overlay, notes or an
+    element id) removes what the commands drew, with what belongs to it,
+    and never what a person drew;
   - `flow lint` catches missing screens, stale sizes, overlapping nodes,
     dangling arrows.
 - **Free-form drawing stays available.** The agent can write Excalidraw
