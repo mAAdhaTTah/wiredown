@@ -277,7 +277,7 @@ it("draws blocks in a pull request comment, and in a comment's preview", async (
   await expect.poll(() => form.locator(".wiredown-block svg.wiredown-svg").count()).toBe(2);
   await form.getByRole("button", { name: "Comment", exact: true }).click();
   await expect.poll(() => comment.count()).toBe(4);
-  await settle(visit);
+  await visit.page.waitForLoadState("load");
   expect(visit.errors).toEqual([]);
   await visit.page.screenshot({ path: join(SHOTS, "pr.png"), fullPage: true });
   await visit.page.close();
@@ -343,9 +343,13 @@ it("draws a flow under a strict CSP, with its fonts and styles", async () => {
   const visit = await open(context, `${FILE}/flows/f.excalidraw.md`);
   await visit.page.locator(".wiredown-flow svg.wiredown-svg").waitFor();
   await settle(visit);
-  expect(
-    await visit.page.evaluate(() => [...document.fonts].every((f) => f.status === "loaded")),
-  ).toBe(true);
+  // The policy blocks fonts silently. Gitea's own unused faces stay unloaded.
+  const fonts = await visit.page.evaluate(() =>
+    [...document.fonts].map((f) => `${f.family} ${f.status}`),
+  );
+  console.log(`fonts under the strict CSP: ${fonts.join(", ")}`);
+  expect(fonts.filter((f) => f.endsWith(" error"))).toEqual([]);
+  expect(fonts).toContain("Excalifont loaded");
   expect(
     await visit.page.locator(".wiredown-svg").evaluate((svg) => getComputedStyle(svg).display),
   ).toBe("block");
