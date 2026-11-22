@@ -238,25 +238,41 @@ export async function embeddedScreens(file: string, flow: Flow) {
 }
 
 /**
+ * An embed's screen from `embeddedScreens`, with the screens file it is in;
+ * when it is unavailable, `message` says why as lint words it, and `errors`
+ * holds the screens file's findings about it.
+ */
+export function embeddedScreen(
+  { files, unresolved }: Awaited<ReturnType<typeof embeddedScreens>>,
+  { path, blockId }: ScreenRef,
+) {
+  const loaded = files.get(path);
+  if (!loaded) return { errors: [], message: unresolved.get(path) ?? "it was not resolved" };
+  const { screen, errors } = loaded.screen(blockId);
+  if (!errors.length) return { loaded, screen: screen!, errors };
+  const message = screen
+    ? `^${blockId} in ${loaded.path} has errors`
+    : `${loaded.path} has no ^${blockId}`;
+  return { loaded, errors, message };
+}
+
+/**
  * The screens lookup lint and refresh take: each screen laid out once.
  * `errors` collects, per screens file, why screens asked for are unavailable.
  */
 async function screenLookup(file: string, flow: Flow) {
-  const { files, unresolved, paths, ambiguous } = await embeddedScreens(file, flow);
+  const screens = await embeddedScreens(file, flow);
+  const { unresolved, paths, ambiguous } = screens;
   const cache = new Map<string, ReturnType<ScreenLookup>>();
   const errors = new Map<string, Finding[]>();
-  const state = ({ path, blockId }: ScreenRef): ReturnType<ScreenLookup> => {
-    const loaded = files.get(path);
-    if (!loaded) return { ok: false, message: unresolved.get(path) ?? "it was not resolved" };
-    const { screen, errors: found } = loaded.screen(blockId);
-    if (found.length) {
-      errors.set(loaded.path, [...(errors.get(loaded.path) ?? []), ...found]);
-      const message = screen
-        ? `^${blockId} in ${loaded.path} has errors`
-        : `${loaded.path} has no ^${blockId}`;
-      return { ok: false, message };
+  const state = (embed: ScreenRef): ReturnType<ScreenLookup> => {
+    const found = embeddedScreen(screens, embed);
+    if (found.message !== undefined) {
+      if (found.loaded)
+        errors.set(found.loaded.path, [...(errors.get(found.loaded.path) ?? []), ...found.errors]);
+      return { ok: false, message: found.message };
     }
-    const { width, height, boxes } = screenElements(layoutScreen(screen!.tree));
+    const { width, height, boxes } = screenElements(layoutScreen(found.screen.tree));
     return { ok: true, screen: { width, height, boxes } };
   };
   const lookup: ScreenLookup = (embed) => {

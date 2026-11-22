@@ -363,15 +363,17 @@ take a place in the note stack.
 whole drawing to `out/example.svg`. Each frame's screen comes from the
 screens file its embed names, resolved from the flow as the flow commands
 do. `--screen` is only for screens files.
-Missing or invalid screens, and embeds that name no screens file (one
-finding per frame), leave placeholders; the SVG is still written, findings
-are reported, and the command exits 1. Flow JSON is
+Missing or invalid screens, and embeds that name no screens file, are
+reported as `flow lint` words them, one finding per frame or image; nothing
+is drawn in their place. An image that embeds a whole file or a heading
+rather than a screen block is not drawn either, and is reported. In each
+case the SVG is still written and the command exits 1. Flow JSON is
 `{ file, flow: { svg, width, height }, errors, warnings }`. The size is
 rounded to whole pixels, as a screen's is; the SVG keeps Excalidraw's exact
 size.
-A file that is not an Excalidraw drawing, or a drawing written by a newer
-wiredown, is an error (exit 1) and nothing is written; a screens file an
-embed names that cannot be read exits 2.
+A file that is not an Excalidraw drawing, a drawing written by a newer
+wiredown, or a screens file an embed names that cannot be read, is an error
+(exit 1): nothing is written, and the JSON has `flow: null`.
 
 Flow embeds include their own Excalifont copy, since nested SVG images cannot
 use the outer SVG's fonts. Each distinct screen is rendered once. This adds

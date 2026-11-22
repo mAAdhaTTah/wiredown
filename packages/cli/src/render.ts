@@ -4,7 +4,7 @@ import { checkScreens, layoutScreen } from "@wiredown/core";
 import type { Box, CheckedScreen } from "@wiredown/core";
 import { FlowError, flowFrames, screenElements } from "@wiredown/excalidraw";
 import { renderFlowSvg, renderScreenSvg } from "@wiredown/excalidraw/node";
-import { embeddedScreens } from "./flow";
+import { embeddedScreen, embeddedScreens } from "./flow";
 import {
   CommandError,
   formatFindings,
@@ -107,24 +107,19 @@ function renderResult(
 
 async function renderFlow(file: string, options: RenderOptions): Promise<Result> {
   if (options.screens?.length) throw new UsageError("--screen cannot be used with a flow");
-  let flow;
+  let flow, screens;
   try {
     flow = parseEditableFlow(await readSource(file), "use");
+    // each embed's screens file is the one its path names, from the flow
+    screens = await embeddedScreens(file, flow);
   } catch (error) {
-    // an unreadable file is exit 2; a drawing we can't use is this file's error
+    // an unreadable flow is exit 2; a drawing we can't use, or a screens file
+    // we can't read, is this file's error, as lint reports it
     if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
     const { message } = error;
     return {
       exitCode: 1,
-      stdout: options.json
-        ? json({
-            file,
-            format: "svg",
-            flow: null,
-            errors: [{ message }],
-            warnings: [],
-          })
-        : "",
+      stdout: options.json ? json({ file, flow: null, errors: [{ message }], warnings: [] }) : "",
       stderr: options.json
         ? ""
         : error instanceof NewerFlowError
@@ -134,45 +129,39 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
   }
   const errors: Finding[] = [];
   const warnings: Finding[] = [];
-  // each embed's screens file is the one its path names, from the flow
-  const screens = await embeddedScreens(file, flow).catch((error: unknown) => {
-    // an unreadable screens file is exit 2, as an unreadable flow is
-    throw error instanceof CommandError ? new UsageError(error.message) : error;
-  });
   const warned = new Set<string>();
   const rendered = await renderFlowSvg(
     flow,
-    ({ path, blockId }) => {
-      const loaded = screens.files.get(path);
-      if (!loaded) return undefined;
-      const found = loaded.screen(blockId);
-      if (!warned.has(`${loaded.path}#^${blockId}`)) {
-        warned.add(`${loaded.path}#^${blockId}`);
-        warnings.push(...loaded.warnings.filter((w) => w.screen === blockId));
+    (embed) => {
+      const found = embeddedScreen(screens, embed);
+      const key = `${found.loaded?.path}#^${embed.blockId}`;
+      if (found.loaded && !warned.has(key)) {
+        warned.add(key);
+        warnings.push(...found.loaded.warnings.filter((w) => w.screen === embed.blockId));
       }
-      return found.errors.length
-        ? undefined
-        : screenElements(layoutScreen(found.screen!.tree)).elements;
+      return found.screen && screenElements(layoutScreen(found.screen.tree)).elements;
     },
     options,
   );
   for (const { id, reason } of rendered.rejected)
     errors.push({ message: `image file ${id}: ${reason}` });
-  const frames = flowFrames(flow);
-  for (const m of rendered.missing) {
-    const frame = frames.find((f) => f.element.id === m.element)?.frame;
-    const at = { screen: m.blockId, ...(frame ? { frame } : {}) };
-    const loaded = screens.files.get(m.path);
-    if (!loaded) {
-      const what = frame ? "embeds" : "an image embeds";
-      const why = screens.unresolved.get(m.path) ?? "it was not resolved";
-      errors.push({ ...at, message: `${what} [[${m.path}#^${m.blockId}]], but ${why}` });
-    } else
-      for (const finding of loaded.screen(m.blockId).errors)
-        errors.push({
-          ...at,
-          message: frame ? `^${m.blockId}: ${finding.message}` : finding.message,
-        });
+  // each problem worded as lint words it: frames by name, other images by id
+  const frames = new Map(flowFrames(flow).map((f) => [f.element.id, f.frame]));
+  const problem = (element: string, message: string) => {
+    const frame = frames.get(element);
+    errors.push(frame ? { frame, element, message } : { element, message: `an image ${message}` });
+  };
+  for (const m of rendered.missing)
+    problem(
+      m.element,
+      `embeds [[${m.path}#^${m.blockId}]], but ${embeddedScreen(screens, m).message}`,
+    );
+  // the plugin also embeds whole files and headings; render draws only screens
+  for (const e of flow.elements) {
+    const embed = flow.embeds.get(String(e.fileId));
+    if (e.isDeleted || e.type !== "image" || !embed || embed.blockId) continue;
+    const ref = embed.path + (embed.heading ? `#${embed.heading}` : "");
+    problem(e.id, `embeds [[${ref}]], but only screen blocks (#^id) can be rendered`);
   }
   const path = join(options.out ?? ".", basename(file, ".excalidraw.md") + ".svg");
   // Excalidraw sizes a drawing to its elements, fractions included; screens

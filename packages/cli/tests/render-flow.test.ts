@@ -33,7 +33,9 @@ it("renders each embed's screens, rejecting --screen and --screens and retaining
   );
   const broken = await run(args.filter((a) => a !== "--json"));
   expect(broken.exitCode).toBe(1);
-  expect(broken.stderr).toContain("F2: error: ^team-after:");
+  expect(broken.stderr).toContain(
+    `F2: error: embeds [[screens#^team-after]], but ^team-after in ${join(dir, "screens.md")} has errors`,
+  );
   expect(await readFile(parsed.flow.svg, "utf8")).toContain("<svg");
 }, 30000);
 
@@ -118,7 +120,9 @@ it("names the frame and block for a removed screen while writing the SVG", async
   await writeFile(join(dir, "screens.md"), BASE);
   const result = await run(["render", file, "--out", dir]);
   expect(result.exitCode).toBe(1);
-  expect(result.stderr).toContain('F2: error: ^team-after: no screen "^team-after"');
+  expect(result.stderr).toContain(
+    `F2: error: embeds [[screens#^team-after]], but ${join(dir, "screens.md")} has no ^team-after`,
+  );
   expect(result.stdout).toContain(join(dir, "f.svg") + "  ");
   expect(await readFile(join(dir, "f.svg"), "utf8")).toContain("<svg");
 });
@@ -156,7 +160,7 @@ it("resolves embeds of a flow given relative to the current directory", async ()
   expect(output).toBe("../screens.md\nno ui.md was found in ..\n");
 });
 
-it("reports a missing hand-made embed by block id without an element id", async () => {
+it("reports a missing hand-made embed as lint does", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const file = join(dir, "f.excalidraw.md");
   await run(["flow", "new", file, "team", ...screensIn(dir)]);
@@ -167,8 +171,34 @@ it("reports a missing hand-made embed by block id without an element id", async 
   await writeFile(join(dir, "screens.md"), "");
   const result = await run(["render", file, "--out", dir]);
   expect(result.exitCode).toBe(1);
-  expect(result.stderr).toContain('^team: error: no screen "^team"');
-  expect(result.stderr).not.toContain(image.id);
+  const lint = await run(["flow", "lint", file]);
+  const { path } = flow.embeds.get(String(image.fileId))!;
+  const message = `an image embeds [[${path}#^team]], but ${join(dir, "screens.md")} has no ^team`;
+  expect(lint.stdout).toContain(`${file}: error: ${message}\n`);
+  expect(result.stderr).toBe(`${file}: error: ${message}\n`);
+  const json = JSON.parse((await run(["render", file, "--out", dir, "--json"])).stdout);
+  expect(json.errors).toEqual([{ element: image.id, message }]);
+  expect(await readFile(join(dir, "f.svg"), "utf8")).toContain("<svg");
+});
+
+it("reports an image that embeds a whole file or a heading, and still writes the flow", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  const file = join(dir, "f.excalidraw.md");
+  await run(["flow", "new", file, "team", ...screensIn(dir)]);
+  const flow = parseFlow(await readFile(file, "utf8"));
+  const image = flowFrames(flow)[0].element;
+  const copy = (id: string) => ({ ...image, id, fileId: id, customData: undefined, groupIds: [] });
+  flow.elements.push(copy("picture"), copy("heading"));
+  flow.embeds.set("picture", { path: "pic.png" });
+  flow.embeds.set("heading", { path: "notes", heading: "Intro" });
+  await writeFile(file, serializeFlow(flow));
+  const result = await run(["render", file, "--out", dir]);
+  expect(result.exitCode).toBe(1);
+  const only = "but only screen blocks (#^id) can be rendered";
+  expect(result.stderr).toBe(
+    `${file}: error: an image embeds [[pic.png]], ${only}\n` +
+      `${file}: error: an image embeds [[notes#Intro]], ${only}\n`,
+  );
   expect(await readFile(join(dir, "f.svg"), "utf8")).toContain("<svg");
 });
 
@@ -201,7 +231,6 @@ it("refuses unsupported flows before creating output, with render JSON errors", 
   expect(result.exitCode).toBe(1);
   expect(JSON.parse(result.stdout)).toEqual({
     file,
-    format: "svg",
     flow: null,
     warnings: [],
     errors: [
@@ -233,7 +262,7 @@ it("reports a file that is not a drawing as an error, writing nothing", async ()
 });
 
 it.skipIf(process.getuid?.() === 0)(
-  "exits 2 when a frame's screens file cannot be read",
+  "reports a frame's screens file that cannot be read, as lint does, writing nothing",
   async () => {
     const dir = await fixture({ "screens.md": BASE });
     const file = join(dir, "flows", "f.excalidraw.md");
@@ -241,9 +270,16 @@ it.skipIf(process.getuid?.() === 0)(
     const screens = join(dir, "screens.md");
     await chmod(screens, 0o000);
     try {
-      const result = await run(["render", file, "--out", dir]);
-      expect(result).toMatchObject({ exitCode: 2, stdout: "" });
-      expect(result.stderr).toContain(`cannot read the screens file ${screens}: permission denied`);
+      const message = `cannot read the screens file ${screens}: permission denied`;
+      expect(await run(["render", file, "--out", dir])).toEqual({
+        exitCode: 1,
+        stdout: "",
+        stderr: `${file}: error: ${message}\n`,
+      });
+      expect((await run(["flow", "lint", file])).stdout).toContain(`${file}: error: ${message}\n`);
+      const json = JSON.parse((await run(["render", file, "--out", dir, "--json"])).stdout);
+      expect(json).toEqual({ file, flow: null, errors: [{ message }], warnings: [] });
+      await expect(readFile(join(dir, "f.svg"))).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await chmod(screens, 0o644);
     }
