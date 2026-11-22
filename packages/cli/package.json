@@ -27,6 +27,7 @@
     "@wiredown/excalidraw": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^26.6.6"
+    "@types/node": "^26.6.6",
+    "lz-string": "^1.5.0"
   }
 }

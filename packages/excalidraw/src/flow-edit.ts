@@ -6,9 +6,12 @@ import type { Flow } from "./flow";
 
 // Confirmed gen-flow.mjs / Excalidraw plugin DEFAULT_MD_EMBED_CSS:
 // host has 10px horizontal padding; footer has 5px height.
+// The plugin's default Markdown border (mdBorderColor "Black") insets the
+// content 2px on every side, as seen in its rendered SVG in Obsidian.
 // The link height is a maximum, with 40px headroom as in the prototype.
 const MD_HOST_PAD = 10,
   MD_FOOTER = 5,
+  MD_BORDER = 2,
   MAX_HEIGHT_HEADROOM = 40;
 // gen-flow.mjs: gap between nodes, where an arrow leaves a frame, the
 // decision diamond's size, the spacing of parallel arrows, and how far an
@@ -17,11 +20,11 @@ const GAP = 340,
   PORT_Y = 180,
   DEC_W = 260,
   DEC_H = 170,
-  PAR = 70,
-  END_GAP = 6;
+  PAR = 70;
+export const END_GAP = 6;
 // gen-flow.mjs captions: 16px, grey, 20px under the frame.
-const NOTE_GAP = 20,
-  NOTE_COLOR = "#495057",
+export const NOTE_GAP = 20;
+const NOTE_COLOR = "#495057",
   FONT_SIZE = 16,
   LABEL_WIDTH = 200;
 // Allow hand nudges of 60px, and 200px gaps left by a deleted note.
@@ -30,8 +33,8 @@ const HAND_NUDGE = 60,
 const measurer = fontMeasurer(EXCALIFONT);
 
 export function embedSize(screenWidth: number, screenHeight: number) {
-  const width = screenWidth + 2 * MD_HOST_PAD,
-    height = screenHeight + MD_FOOTER;
+  const width = screenWidth + 2 * (MD_HOST_PAD + MD_BORDER),
+    height = screenHeight + MD_FOOTER + 2 * MD_BORDER;
   return { link: { width, height: height + MAX_HEIGHT_HEADROOM }, image: { width, height } };
 }
 /** Where a new node goes, relative to an existing node (F2, D1). */
@@ -67,7 +70,7 @@ export interface FlowNode {
  * frame's image (and a decision's diamond, once it has notes) also records
  * `group`, the Excalidraw group that holds the node's parts.
  */
-interface Identity {
+export interface Identity {
   v?: number;
   id?: string;
   role: string;
@@ -91,11 +94,50 @@ function supportedVersion(data: Identity): boolean {
   return (data.v ?? 1) <= DATA_VERSION;
 }
 /** An element's wiredown data; undefined for a hand-drawn element or one from a newer wiredown. */
-function identity(e: ExcalidrawElementJson): Identity | undefined {
+export function identity(e: ExcalidrawElementJson): Identity | undefined {
   const data = dataOf(e);
   return data && supportedVersion(data) && (data.id === undefined || data.id === e.id)
     ? data
     : undefined;
+}
+/**
+ * For a person's copy of one of our elements (its data names another
+ * element), the node it was on and what it copies: `F1's frame`, `arrow
+ * F1 -> F2`. Undefined for anything else.
+ */
+export function copyOf(e: ExcalidrawElementJson): { node?: string; what: string } | undefined {
+  const d = dataOf(e);
+  if (!d || !supportedVersion(d) || d.id === undefined || d.id === e.id) return undefined;
+  const node = d.frame ?? d.node;
+  const arrow = `arrow ${d.from} -> ${d.to}`;
+  if (d.role === "arrow") return { what: arrow };
+  return { node, what: `${node ?? arrow}'s ${d.role === "screen" ? "frame" : d.role}` };
+}
+/** An element's `groupIds`, innermost first. */
+export const groupsOf = (e: ExcalidrawElementJson) =>
+  Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
+/** Whether `e` is in a group its node is not in: one a person made, which flow commands leave alone. */
+export const inPersonalGroup = (e: ExcalidrawElementJson, node?: ExcalidrawElementJson) =>
+  groupsOf(e).some((g) => !(node ? groupsOf(node) : []).includes(g));
+/**
+ * Live copies, as pasted together: bound text with its container, and the
+ * copies in a group that holds nothing else; any other copy alone. A
+ * node's copy comes first in its set.
+ */
+export function pastedCopies(flow: Flow): ExcalidrawElementJson[][] {
+  const live = flow.elements.filter((e) => !e.isDeleted);
+  const copies = live.filter((e) => copyOf(e));
+  const ids = new Set(copies.map((e) => e.id));
+  const key = (e: ExcalidrawElementJson): string => {
+    if (ids.has(String(e.containerId))) return key(copies.find((c) => c.id === e.containerId)!);
+    const group = groupsOf(e)[0];
+    const pasted = group && live.every((o) => ids.has(o.id) || !groupsOf(o).includes(group));
+    return pasted ? group : e.id;
+  };
+  const sets = new Map<string, ExcalidrawElementJson[]>();
+  for (const e of copies) sets.set(key(e), [...(sets.get(key(e)) ?? []), e]);
+  const node = (e: ExcalidrawElementJson) => ["screen", "decision"].includes(dataOf(e)!.role);
+  return [...sets.values()].map((set) => [...set.filter(node), ...set.filter((e) => !node(e))]);
 }
 /**
  * The data version of live elements from a newer wiredown: the highest
@@ -127,14 +169,22 @@ export function flowNodes(flow: Flow): FlowNode[] {
     return [];
   });
 }
+const claimed = (name: string, ids: string[]) =>
+  `${name} is claimed by elements ${ids.join(" and ")}; delete the copy`;
+/** Each name two live nodes claim (data without `id`, or edited by hand), and why it is refused. */
+export function claimedNames(flow: Flow) {
+  const named = new Map<string, string[]>();
+  for (const n of flowNodes(flow)) named.set(n.node, [...(named.get(n.node) ?? []), n.element.id]);
+  return [...named]
+    .filter(([, ids]) => ids.length > 1)
+    .map(([node, ids]) => ({ node, ids, message: claimed(node, ids) }));
+}
 /** The live node named `name`; two nodes claiming one name are an error, not a guess. */
 function findNode(flow: Flow, name: string): FlowNode {
   const nodes = flowNodes(flow);
   const found = nodes.filter((n) => n.node === name);
-  if (found.length > 1)
-    throw new FlowError(
-      `${name} is claimed by elements ${found.map((n) => n.element.id).join(" and ")}; delete the copy`,
-    );
+  const ids = found.map((n) => n.element.id);
+  if (ids.length > 1) throw new FlowError(claimed(name, ids));
   if (!found.length)
     throw new FlowError(
       `unknown node "${name}" (nodes: ${nodes.map((n) => n.node).join(", ") || "none"})`,
@@ -200,7 +250,7 @@ function element(
     customData: { wiredown: { v: DATA_VERSION, ...data, id: elementId } },
   };
 }
-/** Tell Excalidraw an existing element changed. */
+/** Records a change to an existing element, as Excalidraw does on every edit. */
 export function touch(e: ExcalidrawElementJson) {
   e.version = Number(e.version ?? 0) + 1;
   e.versionNonce = random(2147483646) + 1;
@@ -214,16 +264,14 @@ export function touch(e: ExcalidrawElementJson) {
  */
 function nodeGroups(flow: Flow, node: ExcalidrawElementJson): string[] {
   const data = identity(node)!;
-  const groups = (e: ExcalidrawElementJson) =>
-    Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
-  const at = data.group ? groups(node).indexOf(data.group) : -1;
-  if (at >= 0) return groups(node).slice(at);
+  const at = data.group ? groupsOf(node).indexOf(data.group) : -1;
+  if (at >= 0) return groupsOf(node).slice(at);
   data.group = id();
   for (const e of [node, ...flow.elements.filter((e) => e.containerId === node.id)]) {
-    e.groupIds = [data.group, ...groups(e)];
+    e.groupIds = [data.group, ...groupsOf(e)];
     touch(e);
   }
-  return groups(node);
+  return groupsOf(node);
 }
 /** An Excalifont text element sized by core's measurer. */
 function textElement(
@@ -606,12 +654,7 @@ export function nodeAttachments(flow: Flow, n: FlowNode) {
       )
         return [];
       if (!d.anchor && !d.id && legacy.length > 1) return [];
-      if (
-        (e.groupIds as string[] | undefined)?.some(
-          (g) => !(n.element.groupIds as string[] | undefined)?.includes(g),
-        )
-      )
-        return [];
+      if (inPersonalGroup(e, n.element)) return [];
       const label = d.role === "label";
       const want = label ? { x: b.x, y: b.y - LABEL_OFFSET } : { x, y };
       const distance = Math.hypot(Number(e.x) - want.x, Number(e.y) - want.y);
@@ -649,11 +692,12 @@ export function overlayBox(
   const size = embedSize(screen.width, screen.height).image;
   const sx = Number(frameImage.width) / size.width;
   const sy = Number(frameImage.height) / size.height;
-  // x = image.x + (host padding + box.x) * sx; y = image.y + box.y * sy.
+  // x = image.x + (border + host padding + box.x) * sx;
+  // y = image.y + (border + box.y) * sy.
   // Width and height use their own axis ratio, including distorted images.
   return {
-    x: Number(frameImage.x) + (MD_HOST_PAD + box.x) * sx,
-    y: Number(frameImage.y) + box.y * sy,
+    x: Number(frameImage.x) + (MD_BORDER + MD_HOST_PAD + box.x) * sx,
+    y: Number(frameImage.y) + (MD_BORDER + box.y) * sy,
     width: box.w * sx,
     height: box.h * sy,
   };
@@ -715,21 +759,21 @@ function overlayAnchor(flow: Flow, frame: string, options: OverlayOptions, label
 export function markCentre(x: number, y: number, diameter: number) {
   return { x: x - diameter / 3, y: y - diameter / 3 };
 }
+/** A highlight's outline: the component's box with a 4px drawing-coordinate outset. */
+export function highlightBounds(b: ReturnType<typeof overlayBox>) {
+  return { x: b.x - 4, y: b.y - 4, width: b.width + 8, height: b.height + 8 };
+}
+/** The top-left that centres a `width`×`height` element on (x, y), as a mark on its centre. */
+export function centredOn(x: number, y: number, width: number, height: number) {
+  return { x: x - width / 2, y: y - height / 2 };
+}
 
 /** Append an outline with a 4px drawing-coordinate outset; return its element id. */
 export function addHighlight(flow: Flow, frame: string, options: OverlayOptions): string {
-  const { box: b, data, groupIds } = overlayAnchor(flow, frame, options);
+  const { box, data, groupIds } = overlayAnchor(flow, frame, options);
+  const b = highlightBounds(box);
   const e = {
-    ...element(
-      "rectangle",
-      b.x - 4,
-      b.y - 4,
-      b.width + 8,
-      b.height + 8,
-      nextIndices(flow, 1)[0],
-      data,
-      groupIds,
-    ),
+    ...element("rectangle", b.x, b.y, b.width, b.height, nextIndices(flow, 1)[0], data, groupIds),
     roundness: { type: 3 },
     strokeWidth: 2,
     strokeColor: DEFAULT_THEME.colors.highlight,
@@ -748,25 +792,22 @@ export function addMark(
   const { box: b, data, groupIds } = overlayAnchor(flow, frame, options, options.label);
   const keys = nextIndices(flow, 2);
   const measured = measurer.measure(options.label, { fontSize: FONT_SIZE, fontFamily: 5 });
-  // Fit text inside the circle's inscribed square, with 5px container padding.
-  const diameter = Math.max(32, Math.ceil(Math.SQRT2 * Math.max(measured.w, measured.h) + 10));
+  // Excalidraw's own size for an ellipse around bound text (5px padding),
+  // so it does not grow the badge when it opens the drawing.
+  const diameter = Math.max(
+    32,
+    Math.round((Math.ceil(Math.max(measured.w, measured.h)) + 10) * Math.SQRT2),
+  );
   const c = markCentre(b.x, b.y, diameter);
+  const at = centredOn(c.x, c.y, diameter, diameter);
   const badge: ExcalidrawElementJson = {
-    ...element(
-      "ellipse",
-      c.x - diameter / 2,
-      c.y - diameter / 2,
-      diameter,
-      diameter,
-      keys[0],
-      data,
-      groupIds,
-    ),
+    ...element("ellipse", at.x, at.y, diameter, diameter, keys[0], data, groupIds),
     backgroundColor: DEFAULT_THEME.colors.highlight,
   };
+  const text = centredOn(c.x, c.y, measured.w, measured.h);
   const label = textElement(
-    c.x - measured.w / 2,
-    c.y - measured.h / 2,
+    text.x,
+    text.y,
     options.label,
     FONT_SIZE,
     keys[1],

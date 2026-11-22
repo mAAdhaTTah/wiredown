@@ -130,8 +130,8 @@ test("overlays follow the frame's embed; --screens is only for new and add-scree
   expect((await run(["flow", "new", file, "home", "--screens", screens])).exitCode).toBe(0);
   const result = await run(["flow", "highlight", file, "F1", "#home", "--json"]);
   expect(result.exitCode).toBe(0);
-  // Export window (8,8) + host (10,0) - outline outset (4,4) = (14,4).
-  expect(JSON.parse(result.stdout).highlight).toMatchObject({ x: 14, y: 4 });
+  // Export window (8,8) + border (2,2) + host (10,0) - outline outset (4,4) = (16,6).
+  expect(JSON.parse(result.stdout).highlight).toMatchObject({ x: 16, y: 6 });
   expect((await run(["flow", "mark", file, "F1", "go", "1"])).exitCode).toBe(0);
   const usage = await run(["flow", "mark", file, "F1", "go", "2", "--screens", screens]);
   expect(usage.exitCode).toBe(2);

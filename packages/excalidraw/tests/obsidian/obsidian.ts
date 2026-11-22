@@ -5,6 +5,7 @@
 // plugin locks up the window while drawing an embed that resolves to a
 // Markdown file, so no screenshots.
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { once } from "node:events";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -55,7 +56,7 @@ async function installPlugin(vault: string): Promise<void> {
 export interface Obsidian {
   /** Evaluates `expression` in Obsidian's window and returns its (awaited) value. */
   run<T>(expression: string): Promise<T>;
-  close(): void;
+  close(): Promise<void>;
 }
 
 /** Starts Obsidian on a new vault holding `files` (path → text), plugin enabled. */
@@ -79,8 +80,11 @@ export async function startObsidian(files: Record<string, string>): Promise<Obsi
     ["--no-sandbox", "--ozone-platform=headless", "--disable-gpu", "--remote-debugging-port=0"],
     { env: { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, "config") } },
   );
-  const close = () => {
-    child.kill();
+  // Obsidian writes to its home until it has exited, and a folder that gains
+  // a file while it is being removed fails with ENOTEMPTY.
+  const close = async () => {
+    const exited = once(child, "exit");
+    if (child.kill()) await exited;
     rmSync(home, { recursive: true, force: true });
   };
   try {
@@ -132,11 +136,11 @@ export async function startObsidian(files: Record<string, string>): Promise<Obsi
       run,
       close() {
         ws.close();
-        close();
+        return close();
       },
     };
   } catch (e) {
-    close();
+    await close();
     throw e;
   }
 }

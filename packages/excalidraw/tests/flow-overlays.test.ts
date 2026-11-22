@@ -20,11 +20,11 @@ import { bindingFailures, pluginFailures } from "./plugin-checks";
 const screen = { width: 100, height: 200 };
 const box = { x: 20, y: 30, w: 40, h: 50 };
 test.each([
-  [0, 0, 120, 205, 30, 30, 40, 50],
-  [100, -20, 120, 205, 130, 10, 40, 50],
-  [0, 0, 60, 102.5, 15, 15, 20, 25],
-  [0, 0, 240, 410, 60, 60, 80, 100],
-  [100, 10, 60, 410, 115, 70, 20, 100],
+  [0, 0, 124, 209, 32, 32, 40, 50],
+  [100, -20, 124, 209, 132, 12, 40, 50],
+  [0, 0, 62, 104.5, 16, 16, 20, 25],
+  [0, 0, 248, 418, 64, 64, 80, 100],
+  [100, 10, 62, 418, 116, 74, 20, 100],
 ])("overlay geometry %j", (ix, iy, iw, ih, x, y, width, height) => {
   expect(
     overlayBox({ id: "image", type: "image", x: ix, y: iy, width: iw, height: ih }, screen, box),
@@ -40,8 +40,8 @@ test("overlays preserve existing elements, bind labels and survive serialization
   const options = { target: "invite", box, screen };
   const hi = addHighlight(flow, "F1", options);
   expect(flow.elements.find((e) => e.id === hi)).toMatchObject({
-    x: 126,
-    y: 26,
+    x: 128,
+    y: 28,
     width: 48,
     height: 58,
     strokeWidth: 2,
@@ -61,10 +61,12 @@ test("overlays preserve existing elements, bind labels and survive serialization
   });
   const mark = addMark(flow, "F1", { ...options, label: "3" });
   const badge = flow.elements.find((e) => e.id === mark)!;
-  // the badge sits up-left of the corner (130, 30), by a third of its diameter
+  // the badge sits up-left of the corner (132, 32), by a third of its diameter
   const d = Number(badge.width);
-  expect(Number(badge.x) + d / 2).toBe(130 - d / 3);
-  expect(Number(badge.y) + d / 2).toBe(30 - d / 3);
+  // Excalidraw's size for an ellipse around a 20px line: round((20 + 10) × √2)
+  expect([d, badge.height]).toEqual([42, 42]);
+  expect(Number(badge.x) + d / 2).toBe(132 - d / 3);
+  expect(Number(badge.y) + d / 2).toBe(32 - d / 3);
   expect(markCentre(130, 30, 32)).toEqual({ x: 130 - 32 / 3, y: 30 - 32 / 3 });
   for (const e of flow.elements.slice(-2)) {
     expect(e.groupIds).toEqual([group]);
@@ -152,8 +154,8 @@ test.each([1, 0.5, 2, "moved"] as const)("real screen bounds: %s", (scale) => {
       expect(mapped.y + mapped.height).toBeLessThanOrEqual(image.y + image.height);
     }
     const outer = overlayBox(image, rendered, rendered.boxes.window);
-    expect(outer.x).toBe(image.x + ((10 + padding) * image.width) / size.width);
-    expect(outer.y).toBe(image.y + (padding * image.height) / size.height);
+    expect(outer.x).toBe(image.x + ((2 + 10 + padding) * image.width) / size.width);
+    expect(outer.y).toBe(image.y + ((2 + padding) * image.height) / size.height);
   }
 });
 

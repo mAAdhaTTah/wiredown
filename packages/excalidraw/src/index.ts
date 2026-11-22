@@ -27,6 +27,15 @@ export type {
   FlowNode,
   Place,
 } from "./flow-edit";
+export { bindingFailures, lintFlow, refreshFlow } from "./flow-refresh";
+export type {
+  FlowChange,
+  FlowFinding,
+  ScreenLookup,
+  ScreenRef,
+  ScreenState,
+  Size,
+} from "./flow-refresh";
 export {
   embedCandidates,
   embedNotFound,
