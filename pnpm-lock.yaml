@@ -242,10 +242,10 @@ importers:
         version: 3.2.0
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.27.7))
+        version: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6))
       vitest-evals:
         specifier: 0.18.1
-        version: 0.18.1(tinyrainbow@3.2.0)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.27.7)))(zod@4.6.7)
+        version: 0.18.1(tinyrainbow@3.2.0)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)))(zod@4.6.7)
 
   packages/excalidraw:
     dependencies:
@@ -3411,7 +3411,7 @@ snapshots:
     dependencies:
       '@vitest-evals/core': 0.18.1
 
-  '@vitest/mocker@5.1.0(vite@8.3.8(@types/node@26.6.6)(esbuild@0.27.7))':
+  '@vitest/mocker@5.1.0(vite@8.3.8(@types/node@26.6.6))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.1.0
@@ -4430,16 +4430,16 @@ snapshots:
       '@types/node': 26.6.6
       fsevents: 2.3.3
 
-  vitest-evals@0.18.1(tinyrainbow@3.2.0)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.27.7)))(zod@4.6.7):
+  vitest-evals@0.18.1(tinyrainbow@3.2.0)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)))(zod@4.6.7):
     dependencies:
       '@vitest-evals/core': 0.18.1
       '@vitest-evals/report-ui': 0.18.1
       tinyrainbow: 3.2.0
-      vitest: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.27.7))
+      vitest: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6))
     optionalDependencies:
       zod: 4.6.7
 
-  vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.27.7)):
+  vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.1.0(vite@8.3.8(@types/node@26.6.6))
