@@ -419,8 +419,9 @@ overlaps F1; run "wiredown flow refresh" or move it`;
 and no longer meets F1; straighten or move it in the drawing` (refresh
   leaves it);
 - two of our frames or decisions whose boxes overlap, once per pair on the
-  later one: `F3: overlaps F1; move one of them in the drawing, or run
-"wiredown flow move <flow> F3 --right-of F1"` (touching edges are fine);
+  later one: `F3: overlaps F1; move one of them in the drawing, or with
+"wiredown flow move", e.g. "wiredown flow move <flow> F3 --below F1"`
+  (touching edges are fine);
 - an image whose `fileId` has no `## Embedded Files` entry;
 - data written by a newer wiredown, once: `this drawing was written by a
 newer wiredown (data version N)`; that data is otherwise ignored.
@@ -523,9 +524,17 @@ F3  arrow F2 -> F3 unresolved: it was bent by hand and no longer meets F3; strai
 ```
 
 The counts are the notes and overlays that moved and the arrows re-routed.
-JSON is `{ flow, moved: { node, kind, x, y, notes, overlays, arrows },
-unresolved: [...] }`, `unresolved` holding refresh's arrow changes; errors
-exit 1 with `moved: null` and an `errors` array.
+A node already at the place is left, and the command prints `F2 is already
+at 0,0`.
+
+JSON is `{ flow, moved: { unchanged?, node, kind, element, x, y, width,
+height, elements, notes, overlays, arrows }, changes: [...], unresolved:
+[...] }`: `element` is the node's element and `x, y, width, height` its new
+box, `elements` every element id moved (the node's first; empty when it did
+not move), `changes` the re-routed arrows and `unresolved` the bent ones,
+each as `flow refresh --json` reports an arrow change (with its geometry). A
+node already there has `unchanged: true`. Errors exit 1 with `moved: null`,
+`changes` and `unresolved` empty and an `errors` array.
 
 Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"
 in the Excalidraw plugin's Saving settings. `flow lint` reports compressed
