@@ -12,6 +12,7 @@ import {
   flowFrames,
   flowNodes,
   lintFlow,
+  moveNode,
   newFlow,
   parseFlow,
   refreshFlow,
@@ -24,6 +25,8 @@ import type {
   ExcalidrawElementJson,
   Flow,
   FlowChange,
+  Moved,
+  MoveTo,
   Removed,
   ScreenLookup,
   ScreenRef,
@@ -48,6 +51,7 @@ export interface FlowOptions {
   title?: string;
   rightOf?: string;
   below?: string;
+  to?: string;
   json?: boolean;
 }
 async function exists(path: string) {
@@ -623,6 +627,61 @@ export async function removeFlowItems(
     };
   }
 }
+function movedLine(m: Moved): string {
+  const parts = [
+    m.kind,
+    ...(m.notes ? [plural(m.notes, "note")] : []),
+    ...(m.overlays ? [plural(m.overlays, "overlay")] : []),
+    ...(m.arrows ? [plural(m.arrows, "arrow")] : []),
+  ].join(", ");
+  return `moved ${m.node} to ${m.x},${m.y} (${parts})\n` + m.unresolved.map(changeLine).join("");
+}
+/** flow move: the node and what of ours belongs to it, written once, or not at all. */
+export async function moveFlowNode(
+  file: string,
+  node: string,
+  to: MoveTo,
+  options: FlowOptions = {},
+): Promise<Result> {
+  try {
+    const original = await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
+    const flow = parseEditableFlow(original);
+    const moved = moveNode(flow, node, to);
+    if (!moved.unchanged)
+      await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
+    const { changes, unresolved, ...value } = moved;
+    return {
+      exitCode: 0,
+      stderr: "",
+      stdout: options.json
+        ? json({ flow: file, moved: value, changes, unresolved })
+        : moved.unchanged
+          ? `${node} is already at ${moved.x},${moved.y}\n`
+          : movedLine(moved),
+    };
+  } catch (error) {
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
+    const findings: Finding[] = [{ message: error.message }];
+    return {
+      exitCode: 1,
+      stdout: options.json
+        ? json({ flow: file, moved: null, changes: [], unresolved: [], errors: findings })
+        : "",
+      stderr: options.json
+        ? ""
+        : error instanceof NewerFlowError
+          ? `${file}: ${error.message}\n`
+          : formatFindings(file, findings, []),
+    };
+  }
+}
+/** --to <x>,<y> as a top-left, else --right-of or --below. */
+function moveTo(options: FlowOptions): MoveTo {
+  if (!options.to) return place(options)!;
+  const m = /^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/.exec(options.to);
+  if (!m) throw new UsageError(`--to is <x>,<y>, such as 760,0, not "${options.to}"`);
+  return { x: Number(m[1]), y: Number(m[2]) };
+}
 const place = (options: FlowOptions) =>
   options.rightOf
     ? { rightOf: options.rightOf }
@@ -642,6 +701,7 @@ const ARITY = {
   note: [2, 0, "a file, a node and the note's text"],
   decision: [1, 0, "a file and the decision's text"],
   remove: [1, Infinity, "a file and at least one thing to remove"],
+  move: [1, 0, "a file and a node"],
 } satisfies Record<string, [number, number, string]>;
 type FlowCommand = keyof typeof ARITY;
 const isFlowCommand = (command: string | undefined): command is FlowCommand =>
@@ -660,11 +720,14 @@ export function flowCommand(
     throw new UsageError(`flow ${command} needs non-empty text`);
   if ((command === "new" || command === "add-screen") && rest.length && !values.screens)
     throw new UsageError(`flow ${command} needs --screens <screens.md> to embed screens from`);
-  if (values["right-of"] && values.below)
-    throw new UsageError("--right-of and --below are mutually exclusive");
-  const placed = command === "add-screen" || command === "decision";
+  const placements = [values["right-of"], values.below, values.to].filter(Boolean).length;
+  if (placements > 1) throw new UsageError("--right-of, --below and --to are mutually exclusive");
+  const placed = command === "add-screen" || command === "decision" || command === "move";
   if (!placed && (values["right-of"] || values.below))
-    throw new UsageError("placement options require add-screen or decision");
+    throw new UsageError("placement options require add-screen, decision or move");
+  if (command !== "move" && values.to) throw new UsageError("--to requires move");
+  if (command === "move" && !placements)
+    throw new UsageError("flow move needs --right-of <node>, --below <node> or --to <x>,<y>");
   const screens = command === "new" || command === "add-screen";
   if (command !== "add-screen" && values.title) throw new UsageError("--title requires add-screen");
   // other commands follow each frame's embed to its screens file
@@ -674,6 +737,7 @@ export function flowCommand(
     title: values.title as string | undefined,
     rightOf: values["right-of"] as string | undefined,
     below: values.below as string | undefined,
+    to: values.to as string | undefined,
     json: values.json === true,
   };
   if (command === "refresh") return refreshFlowFile(file, options);
@@ -681,6 +745,7 @@ export function flowCommand(
   if (command === "highlight" || command === "mark")
     return editOverlay(command, file, rest, options);
   if (command === "remove") return removeFlowItems(file, rest, options);
+  if (command === "move") return moveFlowNode(file, rest[0], moveTo(options), options);
   if (command === "connect" || command === "note" || command === "decision")
     return editNodes(command, file, rest, options);
   return editFlow(command, file, rest, options);

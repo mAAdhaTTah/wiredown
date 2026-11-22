@@ -856,7 +856,11 @@ test("lint reports each pair of overlapping nodes once, on the later one", () =>
   flow.elements.push({ ...structuredClone(f2), id: "copyOfF2", x: 100, y: 100 });
   const overlaps = lintFlow(flow, screens).filter((f) => f.message.startsWith("overlaps"));
   expect(overlaps).toEqual([
-    { frame: "F3", element: f3.id, message: "overlaps F1; move one of them in the drawing" },
+    {
+      frame: "F3",
+      element: f3.id,
+      message: `overlaps F1; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> F3 --below F1"`,
+    },
   ]);
   // the decision overlapping F2 by a pixel is reported; refresh moves no node
   const d1 = flowNodes(flow).find((n) => n.node === "D1")!.element;
@@ -866,8 +870,16 @@ test("lint reports each pair of overlapping nodes once, on the later one", () =>
   refreshFlow(flow, screens);
   expect(at()).toEqual(before);
   expect(lintFlow(flow, screens).filter((f) => f.message.startsWith("overlaps"))).toEqual([
-    { frame: "F3", element: f3.id, message: "overlaps F1; move one of them in the drawing" },
-    { frame: "D1", element: d1.id, message: "overlaps F2; move one of them in the drawing" },
+    {
+      frame: "F3",
+      element: f3.id,
+      message: `overlaps F1; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> F3 --below F1"`,
+    },
+    {
+      frame: "D1",
+      element: d1.id,
+      message: `overlaps F2; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> D1 --below F2"`,
+    },
   ]);
 });
 

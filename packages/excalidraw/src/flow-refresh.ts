@@ -23,6 +23,7 @@ import {
   markCentre,
   newerDataVersion,
   nodeAttachments,
+  nodeParts,
   NOTE_GAP,
   overlayBox,
   pastedCopies,
@@ -232,7 +233,7 @@ interface Rect {
   width: number;
   height: number;
 }
-const rect = (e: ExcalidrawElementJson): Rect => ({ x: num(e.x), y: num(e.y), ...size(e) });
+export const rect = (e: ExcalidrawElementJson): Rect => ({ x: num(e.x), y: num(e.y), ...size(e) });
 const bottom = (r: Rect) => r.y + r.height;
 /**
  * Our live notes under the frame image `anchor` whose box was `old`: those
@@ -266,16 +267,27 @@ function notesUnder(flow: Flow, anchor: string, old: Rect, now: Rect) {
   return { notes, overlapping, shift };
 }
 /** Whether two boxes share area; touching edges do not. */
-const intersects = (a: Rect, b: Rect) =>
+export const intersects = (a: Rect, b: Rect) =>
   a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
-/** Each pair of our nodes whose boxes intersect, once, named on the later node. */
+/** A node and what of ours belongs to it with a box of its own: its label, notes and overlays. */
+export const footprint = (flow: Flow, n: FlowNode) => [
+  n.element,
+  ...nodeParts(flow, n).filter((e) => !e.containerId),
+];
+/**
+ * Each pair of our nodes whose footprints intersect, once, named on the later
+ * node, with the first two of their elements that do: the nodes themselves
+ * when their boxes do.
+ */
 function overlappingNodes(flow: Flow) {
-  const nodes = flowNodes(flow);
-  return nodes.flatMap((n, i) =>
-    nodes
-      .slice(0, i)
-      .filter((o) => intersects(rect(o.element), rect(n.element)))
-      .map((o) => ({ node: n.node, element: n.element, other: o.node })),
+  const nodes = flowNodes(flow).map((n) => ({ n, parts: footprint(flow, n) }));
+  return nodes.flatMap(({ n, parts }, i) =>
+    nodes.slice(0, i).flatMap(({ n: o, parts: others }) => {
+      const pair = parts
+        .flatMap((a) => others.map((b) => [a, b]))
+        .find(([a, b]) => intersects(rect(a), rect(b)));
+      return pair ? [{ n, o, mine: pair[0], theirs: pair[1] }] : [];
+    }),
   );
 }
 /** Parts with no personal group, shared by lint and refresh. */
@@ -308,7 +320,7 @@ function noteStart(e: ExcalidrawElementJson) {
   return words.slice(0, 4).join(" ") + (words.length > 4 ? "…" : "");
 }
 
-interface Route {
+export interface Route {
   arrow: ExcalidrawElementJson;
   start: FlowNode;
   end: FlowNode;
@@ -322,7 +334,7 @@ interface Route {
  * Each live arrow of ours bound at both ends to two live nodes, with the
  * geometry `connect` gives its slot between the nodes as they are now.
  */
-function arrowRoutes(flow: Flow): Route[] {
+export function arrowRoutes(flow: Flow): Route[] {
   const nodes = new Map(flowNodes(flow).map((n) => [n.element.id, n]));
   const bound = (b: unknown) => nodes.get(String((b as { elementId?: string } | null)?.elementId));
   return flow.elements.flatMap((arrow) => {
@@ -353,12 +365,22 @@ function arrowRoutes(flow: Flow): Route[] {
   });
 }
 
+/** Puts a straight arrow where `connect` would, in its slot, its label along it. */
+export function reroute(flow: Flow, { arrow, start, end, geometry: g }: Route) {
+  Object.assign(arrow, { x: g.x, y: g.y, width: g.width, height: g.height, points: g.points });
+  arrow.startBinding = { ...(arrow.startBinding as object), fixedPoint: g.startFixedPoint };
+  arrow.endBinding = { ...(arrow.endBinding as object), fixedPoint: g.endFixedPoint };
+  touch(arrow);
+  const pair = arrowsBetween(flow, start.element.id, end.element.id);
+  positionArrowLabel(flow, arrow, pair.length > 1 ? 1 / 3 : 1 / 2);
+}
+
 /**
  * The nodes an end of an arrow a person bent no longer meets: it is further
  * off the node's box than `connect` or Excalidraw would leave it, or inside a
  * frame's (a frame that grew under it).
  */
-function unmet({ arrow, start, end }: Route): string[] {
+export function unmet({ arrow, start, end }: Route): string[] {
   const points = arrow.points as number[][];
   const ends: [FlowNode, number[]][] = [
     [start, points[0]],
@@ -496,12 +518,15 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
         message: `${what} is ${Math.round(p.distance)} px from its place ${what === "label" ? "above" : n.kind === "decision" ? "beside" : "under"} ${n.node}; run "wiredown flow refresh"`,
       });
     }
-  for (const { node, element, other } of overlappingNodes(flow))
-    if (!ambiguous.has(node) && !ambiguous.has(other))
+  // what of a node is named in a message: its frame or decision, or a part of it
+  const named = (n: FlowNode, e: ExcalidrawElementJson) =>
+    e === n.element ? n.node : `${n.node}'s ${partName(e)}`;
+  for (const { n, o, mine, theirs } of overlappingNodes(flow))
+    if (!ambiguous.has(n.node) && !ambiguous.has(o.node))
       out.push({
-        frame: node,
-        element: element.id,
-        message: `overlaps ${other}; move one of them in the drawing`,
+        frame: n.node,
+        element: mine.id,
+        message: `${mine === n.element ? "" : `${named(n, mine)} `}overlaps ${named(o, theirs)}; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> ${n.node} --below ${o.node}"`,
       });
   // a screen embedded by hand has no frame, but its reference can still break
   const framed = new Set(flowFrames(flow).map((f) => f.element.id));
@@ -675,9 +700,8 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       out.push({ frame: n.node, kind: "group", element: e.id, part: partName(e), group });
     }
   }
-
   for (const route of arrowRoutes(flow)) {
-    const { arrow, start, end, geometry: g, shaped, missed } = route;
+    const { arrow, start, end, shaped, missed } = route;
     if (!missed.length) continue;
     const change = {
       frame: missed[0],
@@ -691,12 +715,7 @@ export function refreshFlow(flow: Flow, screens: ScreenLookup): FlowChange[] {
       if (off) out.push({ ...change, frame: off, unresolved: bentArrow(off) });
       continue;
     }
-    Object.assign(arrow, { x: g.x, y: g.y, width: g.width, height: g.height, points: g.points });
-    arrow.startBinding = { ...(arrow.startBinding as object), fixedPoint: g.startFixedPoint };
-    arrow.endBinding = { ...(arrow.endBinding as object), fixedPoint: g.endFixedPoint };
-    touch(arrow);
-    const pair = arrowsBetween(flow, start.element.id, end.element.id);
-    positionArrowLabel(flow, arrow, pair.length > 1 ? 1 / 3 : 1 / 2);
+    reroute(flow, route);
     out.push(change);
   }
   const images = new Set(flowFrames(flow).map((f) => f.element.id));

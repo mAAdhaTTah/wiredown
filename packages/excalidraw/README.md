@@ -193,8 +193,8 @@ The root export renders nothing; SVG export is in the Node entry,
 
   `lintFlow` returns `FlowFinding`s, `{ message, frame?, element? }`: missing
   screens, stale embed sizes or image aspect (a uniformly scaled frame is fine),
-  two nodes claiming one name, two nodes whose boxes overlap (touching edges do
-  not), a person's copies of our elements (one finding per set pasted together),
+  two nodes claiming one name, two nodes whose boxes overlap, or whose labels,
+  notes or overlays overlap the other node or its own (touching edges do not), a person's copies of our elements (one finding per set pasted together),
   stale overlays, ones whose target or frame is gone or that were drawn for
   another screen, notes whose node is gone, notes whose top edge lies inside
   their frame, straight arrows of ours whose ends are more than 12px from where
@@ -238,6 +238,22 @@ The root export renders nothing; SVG export is in the Node entry,
   beside a decision are handled the same way. A label or note with a group
   absent from its node is left untouched and does not take a place in the
   note stack.
+
+- **Moving** (`flow-move`): `moveNode(flow, node, to)` moves a frame or
+  decision, `to` being a `MoveTo`: a `Place` (`{ rightOf }` or `{ below }`,
+  placed as a new node would be) or a top-left `{ x, y }`. Its label or text,
+  notes and overlays (what `removeFromFlow` takes with it, but not arrows) move
+  by the same delta; our straight arrows bound to it are re-routed as
+  `refreshFlow` re-routes them, and bent ones are left, those that no longer
+  meet a node returned in `unresolved`. A person's arrows, copies and drawing do
+  not move. It throws, changing nothing, for an unknown node, a name two nodes
+  claim, its own name as `place`, or a place where it, its label, notes or
+  overlays would overlap another node or that node's label, notes or overlays
+  (touching edges do not). It returns `Moved`: `{ node, kind, element, x, y,
+width, height, elements, notes, overlays, arrows, changes, unresolved }`,
+  `element` and the box being the node's after the move, `elements` every
+  element moved, `changes` the re-routed arrows as `refreshFlow` reports
+  them, with `unchanged: true` when nothing moved or was re-routed.
 
 - **Flow rendering** (`flow-render`): the part of the Node entry's
   `renderFlowSvg` that needs no Node. `flowScene(flow, screenSvg, { raster? })`

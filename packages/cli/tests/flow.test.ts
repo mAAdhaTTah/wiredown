@@ -458,6 +458,7 @@ test.each([
   ["note", "F1", "Note"],
   ["refresh"],
   ["remove", "F1"],
+  ["move", "F1", "--to", "0,1000"],
   ["render"],
   ["highlight", "F1", "#target"],
   ["mark", "F1", "#target", "Label"],

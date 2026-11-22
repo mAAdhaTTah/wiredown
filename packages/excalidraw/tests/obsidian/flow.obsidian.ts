@@ -17,6 +17,7 @@ import {
   embedSize,
   flowNodes,
   lintFlow,
+  moveNode,
   newFlow,
   parseFlow,
   refreshFlow,
@@ -212,6 +213,17 @@ function removed(): string {
   return serializeFlow(after);
 }
 
+// The same drawing after `flow move … F1 --below F2`: F1 with its group,
+// label, note, highlight and mark moved, and both arrows to D1 re-routed,
+// labels included.
+function moved(): string {
+  const flow = parseFlow(commands());
+  const { notes, overlays, arrows } = moveNode(flow, "F1", { below: "F2" });
+  if (notes !== 1 || overlays !== 2 || arrows !== 2)
+    throw new Error(`moved ${notes} notes, ${overlays} overlays, ${arrows} arrows`);
+  return serializeFlow(flow);
+}
+
 /** Which elements each element is bound to, by id. */
 type Bound = Pick<Seen, "id" | "startBinding" | "endBinding" | "boundElements" | "containerId">;
 function bindings(elements: Bound[]) {
@@ -269,6 +281,7 @@ const FLOWS = {
   "docs/checkout/flows/commands.excalidraw.md": commands(),
   "docs/checkout/flows/refreshed.excalidraw.md": refreshed(),
   "docs/checkout/flows/removed.excalidraw.md": removed(),
+  "docs/checkout/flows/moved.excalidraw.md": moved(),
 };
 
 let obsidian: Obsidian;
