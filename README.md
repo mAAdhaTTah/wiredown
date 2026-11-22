@@ -51,6 +51,8 @@ folder is installable; `@wiredown/gitea`'s dist is a Gitea custom directory,
 installed by copying it into `$GITEA_CUSTOM`.
 
 The design and syntax proposal live in `docs/prds/initial-implementation/`.
+[packages/evals](packages/evals/README.md) holds a manual eval of how well a
+model writes screens from the skill's reference (`pnpm eval`; never run in CI).
 
 ## Credit
 

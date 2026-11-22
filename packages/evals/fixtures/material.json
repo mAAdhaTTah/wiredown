@@ -1,0 +1,19 @@
+{
+  "prd": "prd.md",
+  "screens": [
+    { "id": "exports-empty", "title": "Exports page with nothing scheduled yet" },
+    { "id": "exports-list", "title": "Exports page with the list of scheduled exports" },
+    { "id": "export-new", "title": "New export dialog" },
+    { "id": "export-detail", "title": "Export detail page" },
+    { "id": "export-failed", "title": "Export detail page when the last run failed" }
+  ],
+  "variant": {
+    "base": "exports-list",
+    "id": "exports-paused",
+    "change": "The Churn by plan export has been paused: its status reads Paused, a notice above the table says it is paused and offers a Resume link, and the usage text reads 3 of 5 scheduled exports used (2 active)."
+  },
+  "review": {
+    "screen": "exports-list",
+    "comment": "show the failed state on row 3; mark the Recipients column as unclear"
+  }
+}
