@@ -3,7 +3,7 @@ import type { SpecNode } from "@wiredown/core";
 import { screenElements } from "./elements";
 import type { ExcalidrawElementJson, ScreenElements } from "./elements";
 import type { Flow } from "./flow";
-import { embedSize } from "./flow-edit";
+import { embedSize, SCREEN_INSET } from "./flow-edit";
 import type { ScreenRef } from "./flow-refresh";
 import { sceneOf } from "./scene";
 
@@ -157,9 +157,8 @@ export async function renderFlowSvg(
         const svg = await renderSvg(screen, { ...options, theme: "light" });
         const size = svgSize(svg);
         const padded = embedSize(size.width, size.height).image;
-        const x = (padded.width - size.width) / 2;
         // This replacement relies on the exporter output starting with "<svg ".
-        const image = `<svg xmlns="http://www.w3.org/2000/svg" width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}">${svg.replace("<svg ", `<svg x="${x}" y="0" `)}</svg>`;
+        const image = `<svg xmlns="http://www.w3.org/2000/svg" width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}">${svg.replace("<svg ", `<svg x="${SCREEN_INSET.x}" y="${SCREEN_INSET.y}" `)}</svg>`;
         cache.set(key, "data:image/svg+xml;base64," + Buffer.from(image).toString("base64"));
       }
     }

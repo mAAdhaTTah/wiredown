@@ -143,8 +143,8 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
   const rendered = await renderFlowSvg(
     flow,
     ({ path, blockId }) => {
-      const loaded = screens.file(path);
-      if (typeof loaded === "string") return undefined;
+      const loaded = screens.files.get(path);
+      if (!loaded) return undefined;
       const found = loaded.screen(blockId);
       if (!warned.has(`${loaded.path}#^${blockId}`)) {
         warned.add(`${loaded.path}#^${blockId}`);
@@ -162,10 +162,11 @@ async function renderFlow(file: string, options: RenderOptions): Promise<Result>
   for (const m of rendered.missing) {
     const frame = frames.find((f) => f.element.id === m.element)?.frame;
     const at = { screen: m.blockId, ...(frame ? { frame } : {}) };
-    const loaded = screens.file(m.path);
-    if (typeof loaded === "string") {
+    const loaded = screens.files.get(m.path);
+    if (!loaded) {
       const what = frame ? "embeds" : "an image embeds";
-      errors.push({ ...at, message: `${what} [[${m.path}#^${m.blockId}]], ${loaded}` });
+      const why = screens.unresolved.get(m.path) ?? "it was not resolved";
+      errors.push({ ...at, message: `${what} [[${m.path}#^${m.blockId}]], but ${why}` });
     } else
       for (const finding of loaded.screen(m.blockId).errors)
         errors.push({
