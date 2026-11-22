@@ -36,9 +36,9 @@ After a build, `pnpm exec wiredown` runs the CLI from the repository root.
 `pnpm test:obsidian` builds the wiredown Obsidian plugin, then opens flows
 in real Obsidian with it and the Excalidraw plugin, headless. It checks that
 the Excalidraw plugin reads them as `parseFlow` does and keeps what
-`serializeFlow` wrote when it saves, and that flows built by commands keep
+`serializeFlow` wrote when it saves, that flows built by commands keep
 their frames where Obsidian draws the screens and save lint-clean with
-nothing to refresh. It downloads the versions pinned in
+nothing to refresh, and what the wiredown plugin draws in notes. It downloads the versions pinned in
 `packages/excalidraw/tests/obsidian/obsidian.ts` on first run and needs
 Linux x64. CI runs it too.
 TypeScript 6 is used because typescript-eslint does not yet support
