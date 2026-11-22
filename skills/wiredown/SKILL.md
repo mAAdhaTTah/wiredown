@@ -197,3 +197,21 @@ Flow commands with `--json` return `frames[].frame` such as `F1`, or
 [examples](reference/examples.md) for trimmed command results and the
 [syntax reference](reference/syntax.md) for the grammar and the component
 categories, variant verbs included.
+
+## Reporting problems
+
+Wiredown's CLI is still being refined, and reports from agents shape it. When
+something surprises you, file an issue on `mAAdhaTTah/wiredown` (for
+example with `gh issue create --repo mAAdhaTTah/wiredown`): a command that
+fails or crashes unexpectedly, output or JSON that differs from what this
+skill describes, a drawing or PNG that looks wrong, or a step this skill
+does not cover. Include:
+
+- `wiredown --version` and the exact command line;
+- its exit code and complete output (stdout and stderr);
+- what you expected instead, and why (cite this skill where it applies);
+- the smallest `wiredown` block or flow that shows the problem.
+
+Replace private content, such as text from an unpublished spec, with
+placeholder text that still shows the problem. If you cannot file issues,
+give the person the report to file.
