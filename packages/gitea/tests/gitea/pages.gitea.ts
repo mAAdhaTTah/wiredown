@@ -178,7 +178,7 @@ it("loads only the loader on a page with no wireframes, from footer.tmpl", async
 
 it("draws a screens file, its variant from the raw file, and keeps the source", async () => {
   const visit = await open(anonymous, `${FILE}/screens.md`);
-  const svgs = visit.page.locator(".wiredown-block svg");
+  const svgs = visit.page.locator(".wiredown-block svg.wiredown-svg");
   await expect.poll(() => svgs.count()).toBe(2);
   await settle(visit);
   expect(await svgs.first().textContent()).toContain("3 of 5 seats used");
@@ -207,7 +207,7 @@ it("shows a block's error with its line in the file, and the code", async () => 
 
 it("draws a flow above its Markdown, with every screen", async () => {
   const visit = await open(anonymous, `${FILE}/flows/f.excalidraw.md`);
-  const svg = visit.page.locator(".wiredown-flow svg");
+  const svg = visit.page.locator(".wiredown-flow svg.wiredown-svg");
   await svg.waitFor();
   await settle(visit);
   for (const text of ["F1", "F2", NOTE]) expect(await svg.textContent()).toContain(text);
@@ -250,9 +250,10 @@ it("draws a hostile flow without leaving Gitea's origin", async () => {
 it("draws dark for a user with the dark theme", async () => {
   const draw = async (context: BrowserContext) => {
     const visit = await open(context, `${FILE}/screens.md`);
-    const svgs = visit.page.locator(".wiredown-block svg");
+    const svgs = visit.page.locator(".wiredown-block svg.wiredown-svg");
     await expect.poll(() => svgs.count()).toBe(2);
-    await settle(visit);
+    // Not networkidle: a signed-in page keeps a connection open to Gitea.
+    await visit.page.waitForLoadState("load");
     expect(visit.errors).toEqual([]);
     const theme = await visit.page.locator("html").getAttribute("data-theme");
     const html = await svgs.first().evaluate((svg) => svg.outerHTML);
@@ -267,13 +268,13 @@ it("draws dark for a user with the dark theme", async () => {
 
 it("draws blocks in a pull request comment, and in a comment's preview", async () => {
   const visit = await open(user, `${REPO}/pulls/1`);
-  const comment = visit.page.locator(".timeline-item.comment .wiredown-block svg");
+  const comment = visit.page.locator(".timeline-item.comment .wiredown-block svg.wiredown-svg");
   await expect.poll(() => comment.count()).toBe(2);
   // Write a comment and preview it: Gitea adds the preview without a reload.
   const form = visit.page.locator("#comment-form");
   await form.locator("textarea").fill(blocks);
   await form.getByText("Preview", { exact: true }).click();
-  await expect.poll(() => form.locator(".wiredown-block svg").count()).toBe(2);
+  await expect.poll(() => form.locator(".wiredown-block svg.wiredown-svg").count()).toBe(2);
   await form.getByRole("button", { name: "Comment", exact: true }).click();
   await expect.poll(() => comment.count()).toBe(4);
   await settle(visit);
@@ -291,7 +292,7 @@ it("leaves blocks as code with a notice when the renderer is missing", async () 
     "Wiredown could not load its renderer; showing the source.",
   );
   expect(await page.locator("pre code.language-wiredown").first().isVisible()).toBe(true);
-  expect(await page.locator(".wiredown-block svg").count()).toBe(0);
+  expect(await page.locator(".wiredown-block svg.wiredown-svg").count()).toBe(0);
   await page.close();
 });
 
@@ -340,7 +341,7 @@ it("draws a flow under a strict CSP, with its fonts and styles", async () => {
     });
   });
   const visit = await open(context, `${FILE}/flows/f.excalidraw.md`);
-  await visit.page.locator(".wiredown-flow svg").waitFor();
+  await visit.page.locator(".wiredown-flow svg.wiredown-svg").waitFor();
   await settle(visit);
   expect(
     await visit.page.evaluate(() => [...document.fonts].every((f) => f.status === "loaded")),
