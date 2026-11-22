@@ -78,7 +78,7 @@ const fixPrompt = (original: string, previous: string, findings: string, note?: 
     "```",
     ...(note ? ["", note] : []),
     "",
-    "Fix every error and reply again with the corrected file, in the reply format above.",
+    "Fix every error and reply again as the task asks, in the reply format above.",
   ].join("\n");
 
 const formatPrompt = (original: string, reason: string) =>

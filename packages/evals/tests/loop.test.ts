@@ -68,6 +68,9 @@ describe("runTask", () => {
     expect(runner.prompts[1]).toContain(r.attempts[0].findings);
     expect(runner.prompts[1]).toContain("## Your previous reply");
     expect(runner.prompts[1]).toContain("with your screen appended from line");
+    // task 2 wants only the new screen back, not the whole file
+    expect(runner.prompts[1]).toMatch(/Fix every error and reply again as the task asks/);
+    expect(runner.prompts[1]).not.toContain("corrected file");
     expect(r.output).toBe(CLEAN + "\n");
   });
 
