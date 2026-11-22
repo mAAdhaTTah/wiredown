@@ -1,8 +1,9 @@
 # Wiredown screen syntax: proposed changes to the Sketchdown fork
 
-Status: draft, 2026-11-16. Baseline is the prototype fork in
-`prototypes/sketchdown-fork/`, which already extends upstream Sketchdown
-1.0.1. Prior art compared: Sketchdown, tsquare, Wireloom.
+Status: draft, 2026-11-16. The historical baseline was a prototype fork
+extending upstream Sketchdown 1.0.1. The prototypes informed the build but
+are not part of this repository. Prior art compared: Sketchdown, tsquare,
+Wireloom.
 
 ## Principles
 

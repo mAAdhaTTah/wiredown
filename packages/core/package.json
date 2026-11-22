@@ -20,6 +20,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^26.6.6"
+    "@excalidraw/excalidraw": "^0.18.1",
+    "@types/node": "^26.6.6",
+    "playwright-core": "^1.65.1"
   }
 }

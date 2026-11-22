@@ -1,12 +1,6 @@
 import { expect, it } from "vitest";
-import {
-  addScreen,
-  embedSize,
-  flowScene,
-  newFlow,
-  paddedScreenSvg,
-  svgDataUrl,
-} from "../src/index";
+import { paddedScreenSvg, svgDataUrl } from "../src/flow-render";
+import { addScreen, embedSize, flowScene, newFlow } from "../src/index";
 
 it("encodes SVG data URLs as Node's Buffer does, for any text", () => {
   const svg = `<svg width="1" height="1"><text>Grüße ⋯ 日本 ${"x".repeat(70_000)}</text></svg>`;

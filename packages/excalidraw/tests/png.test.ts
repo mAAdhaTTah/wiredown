@@ -2,22 +2,24 @@ import { readFileSync } from "node:fs";
 import { layoutScreen, parse } from "@wiredown/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SCREEN_INSET } from "../src/flow-edit";
+import { FLOW_MARGIN } from "../src/flow-render";
 import { addScreen, newFlow, screenElements } from "../src/index";
-import { BACKGROUND, FLOW_MARGIN, renderFlowSvg, renderSvg, svgToPng } from "../src/node";
+import { BACKGROUND, renderFlowSvg, renderScreenSvg, svgToPng } from "../src/node";
 import { decodePng } from "./png";
 
 const proposal = readFileSync(
   new URL("../../../docs/prds/initial-implementation/syntax-proposal.md", import.meta.url),
   "utf8",
 );
-const screen = screenElements(
-  layoutScreen(parse(proposal.split("```wiredown\n")[1].split("\n```")[0]).tree),
-);
+const tree = parse(proposal.split("```wiredown\n")[1].split("\n```")[0]).tree;
+const screen = screenElements(layoutScreen(tree));
+const svgOf = async (options?: Parameters<typeof renderScreenSvg>[1]) =>
+  (await renderScreenSvg(tree, options)).svg;
 let svg: string;
 let opaque: Awaited<ReturnType<typeof svgToPng>>;
 
 beforeAll(async () => {
-  svg = await renderSvg(screen.elements);
+  svg = await svgOf();
   opaque = await svgToPng(svg, { scale: 2, background: BACKGROUND.light });
 }, 30000);
 
@@ -42,7 +44,7 @@ describe("svgToPng", { timeout: 30000 }, () => {
     expect(decodePng(opaque.png).pixel(0, 0)).toEqual([255, 255, 255, 255]);
     const clear = await svgToPng(svg, { scale: 2 });
     expect(decodePng(clear.png).pixel(0, 0)[3]).toBe(0);
-    const dark = await svgToPng(await renderSvg(screen.elements, { theme: "dark" }), {
+    const dark = await svgToPng(await svgOf({ theme: "dark" }), {
       background: BACKGROUND.dark,
     });
     expect(decodePng(dark.png).pixel(0, 0)).toEqual([0x12, 0x12, 0x12, 255]);
@@ -52,7 +54,7 @@ describe("svgToPng", { timeout: 30000 }, () => {
   // it, text falls back to a system font (or draws nothing) and the pixels are
   // exactly those of the same SVG exported without its font.
   it("draws text in the Excalifont the SVG embeds", async () => {
-    const fallback = await svgToPng(await renderSvg(screen.elements, { fonts: false }), {
+    const fallback = await svgToPng(await svgOf({ fonts: false }), {
       scale: 2,
       background: BACKGROUND.light,
     });

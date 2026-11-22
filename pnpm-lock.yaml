@@ -208,12 +208,24 @@ importers:
 
   packages/cli:
     dependencies:
+      '@excalidraw/utils':
+        specifier: 0.1.8
+        version: 0.1.8
+      '@resvg/resvg-js':
+        specifier: ^2.6.2
+        version: 2.6.2
       '@wiredown/core':
         specifier: workspace:*
         version: link:../core
       '@wiredown/excalidraw':
         specifier: workspace:*
         version: link:../excalidraw
+      happy-dom:
+        specifier: ^21.0.4
+        version: 21.0.4
+      woff2-encoder:
+        specifier: ^2.0.0
+        version: 2.0.0
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -224,9 +236,15 @@ importers:
 
   packages/core:
     devDependencies:
+      '@excalidraw/excalidraw':
+        specifier: ^0.18.1
+        version: 0.18.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
+      playwright-core:
+        specifier: ^1.65.1
+        version: 1.65.1
 
   packages/evals:
     dependencies:
@@ -244,29 +262,30 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6))
       vitest-evals:
-        specifier: 0.18.1
+        specifier: ^0.18.1
         version: 0.18.1(tinyrainbow@3.2.0)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)))(zod@4.6.7)
 
   packages/excalidraw:
     dependencies:
-      '@excalidraw/utils':
-        specifier: 0.1.8
-        version: 0.1.8
-      '@resvg/resvg-js':
-        specifier: ^2.6.2
-        version: 2.6.2
       '@wiredown/core':
         specifier: workspace:*
         version: link:../core
       fractional-indexing:
         specifier: ^4.0.0
         version: 4.0.0
-      happy-dom:
-        specifier: ^21.0.4
-        version: 21.0.4
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
+    devDependencies:
+      '@excalidraw/utils':
+        specifier: 0.1.8
+        version: 0.1.8
+      '@resvg/resvg-js':
+        specifier: ^2.6.2
+        version: 2.6.2
+      happy-dom:
+        specifier: ^21.0.4
+        version: 21.0.4
       woff2-encoder:
         specifier: ^2.0.0
         version: 2.0.0
@@ -274,7 +293,7 @@ importers:
   packages/gitea:
     devDependencies:
       '@excalidraw/excalidraw':
-        specifier: 0.18.1
+        specifier: ^0.18.1
         version: 0.18.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/node':
         specifier: ^26.6.6
@@ -289,16 +308,16 @@ importers:
         specifier: workspace:*
         version: link:../excalidraw
       happy-dom:
-        specifier: 21.0.4
+        specifier: ^21.0.4
         version: 21.0.4
       playwright-core:
-        specifier: 1.65.1
+        specifier: ^1.65.1
         version: 1.65.1
       react:
-        specifier: 18.3.1
+        specifier: ^18.3.1
         version: 18.3.1
       react-dom:
-        specifier: 18.3.1
+        specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
 
   packages/obsidian:

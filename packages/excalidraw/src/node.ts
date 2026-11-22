@@ -8,9 +8,8 @@ import type { ExcalidrawElementJson, ScreenElements } from "./elements";
 import type { Flow } from "./flow";
 import type { ScreenRef } from "./flow-refresh";
 import { FLOW_MARGIN, flowScene, svgSize } from "./flow-render";
+import { nodeDependency } from "./node-dependency";
 import { sceneOf } from "./scene";
-
-export { FLOW_MARGIN };
 
 export interface SvgOptions {
   theme?: "light" | "dark";
@@ -19,7 +18,7 @@ export interface SvgOptions {
 }
 
 async function initialize() {
-  const { Window } = await import("happy-dom");
+  const { Window } = await nodeDependency("happy-dom", () => import("happy-dom"));
   // Excalidraw registers fonts before embedding their bytes. Node has no
   // FontFace; no font loading or canvas measurement is needed for SVG export.
   // Install only this global, once on first use, preserving a host's own.
@@ -45,7 +44,10 @@ async function initialize() {
       },
     });
   }
-  const { exportScene } = await import("@excalidraw/utils");
+  const { exportScene } = await nodeDependency(
+    "@excalidraw/utils",
+    () => import("@excalidraw/utils"),
+  );
   return { document: new Window().document, exportScene };
 }
 
@@ -72,7 +74,7 @@ async function quietly<T>(run: () => Promise<T>): Promise<T> {
 }
 
 /** Export the adapter's light-theme elements through Excalidraw in Node. */
-export async function renderSvg(
+async function renderSvg(
   elements: ExcalidrawElementJson[],
   options: SvgOptions = {},
 ): Promise<string> {
@@ -180,7 +182,7 @@ export async function svgToPng(
 ): Promise<{ png: Uint8Array; width: number; height: number }> {
   const scale = options.scale ?? 1;
   if (!(scale > 0 && Number.isFinite(scale))) throw new RangeError(`bad PNG scale ${scale}`);
-  const { Resvg } = await import("@resvg/resvg-js");
+  const { Resvg } = await nodeDependency("@resvg/resvg-js", () => import("@resvg/resvg-js"));
   const trusted = options.inline ?? new Set();
   refuseUntrustedImages(svg, trusted);
   const flat = inlineSvgImages(svg, trusted);
@@ -214,7 +216,9 @@ const sfnts = new Map<string, Promise<Uint8Array>>();
 function woff2ToSfnt(base64: string): Promise<Uint8Array> {
   let font = sfnts.get(base64);
   if (!font) {
-    font = import("woff2-encoder/decompress").then((m) => m.default(Buffer.from(base64, "base64")));
+    font = nodeDependency("woff2-encoder", () => import("woff2-encoder/decompress")).then((m) =>
+      m.default(Buffer.from(base64, "base64")),
+    );
     sfnts.set(base64, font);
   }
   return font;

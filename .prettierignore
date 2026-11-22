@@ -15,7 +15,7 @@ packages/core/src/metrics-*.ts
 # Flow drawing written by the prototype, kept verbatim as a test fixture.
 packages/excalidraw/tests/fixtures/
 
-# Gitea page structures assumed from the prototypes, kept as written.
+# Assumed Gitea page structures, kept as written.
 packages/gitea/tests/fixtures/
 skills/wiredown/reference/syntax.md
 skills/wiredown/reference/components/

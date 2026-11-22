@@ -142,8 +142,8 @@ Everything it reads from the page is in `src/gitea.ts`:
 | `noteUrl(doc)`    | On a `.md` file view, the raw file is the page URL with `/raw/` for `/src/`.                                                      |
 | `theme(doc)`      | `<html data-theme>` names containing `dark` are dark; `auto` follows the OS.                                                      |
 
-The selectors and theme rule come from the round-2 page-script prototype.
-The file-view and raw URLs are new and come from no prototype.
+The selectors, theme rule, file-view and raw URLs are assumptions covered
+by local fixtures; they still need checking against a live Gitea instance.
 
 ## What it does
 

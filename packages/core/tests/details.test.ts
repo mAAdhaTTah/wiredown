@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_THEME, FONT_SIZE, layout, parse } from "../src/index";
-import type { DrawOp, Style, TextOp } from "../src/index";
+import { layout } from "../src/layout";
+import { parse } from "../src/parse";
+import { DEFAULT_THEME, FONT_SIZE } from "../src/theme";
+import type { DrawOp, Style, TextOp } from "../src/types";
 import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure";
 
 const style: Style = { stroke: "#1e1e1e", fontFamily: 5, roughness: 1, fontSize: FONT_SIZE };

@@ -1,4 +1,4 @@
-export { EXCALIFONT_FAMILY, screenElements } from "./elements";
+export { screenElements } from "./elements";
 export type { ElementOptions, ExcalidrawElementJson, ScreenElements } from "./elements";
 export { sceneOf } from "./scene";
 export type { ExcalidrawScene } from "./scene";
@@ -7,16 +7,13 @@ export type { EmbedLink, Flow, FlowSource } from "./flow";
 export {
   addHighlight,
   addMark,
-  overlayBox,
   addDecision,
   addNote,
   addScreen,
-  DATA_VERSION,
   connect,
   embedSize,
   flowFrames,
   frameImage,
-  markCentre,
   flowNodes,
   removeFromFlow,
 } from "./flow-edit";
@@ -30,7 +27,7 @@ export type {
   Removed,
   Unbound,
 } from "./flow-edit";
-export { bindingFailures, lintFlow, refreshFlow } from "./flow-refresh";
+export { lintFlow, refreshFlow } from "./flow-refresh";
 export type {
   FlowChange,
   FlowFinding,
@@ -39,7 +36,7 @@ export type {
   ScreenState,
   Size,
 } from "./flow-refresh";
-export { FLOW_MARGIN, flowScene, paddedScreenSvg, svgDataUrl, svgSize } from "./flow-render";
+export { FLOW_MARGIN, flowScene } from "./flow-render";
 export type { FlowScene } from "./flow-render";
 export {
   embedCandidates,

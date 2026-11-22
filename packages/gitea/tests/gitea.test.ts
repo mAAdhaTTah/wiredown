@@ -4,7 +4,7 @@ import { Window } from "happy-dom";
 import { expect, it } from "vitest";
 import { DONE, findBlocks, findFlow, noteUrl, rawRoot, rawUrl, theme } from "../src/gitea";
 
-// The fixtures' structure is assumed from the prototypes, not captured from a live Gitea.
+// The fixtures model assumed HTML structure, not a captured live Gitea page.
 export function page(fixture: string, url: string, dark = false): Document {
   const window = new Window({ url });
   window.matchMedia = ((query: string) => ({

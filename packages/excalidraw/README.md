@@ -41,8 +41,8 @@ The root export renders nothing; SVG export is in the Node entry,
   around the drawing (default 8) and Excalidraw `roughness` (0 architect,
   1 artist, 2 cartoonist; default 1). Ids and seeds come from each
   element's position in the list, so the same screen always gives the
-  same elements. `EXCALIFONT_FAMILY` is Excalidraw's font family number for
-  Excalifont (5).
+  same elements. Text uses core's `EXCALIFONT_FAMILY`, Excalidraw's font
+  family number for Excalifont (5).
 
 - **Scene** (`scene`): `sceneOf(elements)` wraps elements in the
   `ExcalidrawScene` object Excalidraw's exporters take, with a white
@@ -61,10 +61,9 @@ The root export renders nothing; SVG export is in the Node entry,
 
   `embeds` maps an image's `fileId` to its `## Embedded Files` link, an
   `EmbedLink`: `path`, and optionally `blockId` (`#^id`, as for a screen),
-  `heading` (`#Heading`), `width` and `height`; `serializeFlow` writes it
-  in the Obsidian plugin's link grammar. A flow's `source` is a `FlowSource`,
-  opaque to callers: what `serializeFlow` needs to reproduce the parts it
-  does not own.
+  `heading` (`#Heading`), `width` and `height`. A flow's `source` is a
+  `FlowSource`, opaque to callers: what `serializeFlow` needs to reproduce
+  the parts it does not own.
 
   ```ts
   import { parseFlow, serializeFlow } from "@wiredown/excalidraw";
@@ -115,18 +114,17 @@ The root export renders nothing; SVG export is in the Node entry,
   every command that takes that name throw a `FlowError`, naming both
   element ids.
 
-  Flow overlays use exported screen boxes and the image's current geometry:
-  `overlayBox(image, screenSize, box)` returns `{ x, y, width, height }`.
+  Flow overlays use exported screen boxes and the image's current geometry.
   `addHighlight(flow, frame, { target, box, screen })` returns an outline id;
   `addMark(flow, frame, { target, box, screen, label })` returns the circle id,
   with its text bound to it. Their `OverlayOptions` are the `target` id, its
   `box` from `screenElements` and the `screen`'s `{ width, height }`. Highlights
   have a 4px outset; badges are at least 32px wide, else the size Excalidraw
   gives an ellipse around their label, so it does not resize them.
-  A badge's centre is `markCentre(x, y, diameter)`: up and left of the
-  component's top-left corner by a third of its diameter, so it sits just
-  outside the corner. Neither is bound to the image; both join the frame's
-  group. `frameImage(flow, frame)` is a frame's image element. Overlays record
+  A badge's centre is up and left of the component's top-left corner by a third
+  of its diameter, so it sits just outside the corner. Neither is bound to the
+  image; both join the frame's group. `frameImage(flow, frame)` is a frame's
+  image element. Overlays record
   `{ v: 1, id, role: "highlight" | "mark", frame, screen, target, label?, anchor }`
   in `customData.wiredown`, where `anchor` is the frame image's element id and
   `frame` is for people; bound text has the same data (with its own `id`) and
@@ -165,8 +163,8 @@ The root export renders nothing; SVG export is in the Node entry,
   `.wiredown-block svg{display:block}`), keeping either key the file
   already has. `pnpm test:obsidian` checks the size and place in Obsidian.
 
-  Every `customData.wiredown` carries `v` (`DATA_VERSION`, now 1); data
-  without `v` is version 1, and data with a higher `v` is ignored.
+  Every `customData.wiredown` carries `v` (now 1); data without `v` is
+  version 1, and data with a higher `v` is ignored.
   `newerDataVersion(flow)` is the version of live elements from a newer
   wiredown: the highest number, else the first value; undefined when there
   are none. New elements also carry `id`, equal to the element's id. Data
@@ -201,10 +199,9 @@ The root export renders nothing; SVG export is in the Node entry,
   another screen, notes whose node is gone, notes whose top edge lies inside
   their frame, straight arrows of ours whose ends are more than 12px from where
   `connect` would put them now or inside a frame (Excalidraw moves ends bound
-  to a diamond by up to 6px when it opens the drawing), dangling arrow or text bindings
-  (`bindingFailures(elements)` on its own), images without an
-  `## Embedded Files` entry, and data from a newer wiredown. Overlays belong to
-  the frame whose image id their `anchor` records.
+  to a diamond by up to 6px when it opens the drawing), dangling arrow or text
+  bindings, images without an `## Embedded Files` entry, and data from a newer
+  wiredown. Overlays belong to the frame whose image id their `anchor` records.
 
   `refreshFlow` updates each frame's link size and image size (same top-left and
   scale), moves its overlays to where `addHighlight` and `addMark` would place
@@ -250,11 +247,7 @@ The root export renders nothing; SVG export is in the Node entry,
   `screenSvg(embed)` resolves to an embed's light SVG export, or undefined when
   the screen is missing; it is called once per embed path and block id.
   `FLOW_MARGIN` (16px) is the space to export around a whole flow, so labels at
-  its edge are not cut; a screen pads itself. `paddedScreenSvg(svg)` wraps a
-  screen's SVG in the space a flow embed gives it (see `embedSize`),
-  `svgDataUrl(svg)` is a base64 `data:` URL of an SVG document in any runtime
-  with `btoa`, and `svgSize(svg)` reads the `width` and `height` of an SVG's
-  root element.
+  its edge are not cut; a screen pads itself.
 
 - **Screens paths** (`screens-path`): an embed's path names its screens file
   within a root, a directory URL ending in `/`: the git repository's root, else
@@ -285,18 +278,21 @@ The root export renders nothing; SVG export is in the Node entry,
 ## Node API
 
 `@wiredown/excalidraw/node` exports through Excalidraw in Node. Its heavy
-dependencies load on first render.
+dependencies load on first render. They are optional peers that a consumer
+of this entry must install: `@excalidraw/utils`, `happy-dom`,
+`@resvg/resvg-js` and `woff2-encoder`; a function that needs a missing one
+throws, naming the package to install. The optional Node peers accept
+compatible caret ranges, except `@excalidraw/utils`, which stays at 0.1.8
+for the font metrics and export path.
 
-- **SVG** (`node`): `renderSvg(elements, options?)` exports the adapter's
-  light-theme elements and resolves to the SVG markup.
-  `renderScreenSvg(tree, options?)` lays a parsed screen out with core's
+- **SVG** (`node`): `renderScreenSvg(tree, options?)` lays a parsed screen out with core's
   `layoutScreen`, builds its elements with the default `ElementOptions` and
   exports them, resolving to `{ svg, width, height, boxes }`: the SVG and
   `screenElements`' size and boxes.
 
   `renderFlowSvg(flow, screens, options?)` exports a flow with `FLOW_MARGIN`
   (16px) around it, so labels at its edge are not cut; its options are
-  `FlowSvgOptions`, those of `renderSvg` plus `raster` (below). It returns
+  `FlowSvgOptions`, those of `renderScreenSvg` plus `raster` (below). It returns
   `{ svg, width, height, missing, rejected, inline }`. The lookup is asked per
   embed, `screens({ path, blockId })`, and returns adapter elements or
   `undefined`; missing entries contain `element`, `path` and `blockId`. Screen
@@ -360,9 +356,8 @@ dependencies load on first render.
   the SVG is portable; default true).
 
 ```ts
-import { renderScreenSvg, renderSvg } from "@wiredown/excalidraw/node";
+import { renderScreenSvg } from "@wiredown/excalidraw/node";
 
-const svg = await renderSvg(elements);
 const rendered = await renderScreenSvg(parse("button: Save #save").tree);
 // rendered: { svg, width, height, boxes }
 ```

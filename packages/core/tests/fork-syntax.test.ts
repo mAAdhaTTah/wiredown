@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_THEME, FONT_SIZE, layout, parse } from "../src/index";
-import type { RectOp } from "../src/index";
+import { layout } from "../src/layout";
+import { parse } from "../src/parse";
+import { DEFAULT_THEME, FONT_SIZE } from "../src/theme";
+import type { RectOp } from "../src/types";
 import { fakeMeasure } from "./helpers/fakeMeasure";
 
 const style = { fontSize: FONT_SIZE, fontFamily: 5 };

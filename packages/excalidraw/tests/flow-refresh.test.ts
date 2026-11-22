@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
-import { identity } from "../src/flow-edit";
+import { identity, overlayBox } from "../src/flow-edit";
 import {
   addDecision,
   addHighlight,
@@ -12,7 +12,6 @@ import {
   flowNodes,
   lintFlow,
   newFlow,
-  overlayBox,
   parseFlow,
   refreshFlow,
   serializeFlow,

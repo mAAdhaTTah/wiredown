@@ -9,7 +9,7 @@ declare global {
 
 let excalidraw: Promise<typeof import("@excalidraw/excalidraw")> | undefined;
 
-/** Excalidraw's browser exporter, the call the Gitea prototype made (lib-excalidraw.ts). */
+/** Excalidraw's browser exporter, loaded only when the page needs rendering. */
 export const exportSvg: ExportSvg = async (scene, { theme, padding }) => {
   if (!excalidraw) {
     // Excalidraw loads the fonts it inlines from here: the fonts/ folder

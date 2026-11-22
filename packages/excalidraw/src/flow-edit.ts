@@ -9,11 +9,11 @@ import type { Flow } from "./flow";
 // an embed whose CSS mentions svg, as the CSS styleScreens writes does.
 // Measured in Obsidian (test:obsidian). A person's own embed CSS can change
 // the padding and footer; that is their choice.
-// The link height is a maximum, with 40px headroom as in the prototype.
+// The link height is a maximum, with 40px headroom.
 const MD_HOST_PAD = 10,
   MD_FOOTER = 5,
   MAX_HEIGHT_HEADROOM = 40;
-// gen-flow.mjs: gap between nodes, where an arrow leaves a frame, the
+// Gap between nodes, where an arrow leaves a frame, the
 // decision diamond's size, the spacing of parallel arrows, and how far an
 // arrow end stays off its node's edge.
 const GAP = 340,
@@ -22,7 +22,7 @@ const GAP = 340,
   DEC_H = 170,
   PAR = 70;
 export const END_GAP = 6;
-// gen-flow.mjs captions: 16px, grey, 20px under the frame.
+// Captions: 16px, grey, 20px under the frame.
 export const NOTE_GAP = 20;
 const NOTE_COLOR = "#495057",
   FONT_SIZE = 16,
@@ -357,7 +357,7 @@ function boxOf(n: FlowNode): Box {
   const [x, y, w, h] = [e.x, e.y, e.width, e.height].map(Number);
   return { x, y, w, h, decision: n.kind === "decision" };
 }
-/** How far down its left or right edge an arrow meets a node (gen-flow.mjs PORT_Y). */
+/** How far down its left or right edge an arrow meets a node. */
 function portY(b: Box) {
   return b.decision ? b.h / 2 : Math.min(PORT_Y, b.h / 2);
 }
@@ -446,7 +446,7 @@ export function addScreen(flow: Flow, options: AddScreenOptions): string {
 }
 
 /**
- * Appends a decision diamond with its text centred inside (gen-flow.mjs).
+ * Appends a decision diamond with its text centred inside.
  * The diamond grows if the wrapped text does not fit. Returns its D-number.
  */
 export function addDecision(flow: Flow, options: AddDecisionOptions): string {
@@ -486,7 +486,7 @@ export function addDecision(flow: Flow, options: AddDecisionOptions): string {
  *
  * The arrow is straight, between the facing edges of the nodes where they are
  * now: right to left when the target is further away sideways than up or
- * down, bottom to top otherwise (gen-flow.mjs edgeGeometry, made symmetric).
+ * down, bottom to top otherwise.
  * Each further arrow between the same pair, in either direction, is offset so
  * they do not overlap: 0, +70, -70, +140, ...
  */

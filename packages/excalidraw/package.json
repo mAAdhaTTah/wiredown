@@ -29,12 +29,34 @@
     "test:obsidian": "vitest run --config vitest.obsidian.config.ts"
   },
   "dependencies": {
-    "@excalidraw/utils": "0.1.8",
-    "@resvg/resvg-js": "^2.6.2",
     "@wiredown/core": "workspace:*",
     "fractional-indexing": "^4.0.0",
+    "lz-string": "^1.5.0"
+  },
+  "peerDependencies": {
     "happy-dom": "^21.0.4",
-    "lz-string": "^1.5.0",
-    "woff2-encoder": "^2.0.0"
+    "@resvg/resvg-js": "^2.6.2",
+    "woff2-encoder": "^2.0.0",
+    "@excalidraw/utils": "0.1.8"
+  },
+  "peerDependenciesMeta": {
+    "happy-dom": {
+      "optional": true
+    },
+    "@resvg/resvg-js": {
+      "optional": true
+    },
+    "woff2-encoder": {
+      "optional": true
+    },
+    "@excalidraw/utils": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "happy-dom": "^21.0.4",
+    "@resvg/resvg-js": "^2.6.2",
+    "woff2-encoder": "^2.0.0",
+    "@excalidraw/utils": "0.1.8"
   }
 }

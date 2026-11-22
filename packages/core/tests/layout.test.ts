@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_THEME, FONT_SIZE, layout, parse } from "../src/index";
-import type { DrawOp, LineOp, RectOp, TextOp, TextStyle } from "../src/index";
+import { layout } from "../src/layout";
+import { parse } from "../src/parse";
+import { DEFAULT_THEME, FONT_SIZE } from "../src/theme";
+import type { DrawOp, LineOp, RectOp, TextOp, TextStyle } from "../src/types";
 import { EXAMPLE, NEW_USER } from "./fixtures/specs";
 import { CHAR_W, LINE_H, fakeMeasure } from "./helpers/fakeMeasure";
 
