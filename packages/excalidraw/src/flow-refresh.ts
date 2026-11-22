@@ -222,6 +222,7 @@ const overlayChange = (flow: Flow, o: Overlay) => {
   };
 };
 const link = (path: string, blockId: string) => `[[${path}#^${blockId}]]`;
+const removeIt = (what: string) => `remove it with "wiredown flow remove <flow> ${what}"`;
 const overlayName = (o: Overlay) =>
   o.role === "mark" ? `mark ${o.label} #${o.target}` : `highlight #${o.target}`;
 
@@ -454,7 +455,7 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
     out.push({
       ...(node ? { frame: node } : {}),
       element: copy.id,
-      message: `element ${copy.id} is a copy of ${what}; flow commands leave copies alone: delete it in the drawing`,
+      message: `element ${copy.id} is a copy of ${what}; flow commands leave copies alone: delete it in the drawing, or run "wiredown flow remove <flow> ${copy.id}"`,
     });
   }
   const states = frameStates(flow, screens);
@@ -521,7 +522,7 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
     out.push({
       ...(d.node ? { frame: d.node } : {}),
       element: e.id,
-      message: `note "${noteStart(e)}" is on a node that no longer exists`,
+      message: `note "${noteStart(e)}" is on a node that no longer exists; ${removeIt(e.id)}`,
     });
   }
   // as refresh, which moves them, only on frames whose screen exists
@@ -537,7 +538,10 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
     const at = { frame: o.frame, element: o.element.id };
     const s = states.find((s) => s.image.id === o.anchor);
     if (!framed.has(o.anchor ?? ""))
-      out.push({ ...at, message: `${overlayName(o)} is on a frame that no longer exists` });
+      out.push({
+        ...at,
+        message: `${overlayName(o)} is on a frame that no longer exists; ${removeIt(o.element.id)}`,
+      });
     if (!s?.screen) continue;
     if (o.screen !== undefined && o.screen !== s.blockId)
       out.push({
@@ -545,8 +549,9 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
         message: `${overlayName(o)} was drawn on ^${o.screen}, but ${s.frame} embeds ^${s.blockId}`,
       });
     const plan = placeOverlay(flow, o, s as typeof s & { screen: ScreenState }, refreshedImage(s));
-    if (typeof plan === "string") out.push({ ...at, message: `${overlayName(o)}: ${plan}` });
-    else if (!plan.every(placed))
+    if (typeof plan === "string") {
+      out.push({ ...at, message: `${overlayName(o)}: ${plan}; ${removeIt(o.element.id)}` });
+    } else if (!plan.every(placed))
       out.push({ ...at, message: `stale overlay: ${overlayName(o)} is not on #${o.target}` });
   }
   const bindings = bindingFailures(flow.elements);
@@ -558,7 +563,10 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
     if (bindings.some((f) => f.element === a.id)) continue; // already reported as dangling
     for (const n of [d.from, d.to])
       if (!nodes.has(n))
-        out.push({ element: a.id, message: `arrow ${d.from} -> ${d.to}: ${n} no longer exists` });
+        out.push({
+          element: a.id,
+          message: `arrow ${d.from} -> ${d.to}: ${n} no longer exists; ${removeIt(a.id)}`,
+        });
   }
   for (const r of arrowRoutes(flow)) {
     if (!r.missed.length || bindings.some((f) => f.element === r.arrow.id)) continue;

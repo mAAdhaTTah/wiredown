@@ -173,7 +173,7 @@ test("overlays find their frame by element id, not by name", () => {
   expect(() => addHighlight(flow, "F7", options)).toThrow("F7 already highlights #invite");
   delete (copy.customData as { wiredown: { id?: string } }).wiredown.id;
   expect(() => addHighlight(flow, "F7", options)).toThrow(
-    `F7 is claimed by elements ${image.id} and copy0001; delete the copy`,
+    `F7 is claimed by elements ${image.id} and copy0001; remove the copy with "wiredown flow remove <flow> ${image.id}" or "wiredown flow remove <flow> copy0001"`,
   );
 });
 

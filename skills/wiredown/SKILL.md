@@ -74,6 +74,16 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    wiredown flow lint flows/members.excalidraw.md --json
    ```
 
+   When lint reports an overlay whose component is gone, a note or overlay
+   whose node is gone, or two elements claiming one name, run the
+   `flow remove` its finding names. A copy a person pasted is theirs: ask
+   them before removing it. Remove a wrong arrow (`'F1->F2'`), note (`F2:note:1`)
+   or mark the same way, then add the right one. Never hand-edit the JSON.
+
+   ```sh
+   wiredown flow remove flows/members.excalidraw.md 'F2#notice:1' --json
+   ```
+
 7. Before committing, lint the spec directory (the default is the current
    directory). Markdown files without `wiredown` blocks, such as the PRD
    itself, each get a "no wiredown blocks" warning; skip them with
@@ -147,10 +157,11 @@ A flow is a drawing a person also edits: never regenerate an
 existing flow. Use the commands, which preserve their edits. A frame's parts
 (image, label, notes, overlays) are grouped and move together. A copy a
 person pastes (a frame, a note, an overlay) is theirs: commands leave it
-alone, and `flow lint` reports it until they delete it. In a drawing from
-before wiredown recorded element ids, a pasted copy of a frame claims its
-F-number instead, so commands, refresh included, refuse that name and
-`flow lint` reports both element ids until the copy is deleted.
+alone, and `flow lint` reports it until they delete it or agree to
+`flow remove` it by its id. In a drawing from before wiredown recorded
+element ids, a pasted copy of a frame claims its F-number instead, so
+commands, refresh included, refuse that name and `flow lint` reports both
+element ids until `flow remove` removes the copy by its id.
 Lint also reports far labels and notes; refresh restores them and frame groups.
 
 Each frame's embed names its screens file by its path from the repository
@@ -185,6 +196,8 @@ read; it prints only a message on stderr, even with `--json`.
 `wiredown lint --json` returns `{ screens: [...check per-file objects], flows: [{ file, findings }] }`.
 `flow lint --json` returns `{ files: [{ file, findings }] }`.
 `flow refresh --json` returns `changes` and `unresolved` arrays.
+`flow remove --json` returns `removed` and `unbound`: tell the person about
+hand-drawn arrows it unbound.
 `render --json` returns `screens` with `id`, output path (`png` or `svg`),
 `width`, `height` and `boxes` keyed by component id. Each box is
 `{ x, y, w, h }` in image coordinates; use ids for overlays, not these numbers.

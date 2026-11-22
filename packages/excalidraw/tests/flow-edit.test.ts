@@ -140,7 +140,7 @@ test("a copied frame name is refused; data from a newer wiredown is ignored", ()
   delete (copy.customData as { wiredown: { id?: string } }).wiredown.id;
   flow.elements.push(copy);
   expect(() => addScreen(flow, { ...options, place: { rightOf: "F1" } })).toThrow(
-    `F1 is claimed by elements ${flow.elements[1].id} and copy0001; delete the copy`,
+    `F1 is claimed by elements ${flow.elements[1].id} and copy0001; remove the copy with "wiredown flow remove <flow> ${flow.elements[1].id}" or "wiredown flow remove <flow> copy0001"`,
   );
   copy.customData = { wiredown: { v: 2, role: "screen", frame: "F1", screen: "home" } };
   expect(flowFrames(flow).map((f) => f.element.id)).toEqual([flow.elements[1].id]);

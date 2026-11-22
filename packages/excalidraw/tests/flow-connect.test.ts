@@ -322,7 +322,7 @@ test("a node name claimed twice is refused, naming both elements", () => {
   flow.elements.push({ ...structuredClone(image), id: "copy0001" });
   const before = structuredClone(flow.elements);
   expect(() => addNote(flow, "F1", "hi")).toThrow(
-    `F1 is claimed by elements ${image.id} and copy0001; delete the copy`,
+    `F1 is claimed by elements ${image.id} and copy0001; remove the copy with "wiredown flow remove <flow> ${image.id}" or "wiredown flow remove <flow> copy0001"`,
   );
   expect(flow.elements).toEqual(before);
 });

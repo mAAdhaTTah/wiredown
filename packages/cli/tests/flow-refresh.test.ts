@@ -105,7 +105,9 @@ test("refresh moves overlays when a component moves, and reports lost ones", asy
           {
             frame: "F1",
             element: expect.any(String),
-            message: "mark 2 #seats: ^team has no #seats any more",
+            message: expect.stringMatching(
+              /^mark 2 #seats: \^team has no #seats any more; remove it with "wiredown flow remove <flow> \w{8}"$/,
+            ),
           },
         ],
       },
@@ -448,7 +450,7 @@ test("a pasted frame is a copy: lint names it once, refresh leaves it", async ()
   const pasted = await pasteF1(file);
   const image = pasted.elements.find((e) => e.id.startsWith("pasted") && e.type === "image")!;
   expect((await run(["flow", "lint", file])).stdout).toBe(
-    `${file}: F1: error: element ${image.id} is a copy of F1's frame; flow commands leave copies alone: delete it in the drawing\n${file}: 1 error\n`,
+    `${file}: F1: error: element ${image.id} is a copy of F1's frame; flow commands leave copies alone: delete it in the drawing, or run "wiredown flow remove <flow> ${image.id}"\n${file}: 1 error\n`,
   );
   await writeFile(screens, grow(await readFile(screens, "utf8")));
   const result = await run(["flow", "refresh", file, "--json"]);
@@ -469,7 +471,7 @@ test("refresh refuses a name two elements claim and writes nothing", async () =>
   await writeFile(screens, grow(await readFile(screens, "utf8")));
   const before = await readFile(file, "utf8");
   const [f1, copy] = parseFlow(before).elements.filter((e) => e.type === "image");
-  const message = `F1 is claimed by elements ${f1.id} and ${copy.id}; delete the copy`;
+  const message = `F1 is claimed by elements ${f1.id} and ${copy.id}; remove the copy with "wiredown flow remove <flow> ${f1.id}" or "wiredown flow remove <flow> ${copy.id}"`;
   expect((await run(["flow", "note", file, "F1", "Which?"])).stderr).toBe(
     `${file}: error: ${message}\n`,
   );

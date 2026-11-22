@@ -15,6 +15,7 @@ import {
   newFlow,
   parseFlow,
   refreshFlow,
+  removeFromFlow,
   screenElements,
   serializeFlow,
   styleScreens,
@@ -23,6 +24,7 @@ import type {
   ExcalidrawElementJson,
   Flow,
   FlowChange,
+  Removed,
   ScreenLookup,
   ScreenRef,
 } from "@wiredown/excalidraw";
@@ -551,6 +553,76 @@ export async function editNodes(
     };
   }
 }
+function removedLine(r: Removed): string {
+  if (r.kind === "frame" || r.kind === "decision") {
+    const parts = [
+      r.kind,
+      ...(r.notes ? [plural(r.notes, "note")] : []),
+      ...(r.overlays ? [plural(r.overlays, "overlay")] : []),
+      ...(r.arrows ? [plural(r.arrows, "arrow")] : []),
+    ].join(", ");
+    return r.copy
+      ? `removed ${r.element}, one of the elements claiming ${r.node} (${parts})\n` +
+          (r.labelLeft
+            ? `left the label of ${r.node}, and any notes or overlays pasted with it: the copy has no group of its own; remove them by element id\n`
+            : "")
+      : `removed ${r.node} (${parts})\n`;
+  }
+  if (r.kind === "copy") {
+    const more = r.elements.length - 1;
+    return `removed ${r.element}, a copy of ${r.of}${more ? `, and ${plural(more, "element")} pasted with it` : ""}\n`;
+  }
+  if (r.kind === "arrow")
+    return `removed ${r.arrows && r.arrows > 1 ? `${r.arrows} arrows` : "arrow"} ${r.from} -> ${r.to}\n`;
+  if (r.kind === "highlight") return `removed highlight ${r.node} #${r.target}\n`;
+  if (r.kind === "mark") return `removed mark ${r.node} #${r.target} ${r.label}\n`;
+  if (r.kind === "note")
+    return `removed ${r.notes && r.notes > 1 ? `${r.notes} notes` : `note ${r.element}`} on ${r.node}\n`;
+  return `removed label ${r.element}${r.node ? ` of ${r.node}` : ""}\n`;
+}
+/** flow remove: every target is checked first; the drawing is written once, or not at all. */
+export async function removeFlowItems(
+  file: string,
+  targets: string[],
+  options: FlowOptions = {},
+): Promise<Result> {
+  try {
+    const original = await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
+    const flow = parseEditableFlow(original);
+    const { removed, unbound } = removeFromFlow(flow, targets);
+    await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
+    return {
+      exitCode: 0,
+      stderr: "",
+      stdout: options.json
+        ? json({
+            flow: file,
+            removed: removed.map((r) => ({
+              ...r,
+              elements: r.elements.map((id) => {
+                const e = elementById(flow, id);
+                return { id, type: e.type, ...(e.text ? { text: e.text } : {}), ...box(e) };
+              }),
+            })),
+            unbound: unbound.map((u) => ({ ...u, ...box(elementById(flow, u.element)) })),
+          })
+        : removed.map(removedLine).join("") +
+          unbound.map((u) => `unbound a hand-drawn arrow ${u.element} from ${u.from}\n`).join(""),
+    };
+  } catch (error) {
+    if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
+    const findings: Finding[] = [{ message: error.message }];
+    return {
+      exitCode: 1,
+      stdout: options.json ? json({ flow: file, removed: [], unbound: [], errors: findings }) : "",
+      stderr: options.json
+        ? ""
+        : error instanceof NewerFlowError
+          ? `${file}: ${error.message}\n`
+          : formatFindings(file, findings, []),
+    };
+  }
+}
 const place = (options: FlowOptions) =>
   options.rightOf
     ? { rightOf: options.rightOf }
@@ -569,6 +641,7 @@ const ARITY = {
   connect: [2, 1, "a file, two nodes and an optional label"],
   note: [2, 0, "a file, a node and the note's text"],
   decision: [1, 0, "a file and the decision's text"],
+  remove: [1, Infinity, "a file and at least one thing to remove"],
 } satisfies Record<string, [number, number, string]>;
 type FlowCommand = keyof typeof ARITY;
 const isFlowCommand = (command: string | undefined): command is FlowCommand =>
@@ -607,6 +680,7 @@ export function flowCommand(
   if (command === "lint") return lintFlows([file, ...rest], options);
   if (command === "highlight" || command === "mark")
     return editOverlay(command, file, rest, options);
+  if (command === "remove") return removeFlowItems(file, rest, options);
   if (command === "connect" || command === "note" || command === "decision")
     return editNodes(command, file, rest, options);
   return editFlow(command, file, rest, options);

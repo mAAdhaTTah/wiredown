@@ -155,13 +155,17 @@ is the source of truth for the flow; the agent and the person both edit it.
     agent-drawn Excalidraw in testing);
   - `flow refresh` updates embed sizes and anything anchored to a screen
     after its layout changes;
-  - `flow lint` catches missing screens, stale sizes, dangling arrows.
+  - `flow lint` catches missing screens, stale sizes, dangling arrows;
+  - `flow remove F2`, `flow remove 'F1->F2'` (also an overlay, notes or an
+    element id) removes what the commands drew, with what belongs to it,
+    and never what a person drew.
 - **Free-form drawing stays available.** The agent can write Excalidraw
   elements directly for anything the commands don't cover.
 - **Element provenance.** New `customData.wiredown` records carry `v: 1`
   and `id`, equal to their element's id. A different `id` identifies a
   person's pasted copy, which flow commands leave alone and `flow lint`
-  reports; existing data without `id` keeps its previous behaviour.
+  reports; only `flow remove` of its element id removes it. Existing data
+  without `id` keeps its previous behaviour.
 - **Frame labels** (F1, F2, …) let review comments in the forge refer to
   steps.
 

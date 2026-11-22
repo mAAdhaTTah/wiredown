@@ -457,6 +457,7 @@ test.each([
   ["connect", "F1", "F1"],
   ["note", "F1", "Note"],
   ["refresh"],
+  ["remove", "F1"],
   ["render"],
   ["highlight", "F1", "#target"],
   ["mark", "F1", "#target", "Label"],

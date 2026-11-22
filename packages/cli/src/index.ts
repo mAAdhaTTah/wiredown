@@ -111,6 +111,20 @@ example:
   wiredown flow note flows/invite.excalidraw.md F2 'Maja accepts the invitation.'`,
   ],
   [
+    "remove <flow.excalidraw.md> <what>... [--json]",
+    `Removes, all or nothing: a node (F2, with its label, notes, overlays and
+arrows), an arrow ('F1->F2'), a highlight ('F2#invite'), a mark
+('F2#invite:3', with its label), notes ('F2:note', or 'F2:note:2' for the
+second from the top) or an element id from lint or --json output. It never
+deletes what a person drew; their arrows bound to a removed node are unbound.
+
+options:
+  --json             print one JSON document instead
+
+example:
+  wiredown flow remove flows/invite.excalidraw.md 'F1->F2' 'F2#invite'`,
+  ],
+  [
     "refresh <flow.excalidraw.md> [--json]",
     `Brings the drawing up to date after its screens change: embed sizes,
 overlays, notes and our straight arrows. Writes only if something changed.
