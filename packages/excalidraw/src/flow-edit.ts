@@ -193,10 +193,10 @@ export function flowNodes(flow: Flow): FlowNode[] {
     return [];
   });
 }
-/** How a duplicate-name message ends; `<flow>` and `<id>` are for the reader to fill in. */
-const REMOVE_COPY = 'remove the copy with "wiredown flow remove <flow> <id>"';
+/** A duplicate name, with a remove command for each claimant; `<flow>` is for the reader to fill in. */
 const claimed = (name: string, ids: string[]) =>
-  `${name} is claimed by elements ${ids.join(" and ")}; ${REMOVE_COPY}`;
+  `${name} is claimed by elements ${ids.join(" and ")}; remove the copy with ` +
+  ids.map((id) => `"wiredown flow remove <flow> ${id}"`).join(" or ");
 /** Each name two live nodes claim (data without `id`, or edited by hand), and why it is refused. */
 export function claimedNames(flow: Flow) {
   const named = new Map<string, string[]>();

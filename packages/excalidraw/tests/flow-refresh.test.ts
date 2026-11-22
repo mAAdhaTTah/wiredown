@@ -414,12 +414,12 @@ test("overlays follow their frame's image by id; copies and other screens are re
     {
       frame: "F1",
       element: "copy0001",
-      message: `F1 is claimed by elements ${f1.id} and copy0001; remove the copy with "wiredown flow remove <flow> <id>"`,
+      message: `F1 is claimed by elements ${f1.id} and copy0001; remove the copy with "wiredown flow remove <flow> ${f1.id}" or "wiredown flow remove <flow> copy0001"`,
     },
   ]);
   const before = serializeFlow(flow);
   expect(() => refreshFlow(flow, lookup({ home: grown, other }))).toThrow(
-    `F1 is claimed by elements ${f1.id} and copy0001; remove the copy with "wiredown flow remove <flow> <id>"`,
+    `F1 is claimed by elements ${f1.id} and copy0001; remove the copy with "wiredown flow remove <flow> ${f1.id}" or "wiredown flow remove <flow> copy0001"`,
   );
   expect(serializeFlow(flow)).toBe(before);
   copy.isDeleted = true;

@@ -186,7 +186,7 @@ test("lint, remove, lint: a pasted copy of a frame", async () => {
 test("lint, remove, lint: a copy pasted before elements recorded their id", async () => {
   const { file } = await setup();
   const image = await pasteF1(file, { legacy: true });
-  const claimed = `F1 is claimed by elements ${image.id} and pasted01; remove the copy with "wiredown flow remove <flow> <id>"`;
+  const claimed = `F1 is claimed by elements ${image.id} and pasted01; remove the copy with "wiredown flow remove <flow> ${image.id}" or "wiredown flow remove <flow> pasted01"`;
   expect((await lint(file)).stdout).toBe(`${file}: F1: error: ${claimed}\n${file}: 1 error\n`);
   expect((await run(["flow", "remove", file, "F1"])).stderr).toBe(`${file}: error: ${claimed}\n`);
   expect((await run(["flow", "remove", file, "pasted01"])).stdout).toBe(

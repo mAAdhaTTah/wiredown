@@ -471,7 +471,7 @@ test("refresh refuses a name two elements claim and writes nothing", async () =>
   await writeFile(screens, grow(await readFile(screens, "utf8")));
   const before = await readFile(file, "utf8");
   const [f1, copy] = parseFlow(before).elements.filter((e) => e.type === "image");
-  const message = `F1 is claimed by elements ${f1.id} and ${copy.id}; remove the copy with "wiredown flow remove <flow> <id>"`;
+  const message = `F1 is claimed by elements ${f1.id} and ${copy.id}; remove the copy with "wiredown flow remove <flow> ${f1.id}" or "wiredown flow remove <flow> ${copy.id}"`;
   expect((await run(["flow", "note", file, "F1", "Which?"])).stderr).toBe(
     `${file}: error: ${message}\n`,
   );
