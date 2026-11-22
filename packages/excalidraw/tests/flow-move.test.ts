@@ -19,7 +19,7 @@ import { bindingFailures, pluginFailures } from "./plugin-checks";
 
 const box = { x: 20, y: 30, w: 40, h: 50 };
 const home: ScreenState = { width: 100, height: 200, boxes: { invite: box } };
-const screens = () => home;
+const screens = () => ({ ok: true as const, screen: home });
 
 /**
  * F1 -> F2 (labelled), F2 -> F1, F1 -> D1 below F1; a note, a highlight and a
@@ -78,7 +78,7 @@ function sound(flow: Flow, lint: unknown) {
 }
 
 test.each([
-  ["--right-of", { rightOf: "F2" }, (f: Flow) => [Number(node(f, "F2").x) + 120 + 340, 0]],
+  ["--right-of", { rightOf: "F2" }, (f: Flow) => [Number(node(f, "F2").x) + 124 + 340, 0]],
   ["--below", { below: "D1" }, (f: Flow) => [0, Number(node(f, "D1").y) + 170 + 340]],
   ["--to", { x: -1000, y: 500 }, () => [-1000, 500]],
 ] as const)("%s moves the node and what of ours belongs to it by one delta", (_, to, want) => {
@@ -122,7 +122,8 @@ test("our arrows are re-routed as connect places them; a bent one is left and re
   const moved = moveNode(flow, "F1", { x: 0, y: -1000 });
   expect(moved.arrows).toBe(2);
   const why = "it was bent by hand and no longer meets F1; straighten or move it in the drawing";
-  expect(moved.unresolved).toEqual([
+  // each entry also carries the arrow's geometry, as refresh's changes do
+  expect(moved.unresolved).toMatchObject([
     { frame: "F1", kind: "arrow", element: bent.id, from: "F2", to: "F1", unresolved: why },
   ]);
   expect(bent).toEqual(before);

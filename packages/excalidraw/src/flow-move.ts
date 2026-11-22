@@ -85,7 +85,9 @@ export function moveNode(flow: Flow, name: string, to: MoveTo): Moved {
         if (!off) return [];
         const { arrow, start, end } = r;
         const change = { frame: off, kind: "arrow" as const, element: arrow.id };
-        return [{ ...change, from: start.node, to: end.node, unresolved: bentArrow(off) }];
+        return [
+          { ...change, from: start.node, to: end.node, unresolved: bentArrow(off), ...rect(arrow) },
+        ];
       }),
   };
 }
