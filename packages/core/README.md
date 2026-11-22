@@ -87,10 +87,6 @@ Draw ops carry geometry and colour overrides only. Stroke colour,
 roughness and the like come from the host's canvas style when it renders
 them.
 
-`checkScreens(markdown)` is the public checker. The private eval baseline
-imports `checkScreensInternal` directly from core's source to inject its
-block checker; it is not a published package subpath.
-
 ## Metrics
 
 `pnpm metrics` reads the installed `@excalidraw/utils` 0.1.8 Excalifont.ttf

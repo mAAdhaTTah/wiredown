@@ -4,6 +4,8 @@
 //   a `.code-block-container`.
 // - A `^id` line after a block renders as the next element, a paragraph
 //   whose whole text is `^id`.
+// - Each rendered Markdown document (a file view, a comment, a comment's
+//   preview) is a `.markup` element.
 // - The theme is named on `<html data-theme>`; names containing "dark" are
 //   dark, names containing "auto" follow the OS.
 // - A file view is `.../src/{branch|tag|commit}/<ref>/<path>` and its raw

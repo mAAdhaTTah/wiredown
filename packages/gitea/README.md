@@ -110,7 +110,7 @@ reported under "Not drawn:" as drawn in a fallback font, so no request is
 made for a font that is not there. The renderer does not check that a
 listed folder exists.
 
-### Content Security Policy (unverified)
+### Content Security Policy
 
 Gitea 28.4.0 sends no Content Security Policy by default. A strict policy
 works if it allows, from the page's own origin, scripts (module scripts and

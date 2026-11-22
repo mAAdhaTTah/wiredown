@@ -35,14 +35,7 @@ The model must reply with only the file in one four-backtick fence; any
 other reply is a failed attempt. The output is checked with core's
 `checkScreens`; on errors the findings go back to the model, formatted as
 `wiredown check` prints them (`screens.md:12: ^id: error: …`, errors only),
-with its previous file, up to the cap of fix rounds. The baseline has no
-`checkScreens`, so the old arm uses `checkScreensInternal` from core's
-source (`../../core/src/internal.ts`) with the baseline's
-`resolve` as its block checker
-([`src/arms.ts`](src/arms.ts)): scanning, `^ids` and every file-level
-finding (no id, invalid or duplicate id, unclosed fence) are the same code
-in both arms, and a parity test holds them equal. Only the block parser
-differs.
+with its previous file, up to the cap of fix rounds.
 
 Each case records:
 
