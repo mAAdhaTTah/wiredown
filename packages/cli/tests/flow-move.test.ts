@@ -222,3 +222,34 @@ test("moving to the current coordinates or placement writes nothing", async () =
   expect(await readFile(file, "utf8")).toBe(before);
   expect((await stat(file)).mtimeMs).toBe(modified);
 });
+
+test("a node may not land on another node's note, and lint reports one dragged there", async () => {
+  const dir = await fixture({ "screens.md": BASE });
+  const file = join(dir, "f.excalidraw.md");
+  expect(
+    (await run(["flow", "new", file, "team", "team", "team", ...screensIn(dir)])).exitCode,
+  ).toBe(0);
+  expect((await run(["flow", "note", file, "F1", "Note under F1"])).exitCode).toBe(0);
+  const flow = parseFlow(await readFile(file, "utf8"));
+  const note = flow.elements.find((e) => e.text === "Note under F1")!;
+  const before = await readFile(file, "utf8");
+  const y = Number(note.y) + 5;
+  expect(await run(["flow", "move", file, "F3", "--to", `0,${y}`])).toEqual({
+    exitCode: 1,
+    stdout: "",
+    stderr: `${file}: error: F3 at 0,${y} would overlap F1; pick another place\n`,
+  });
+  expect(await readFile(file, "utf8")).toBe(before);
+  // a person drags F3 there in the drawing
+  const f3 = flowNodes(flow).find((n) => n.node === "F3")!.element;
+  const dx = -Number(f3.x);
+  const dy = y - Number(f3.y);
+  for (const e of flow.elements.filter(
+    (e) => (e.groupIds as string[])[0] === (f3.groupIds as string[])[0],
+  ))
+    Object.assign(e, { x: Number(e.x) + dx, y: Number(e.y) + dy });
+  await writeFile(file, serializeFlow(flow));
+  expect((await lint(file)).stdout).toContain(
+    `${file}: F3: error: overlaps F1's note ${note.id}; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> F3 --below F1"\n`,
+  );
+});

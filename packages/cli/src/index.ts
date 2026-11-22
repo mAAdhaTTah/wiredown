@@ -128,8 +128,9 @@ example:
     "move <flow.excalidraw.md> <node> (--right-of F2 | --below F2 | --to <x>,<y>) [--json]",
     `Moves a node with its label, notes and overlays, and re-routes its arrows,
 to where add-screen would place it next to another node, or to a top-left.
-It refuses a place that overlaps another node. What a person drew stays
-where it is.
+It refuses a place where the node, its label, notes or overlays would
+overlap another node or what belongs to it. What a person drew stays where
+it is.
 
 options:
   --right-of <node>  place it right of this node

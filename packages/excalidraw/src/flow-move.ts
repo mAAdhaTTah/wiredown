@@ -10,7 +10,15 @@ import {
   placeNode,
   touch,
 } from "./flow-edit";
-import { arrowRoutes, bentArrow, intersects, rect, reroute, unmet } from "./flow-refresh";
+import {
+  arrowRoutes,
+  bentArrow,
+  footprint,
+  intersects,
+  rect,
+  reroute,
+  unmet,
+} from "./flow-refresh";
 import type { FlowChange, Route } from "./flow-refresh";
 
 /** Where `moveNode` puts a node: next to another node, as add-screen places, or at a top-left. */
@@ -58,13 +66,21 @@ export function moveNode(flow: Flow, name: string, to: MoveTo): Moved {
   if (ref === name) throw new FlowError(`cannot place ${name} relative to itself`);
   const at = "x" in to ? to : placeNode(flow, to, box.width, box.height, n.kind === "decision");
   const where = `${at.x},${at.y}`;
-  const now = { ...box, x: at.x, y: at.y };
-  const hit = flowNodes(flow).filter((o) => o.element !== e && intersects(rect(o.element), now));
-  if (hit.length && (at.x !== box.x || at.y !== box.y))
+  // its footprint where it would be, against every other node's footprint
+  const [dx, dy] = [at.x - box.x, at.y - box.y];
+  const mine = footprint(flow, n).map((p) => ({
+    ...rect(p),
+    x: rect(p).x + dx,
+    y: rect(p).y + dy,
+  }));
+  const hit = flowNodes(flow).filter(
+    (o) =>
+      o.element !== e && footprint(flow, o).some((p) => mine.some((m) => intersects(rect(p), m))),
+  );
+  if (hit.length && (dx || dy))
     throw new FlowError(
       `${name} at ${where} would overlap ${hit.map((o) => o.node).join(" and ")}; pick another place`,
     );
-  const [dx, dy] = [at.x - box.x, at.y - box.y];
   const moving = dx || dy ? [e, ...nodeParts(flow, n)] : [];
   const parts = moving.slice(1);
   for (const p of moving) {

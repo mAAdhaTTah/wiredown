@@ -23,6 +23,7 @@ import {
   markCentre,
   newerDataVersion,
   nodeAttachments,
+  nodeParts,
   NOTE_GAP,
   overlayBox,
   pastedCopies,
@@ -268,14 +269,25 @@ function notesUnder(flow: Flow, anchor: string, old: Rect, now: Rect) {
 /** Whether two boxes share area; touching edges do not. */
 export const intersects = (a: Rect, b: Rect) =>
   a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
-/** Each pair of our nodes whose boxes intersect, once, named on the later node. */
+/** A node and what of ours belongs to it with a box of its own: its label, notes and overlays. */
+export const footprint = (flow: Flow, n: FlowNode) => [
+  n.element,
+  ...nodeParts(flow, n).filter((e) => !e.containerId),
+];
+/**
+ * Each pair of our nodes whose footprints intersect, once, named on the later
+ * node, with the first two of their elements that do: the nodes themselves
+ * when their boxes do.
+ */
 function overlappingNodes(flow: Flow) {
-  const nodes = flowNodes(flow);
-  return nodes.flatMap((n, i) =>
-    nodes
-      .slice(0, i)
-      .filter((o) => intersects(rect(o.element), rect(n.element)))
-      .map((o) => ({ node: n.node, element: n.element, other: o.node })),
+  const nodes = flowNodes(flow).map((n) => ({ n, parts: footprint(flow, n) }));
+  return nodes.flatMap(({ n, parts }, i) =>
+    nodes.slice(0, i).flatMap(({ n: o, parts: others }) => {
+      const pair = parts
+        .flatMap((a) => others.map((b) => [a, b]))
+        .find(([a, b]) => intersects(rect(a), rect(b)));
+      return pair ? [{ n, o, mine: pair[0], theirs: pair[1] }] : [];
+    }),
   );
 }
 /** Parts with no personal group, shared by lint and refresh. */
@@ -506,12 +518,15 @@ export function lintFlow(flow: Flow, screens: ScreenLookup): FlowFinding[] {
         message: `${what} is ${Math.round(p.distance)} px from its place ${what === "label" ? "above" : n.kind === "decision" ? "beside" : "under"} ${n.node}; run "wiredown flow refresh"`,
       });
     }
-  for (const { node, element, other } of overlappingNodes(flow))
-    if (!ambiguous.has(node) && !ambiguous.has(other))
+  // what of a node is named in a message: its frame or decision, or a part of it
+  const named = (n: FlowNode, e: ExcalidrawElementJson) =>
+    e === n.element ? n.node : `${n.node}'s ${partName(e)}`;
+  for (const { n, o, mine, theirs } of overlappingNodes(flow))
+    if (!ambiguous.has(n.node) && !ambiguous.has(o.node))
       out.push({
-        frame: node,
-        element: element.id,
-        message: `overlaps ${other}; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> ${node} --below ${other}"`,
+        frame: n.node,
+        element: mine.id,
+        message: `${mine === n.element ? "" : `${named(n, mine)} `}overlaps ${named(o, theirs)}; move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> ${n.node} --below ${o.node}"`,
       });
   // a screen embedded by hand has no frame, but its reference can still break
   const framed = new Set(flowFrames(flow).map((f) => f.element.id));

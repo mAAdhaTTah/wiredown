@@ -198,6 +198,48 @@ test("touching a node is not an overlap", () => {
   expect(lintFlow(flow, screens).filter((f) => f.message.includes("overlaps"))).toEqual([]);
 });
 
+test("a node, its notes and overlays may not land on another node's or its notes", () => {
+  const flow = build();
+  const before = serializeFlow(flow);
+  const f1 = node(flow, "F1");
+  const note = flow.elements.find((e) => identity(e)?.role === "note" && e.id !== "copy0001")!;
+  // D1's box on F1's note, clear of F1 itself
+  const onNote = { x: Number(f1.x), y: Number(note.y) + 5 };
+  expect(Number(note.y)).toBeGreaterThan(Number(f1.y) + Number(f1.height));
+  expect(() => moveNode(flow, "D1", onNote)).toThrow(
+    `D1 at ${onNote.x},${onNote.y} would overlap F1; pick another place`,
+  );
+  // F1's note on F2, F1 itself just above F2
+  const f2 = node(flow, "F2");
+  const [x, y] = [Number(f2.x), Number(f2.y) + 10 - (Number(note.y) - Number(f1.y))];
+  expect(y + Number(f1.height)).toBeLessThan(Number(f2.y));
+  expect(() => moveNode(flow, "F1", { x, y })).toThrow(`F1 at ${x},${y} would overlap F2`);
+  expect(serializeFlow(flow)).toBe(before);
+});
+
+test("lint reports a note or overlay of one node on another node", () => {
+  const flow = build();
+  const [f2, d1] = [node(flow, "F2"), node(flow, "D1")];
+  const note = flow.elements.find((e) => identity(e)?.role === "note" && e.id !== "copy0001")!;
+  Object.assign(note, { x: Number(f2.x) + 10, y: Number(f2.y) + 10 });
+  const highlight = flow.elements.find((e) => identity(e)?.role === "highlight")!;
+  Object.assign(highlight, { x: Number(d1.x) + 5, y: Number(d1.y) + 5 });
+  const how = (n: string, other: string) =>
+    `move one of them in the drawing, or with "wiredown flow move", e.g. "wiredown flow move <flow> ${n} --below ${other}"`;
+  expect(lintFlow(flow, screens).filter((f) => f.message.includes("overlaps"))).toEqual([
+    {
+      frame: "F2",
+      element: f2.id,
+      message: `overlaps F1's note ${note.id}; ${how("F2", "F1")}`,
+    },
+    {
+      frame: "D1",
+      element: d1.id,
+      message: `overlaps F1's highlight ${highlight.id}; ${how("D1", "F1")}`,
+    },
+  ]);
+});
+
 test("lint offers a below example when the space right of F1 is occupied", () => {
   const flow = build();
   const f2 = node(flow, "F2");

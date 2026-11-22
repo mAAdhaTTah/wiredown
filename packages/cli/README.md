@@ -418,10 +418,12 @@ overlaps F1; run "wiredown flow refresh" or move it`;
   than 12px off it, or inside a frame): `arrow F1 -> F2: it was bent by hand
 and no longer meets F1; straighten or move it in the drawing` (refresh
   leaves it);
-- two of our frames or decisions whose boxes overlap, once per pair on the
-  later one: `F3: overlaps F1; move one of them in the drawing, or with
-"wiredown flow move", e.g. "wiredown flow move <flow> F3 --below F1"`
-  (touching edges are fine);
+- two of our frames or decisions that overlap, once per pair on the later
+  one: `F3: overlaps F1; move one of them in the drawing, or with "wiredown
+flow move", e.g. "wiredown flow move <flow> F3 --below F1"`, or whose
+  labels, notes or overlays overlap the other node or its own, naming the
+  first two that do: `F3: overlaps F1's note AbCd1234; …`, `F3's label
+overlaps F1; …` (touching edges are fine);
 - an image whose `fileId` has no `## Embedded Files` entry;
 - data written by a newer wiredown, once: `this drawing was written by a
 newer wiredown (data version N)`; that data is otherwise ignored.
@@ -513,8 +515,9 @@ A person's arrows, copies and drawing never move, even inside the node's
 group.
 
 It refuses, writing nothing, an unknown node, a name two nodes claim, a
-drawing from a newer wiredown, and a place where the node would overlap
-another of ours: `F3 at 760,0 would overlap F2; pick another place`.
+drawing from a newer wiredown, and a place where the node, its label, notes
+or overlays would overlap another of our nodes or that node's label, notes or
+overlays: `F3 at 760,0 would overlap F2; pick another place`.
 Touching edges are not an overlap. Output is one line, then one per bent
 arrow, as refresh prints it:
 

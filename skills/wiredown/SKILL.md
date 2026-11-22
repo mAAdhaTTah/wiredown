@@ -87,8 +87,9 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    When lint reports that two nodes overlap, run the `flow move` its finding
    suggests, or place the node `--below` another instead. It moves the
    node's label, notes and overlays with it and re-routes its arrows; a
-   person's drawing stays. If the new place would overlap another node, it
-   refuses and names it: move that node first, or pick another place.
+   person's drawing stays. If the new place would overlap another node or
+   its label, notes or overlays, it refuses and names the node: move that
+   node first, or pick another place.
    `flow move` also takes `--to <x>,<y>`, the node's top-left in drawing
    coordinates (`--to=-200,0` for a negative x). Use it only with
    coordinates a person gives you or a command's `--json` reported, such as
@@ -167,7 +168,7 @@ use supported text or icons instead of glyphs that may render as empty boxes.
 Never hand-compute coordinates. Use `--right-of` and `--below` relative to
 existing nodes. Placement ignores what a person drew by hand, so after placing
 next to their drawing, render it and look for overlaps (`flow lint` reports
-only overlaps between nodes).
+only overlaps between nodes and their labels, notes and overlays).
 A flow is a drawing a person also edits: never regenerate an
 existing flow. Use the commands, which preserve their edits. A frame's parts
 (image, label, notes, overlays) are grouped and move together. A copy a

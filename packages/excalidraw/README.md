@@ -193,8 +193,8 @@ The root export renders nothing; SVG export is in the Node entry,
 
   `lintFlow` returns `FlowFinding`s, `{ message, frame?, element? }`: missing
   screens, stale embed sizes or image aspect (a uniformly scaled frame is fine),
-  two nodes claiming one name, two nodes whose boxes overlap (touching edges do
-  not), a person's copies of our elements (one finding per set pasted together),
+  two nodes claiming one name, two nodes whose boxes overlap, or whose labels,
+  notes or overlays overlap the other node or its own (touching edges do not), a person's copies of our elements (one finding per set pasted together),
   stale overlays, ones whose target or frame is gone or that were drawn for
   another screen, notes whose node is gone, notes whose top edge lies inside
   their frame, straight arrows of ours whose ends are more than 12px from where
@@ -247,7 +247,8 @@ The root export renders nothing; SVG export is in the Node entry,
   `refreshFlow` re-routes them, and bent ones are left, those that no longer
   meet a node returned in `unresolved`. A person's arrows, copies and drawing do
   not move. It throws, changing nothing, for an unknown node, a name two nodes
-  claim, its own name as `place`, or a place where it would overlap another node
+  claim, its own name as `place`, or a place where it, its label, notes or
+  overlays would overlap another node or that node's label, notes or overlays
   (touching edges do not). It returns `Moved`: `{ node, kind, element, x, y,
 width, height, elements, notes, overlays, arrows, changes, unresolved }`,
   `element` and the box being the node's after the move, `elements` every
