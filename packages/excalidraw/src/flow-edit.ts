@@ -6,6 +6,8 @@ import type { Flow } from "./flow";
 
 // Excalidraw plugin DEFAULT_MD_EMBED_CSS:
 // host has 10px horizontal padding; footer has 5px height.
+// The plugin's default Markdown border (mdBorderColor "Black") insets the
+// content 2px on every side, as seen in its rendered SVG in Obsidian.
 // The link height is a maximum, with 40px headroom.
 const MD_HOST_PAD = 10,
   MD_FOOTER = 5,

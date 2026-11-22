@@ -120,7 +120,8 @@ The root export renders nothing; SVG export is in the Node entry,
   `addMark(flow, frame, { target, box, screen, label })` returns the circle id,
   with its text bound to it. Their `OverlayOptions` are the `target` id, its
   `box` from `screenElements` and the `screen`'s `{ width, height }`. Highlights
-  have a 4px outset; badges are at least 32px wide and grow to fit their label.
+  have a 4px outset; badges are at least 32px wide, else the size Excalidraw
+  gives an ellipse around their label, so it does not resize them.
   A badge's centre is up and left of the component's top-left corner by a third
   of its diameter, so it sits just outside the corner. Neither is bound to the
   image; both join the frame's group. `frameImage(flow, frame)` is a frame's
@@ -197,10 +198,11 @@ The root export renders nothing; SVG export is in the Node entry,
   not), a person's copies of our elements (one finding per set pasted together),
   stale overlays, ones whose target or frame is gone or that were drawn for
   another screen, notes whose node is gone, notes whose top edge lies inside
-  their frame, straight arrows of ours whose ends are more than 1px from where
-  `connect` would put them now, dangling arrow or text bindings, images without
-  an `## Embedded Files` entry, and data from a newer wiredown. Overlays belong
-  to the frame whose image id their `anchor` records.
+  their frame, straight arrows of ours whose ends are more than 12px from where
+  `connect` would put them now or inside a frame (Excalidraw moves ends bound
+  to a diamond by up to 6px when it opens the drawing), dangling arrow or text
+  bindings, images without an `## Embedded Files` entry, and data from a newer
+  wiredown. Overlays belong to the frame whose image id their `anchor` records.
 
   `refreshFlow` updates each frame's link size and image size (same top-left and
   scale), moves its overlays to where `addHighlight` and `addMark` would place
