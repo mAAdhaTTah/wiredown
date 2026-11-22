@@ -50,7 +50,8 @@ export interface Output {
 export type RenderedScreen = Output & { id: string; boxes: Record<string, Box> };
 
 /**
- * Render a file's screens to `<out>/<id>.svg`. Screens with errors are
+ * Render a file's screens to `<out>/<id>.svg`, or a flow to
+ * `<out>/<name>.svg` (`.png` with `format: "png"`). Screens with errors are
  * skipped and reported; the rest still render, and the exit code is 1.
  */
 export async function render(file: string, options: RenderOptions = {}): Promise<Result> {

@@ -436,7 +436,7 @@ wiredown, or a screens file an embed names that cannot be read, is an error
 Flow embeds include their own Excalifont copy, since nested SVG images cannot
 use the outer SVG's fonts. Each distinct screen is rendered once. This adds
 about 33 KB per screen before data URL encoding, plus the outer font copy.
-A measured three-screen flow was 244,120 bytes with fonts and 77,374
+A measured three-screen flow was 227,147 bytes with fonts and 60,397
 without. Use `--no-fonts` for smaller files when font portability is
 unnecessary.
 Dark flows use light screen images with Excalidraw's own dark image filter.
