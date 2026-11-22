@@ -133,11 +133,14 @@ The root export renders nothing; SVG export is in the Node entry,
   role `label`. Duplicate highlights or identical mark labels on one component
   throw; a person's copy of an overlay is not one of ours.
 
-  Embeds are sized for the Excalidraw plugin's default Markdown embed, as
-  measured in Obsidian: 10px host padding on each side, a 2px border on
-  every side, a 5px footer. Those constants in `flow-edit.ts` set both
-  sizing and overlays. With the plugin's border turned off, the plugin
-  reshapes frames on open (issue #42).
+  Embeds are sized for a screen with 10px of host padding on each side, a
+  5px footer and no border; those constants in `flow-edit.ts` set both
+  sizing and overlays. That is the Excalidraw plugin's default Markdown
+  embed, with the border off: the plugin draws none around an embed whose
+  CSS mentions `svg`. `styleScreens(source)` adds that front matter to a
+  screens file (`excalidraw-font`, and `excalidraw-css` with
+  `.wiredown-block svg{display:block}`), keeping either key the file
+  already has. `pnpm test:obsidian` checks the size and place in Obsidian.
 
   Every `customData.wiredown` carries `v` (`DATA_VERSION`, now 1); data
   without `v` is version 1, and data with a higher `v` is ignored.

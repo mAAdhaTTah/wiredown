@@ -229,15 +229,16 @@ name: Framedown.
 | Headless export works in Node | Prototype run, re-run 2026-11-16 | Confirmed |
 | Excalifont metrics match Excalidraw | Prototype measurement | Measured |
 | Variants, wrapping grids, validation work | Prototype fork, 1,024 tests passing | Prototyped |
-| Overlays line up with elements inside embeds | Embed padding, border and footer measured in headless Obsidian with the plugin's default border (PR #17); not checked by eye | Measured |
+| Overlays line up with elements inside embeds | Screen size and place inside the embed measured in headless Obsidian, for a screens file with the CLI's styling front matter (`pnpm test:obsidian`); not checked by eye | Measured |
 | Forge renderer | Bundle built, never run on a forge | Open |
 
 ## Open questions and risks
 
 - **Embed timing.** The processor must finish within the Excalidraw plugin's
   snapshot window; the first render in a session is the slow case.
-- **Overlay alignment.** Measured for the plugin's default Markdown border;
-  with the border off, frames and overlays are off by 2px a side (#42).
+- **Overlay alignment.** Measured in headless Obsidian, not by eye. It
+  holds for a screens file that keeps the styling front matter the CLI
+  writes.
 - **Owning a fork alone.** Upstream Sketchdown is young with one maintainer;
   little to lean on.
 - **Excalidraw upgrades.** Two Excalidraw builds are involved (the Obsidian

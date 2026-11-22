@@ -84,7 +84,7 @@ test("--screens is required to add screens, and only then", async () => {
 });
 
 test("empty frontmatter is filled without adding a second block", async () => {
-  const { styleScreens } = await import("../src/flow");
+  const { styleScreens } = await import("@wiredown/excalidraw");
   const source = "---\n---\n" + BASE;
   expect(styleScreens(source).match(/^---$/gm)).toHaveLength(2);
 });
@@ -98,7 +98,7 @@ test.each([
   ["both", "---\nexcalidraw-font: Custom\nexcalidraw-css: custom\n---\n", false],
   ["crlf", "---\r\ntags: [example]\r\n---\r\n", true],
 ])("frontmatter: %s", async (_name, prefix, changed) => {
-  const { styleScreens } = await import("../src/flow");
+  const { styleScreens } = await import("@wiredown/excalidraw");
   const nl = String(prefix).includes("\r\n") ? "\r\n" : "\n";
   const source = prefix + BASE.replace(/\n/g, nl);
   const styled = styleScreens(source);

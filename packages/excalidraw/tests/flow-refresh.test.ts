@@ -113,7 +113,7 @@ test("a grown screen: lint reports it, refresh fixes it, lint is clean", () => {
     {
       frame: "F1",
       element: img.id,
-      message: "stale embed size: 124x249, but ^home now needs 164x309",
+      message: "stale embed size: 120x245, but ^home now needs 160x305",
     },
     { frame: "F1", element: hi, message: "stale overlay: highlight #invite is not on #invite" },
     { frame: "F1", element: mark, message: "stale overlay: mark 3 #invite is not on #invite" },
@@ -133,19 +133,19 @@ test("a grown screen: lint reports it, refresh fixes it, lint is clean", () => {
       frame: "F1",
       kind: "embed",
       element: img.id,
-      link: { from: { width: 124, height: 249 }, to: { width: 164, height: 309 } },
-      image: { from: { width: 124, height: 209 }, to: { width: 164, height: 269 } },
+      link: { from: { width: 120, height: 245 }, to: { width: 160, height: 305 } },
+      image: { from: { width: 120, height: 205 }, to: { width: 160, height: 265 } },
     },
     { frame: "F1", kind: "note", element: note },
     { frame: "F1", kind: "highlight", element: hi, target: "invite" },
     { frame: "F1", kind: "mark", element: mark, target: "invite", label: "3" },
     { frame: "F1", kind: "arrow", element: arrow, from: "F1", to: "F2" },
   ]);
-  expect(img).toMatchObject({ x: 0, y: 0, width: 164, height: 269, version: version + 1 });
+  expect(img).toMatchObject({ x: 0, y: 0, width: 160, height: 265, version: version + 1 });
   // the note keeps its gap under the frame; the arrow leaves F1's new port
-  expect(byId(flow, note).y).toBe(269 + 20);
-  expect(points(byId(flow, arrow)).slice(0, 2)).toEqual([164 + 6, 269 / 2]);
-  expect(flow.embeds.get(String(img.fileId))).toMatchObject({ width: 164, height: 309 });
+  expect(byId(flow, note).y).toBe(265 + 20);
+  expect(points(byId(flow, arrow)).slice(0, 2)).toEqual([160 + 6, 265 / 2]);
+  expect(flow.embeds.get(String(img.fileId))).toMatchObject({ width: 160, height: 305 });
   // exactly where addHighlight and addMark would put them on the new layout
   const fresh = newFlow();
   addScreen(fresh, { screenId: "home", title: "Home", path: "screens", size: grown });
@@ -168,7 +168,7 @@ test("a uniformly scaled frame is not stale; refresh keeps its scale", () => {
   const { flow, hi, mark, arrow } = build();
   const label = flow.elements.find((e) => identity(e)?.role === "label")!;
   const img = image(flow, "F1");
-  Object.assign(img, { x: 50, y: 70, width: 62, height: 104.5 });
+  Object.assign(img, { x: 50, y: 70, width: 60, height: 102.5 });
   const screens = lookup({ home, other });
   // the overlays and arrow were placed on the unscaled frame, so only they are stale
   expect(lintFlow(flow, screens).map((f) => f.element)).toEqual([label.id, hi, mark, arrow]);
@@ -178,7 +178,7 @@ test("a uniformly scaled frame is not stale; refresh keeps its scale", () => {
     "label",
     "arrow",
   ]);
-  expect(img).toMatchObject({ x: 50, y: 70, width: 62, height: 104.5 });
+  expect(img).toMatchObject({ x: 50, y: 70, width: 60, height: 102.5 });
   const b = overlayBox(img, home, box);
   expect(byId(flow, hi)).toMatchObject({
     x: b.x - 4,
@@ -187,10 +187,10 @@ test("a uniformly scaled frame is not stale; refresh keeps its scale", () => {
     height: b.height + 8,
   });
   expect(lintFlow(flow, screens)).toEqual([]);
-  // grown, at half scale: 164x269 at 0.5
+  // grown, at half scale: 160x265 at 0.5
   const big = lookup({ home: grown, other });
   refreshFlow(flow, big);
-  expect(img).toMatchObject({ x: 50, y: 70, width: 82, height: 134.5 });
+  expect(img).toMatchObject({ x: 50, y: 70, width: 80, height: 132.5 });
   expect(lintFlow(flow, big)).toEqual([]);
 });
 
@@ -202,11 +202,11 @@ test("a changed aspect is stale even when the link size is current", () => {
   expect(lintFlow(flow, screens)[0]).toEqual({
     frame: "F1",
     element: img.id,
-    message: "stale image: 124x300 no longer has the aspect of ^home",
+    message: "stale image: 120x300 no longer has the aspect of ^home",
   });
   expect(refreshFlow(flow, screens)[0]).toMatchObject({
     kind: "embed",
-    image: { from: { width: 124, height: 300 }, to: { width: 124, height: 209 } },
+    image: { from: { width: 120, height: 300 }, to: { width: 120, height: 205 } },
   });
   expect(lintFlow(flow, screens)).toEqual([]);
 });
@@ -217,8 +217,8 @@ test("a hand-moved frame keeps its position", () => {
   Object.assign(img, { x: -300, y: 400 });
   const screens = lookup({ home: grown, other });
   refreshFlow(flow, screens);
-  expect(img).toMatchObject({ x: -300, y: 400, width: 164, height: 269 });
-  expect(Number(byId(flow, hi).x)).toBe(-300 + 2 + 10 + 30 - 4);
+  expect(img).toMatchObject({ x: -300, y: 400, width: 160, height: 265 });
+  expect(Number(byId(flow, hi).x)).toBe(-300 + 10 + 30 - 4);
   expect(lintFlow(flow, screens)).toEqual([]);
 });
 
@@ -545,9 +545,9 @@ test("a flow an older refresh left stranded lints dirty, and refresh repairs it"
   const { flow, hi, mark, arrow, note } = build();
   // what refresh did before it moved arrows and notes: only the embed grew
   const img = image(flow, "F1");
-  Object.assign(img, { width: 164, height: 269 });
+  Object.assign(img, { width: 160, height: 265 });
   const fileId = String(img.fileId);
-  flow.embeds.set(fileId, { ...flow.embeds.get(fileId)!, width: 164, height: 309 });
+  flow.embeds.set(fileId, { ...flow.embeds.get(fileId)!, width: 160, height: 305 });
   const screens = lookup({ home: grown, other });
   expect(lintFlow(flow, screens)).toEqual([
     {
@@ -569,8 +569,8 @@ test("a flow an older refresh left stranded lints dirty, and refresh repairs it"
     ["mark", mark],
     ["arrow", arrow],
   ]);
-  expect(byId(flow, note).y).toBe(269 + 20);
-  expect(points(byId(flow, arrow)).slice(0, 2)).toEqual([170, 134.5]);
+  expect(byId(flow, note).y).toBe(265 + 20);
+  expect(points(byId(flow, arrow)).slice(0, 2)).toEqual([166, 132.5]);
   expect(lintFlow(flow, screens)).toEqual([]);
   const out = valid(flow);
   expect(refreshFlow(flow, screens)).toEqual([]);
@@ -585,7 +585,7 @@ test("an arrow to a frame below follows the grown frame's bottom edge", () => {
   addNote(flow, "F1", "Between");
   settles(flow, lookup({ home: grown, other }));
   const [sx, sy, ex, ey] = points(byId(flow, arrow));
-  expect([sx, sy, ex, ey]).toEqual([82, 269 + 6, 162, 209 + 340 - 6]);
+  expect([sx, sy, ex, ey]).toEqual([80, 265 + 6, 160, 205 + 340 - 6]);
   expect(byId(flow, arrow).startBinding).toMatchObject({ fixedPoint: [0.5, 1] });
   // a lone arrow's label sits at its middle
   expect(centre(label(flow, arrow)).x).toBeCloseTo((sx + ex) / 2);
@@ -597,10 +597,10 @@ test("parallel arrows keep their slots and labels one third from their start", (
   const back = connect(flow, "F2", "F1", { label: "Back" });
   const again = connect(flow, "F1", "F2");
   settles(flow, lookup({ home: grown, other }));
-  expect(points(byId(flow, arrow))[1]).toBe(134.5);
-  // offsets stay inside F2's 109px height: 54.5 either side of its port
-  expect(points(byId(flow, back))[3]).toBe(134.5 + 54.5);
-  expect(points(byId(flow, again))[1]).toBe(134.5 - 54.5);
+  expect(points(byId(flow, arrow))[1]).toBe(132.5);
+  // offsets stay inside F2's 105px height: 52.5 either side of its port
+  expect(points(byId(flow, back))[3]).toBe(132.5 + 52.5);
+  expect(points(byId(flow, again))[1]).toBe(132.5 - 52.5);
   for (const id of [arrow, back]) {
     const [sx, sy, ex, ey] = points(byId(flow, id));
     expect(centre(label(flow, id)).x).toBeCloseTo(sx + (ex - sx) / 3);
@@ -617,8 +617,8 @@ test("arrows between a frame and a decision follow; the decision's notes stay", 
   const notes = [addNote(flow, "D1", "Why"), addNote(flow, "D1", "And why not")];
   const kept = notes.map((id) => structuredClone(byId(flow, id)));
   settles(flow, lookup({ home: grown }));
-  expect(points(byId(flow, there)).slice(0, 2)).toEqual([170, 134.5]);
-  expect(points(byId(flow, back))[3]).toBe(134.5 + 70);
+  expect(points(byId(flow, there)).slice(0, 2)).toEqual([166, 132.5]);
+  expect(points(byId(flow, back))[3]).toBe(132.5 + 70);
   expect(notes.map((id) => byId(flow, id))).toEqual(kept);
 });
 
@@ -702,7 +702,7 @@ test("stacked notes move together in order; a note moved away is restored", () =
   const ys = [note, second].map((id) => Number(byId(flow, id).y));
   settles(flow, lookup({ home: grown, other }));
   expect([note, second].map((id) => byId(flow, id).y)).toEqual(ys.map((y) => y + 60));
-  expect(byId(flow, away)).toMatchObject({ x: 0, y: 369, version: 2 });
+  expect(byId(flow, away)).toMatchObject({ x: 0, y: 365, version: 2 });
 });
 
 test("a note dragged onto its frame is reported, and refresh puts it under", () => {
@@ -714,13 +714,13 @@ test("a note dragged onto its frame is reported, and refresh puts it under", () 
     {
       frame: "F1",
       element: second,
-      message: `note ${second} is 169 px from its place under F1; run "wiredown flow refresh"`,
+      message: `note ${second} is 165 px from its place under F1; run "wiredown flow refresh"`,
     },
   ]);
   settles(flow, screens);
   // The note still in the stack stays; the displaced note follows it.
-  expect(byId(flow, note).y).toBe(229);
-  expect(byId(flow, second).y).toBe(229 + Number(byId(flow, note).height) + 20);
+  expect(byId(flow, note).y).toBe(225);
+  expect(byId(flow, second).y).toBe(225 + Number(byId(flow, note).height) + 20);
 });
 
 test.each([

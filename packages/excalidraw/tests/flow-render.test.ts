@@ -65,14 +65,14 @@ it("reports missing embeds and caches screens by path and block id", () => {
     { element: flowFrames(flow)[3].element.id, path: "other", blockId: "one" },
   ]);
 });
-it("pads the nested canvas and places its screen at x=12, y=2", () => {
+it("pads the nested canvas and places its screen at x=10, y=0", () => {
   const nested = decode(urls(light.svg)[0]);
   const padded = embedSize(screen.width, screen.height).image;
-  expect(padded).toEqual({ width: screen.width + 24, height: screen.height + 9 });
+  expect(padded).toEqual({ width: screen.width + 20, height: screen.height + 5 });
   expect(nested).toContain(
     `width="${padded.width}" height="${padded.height}" viewBox="0 0 ${padded.width} ${padded.height}"`,
   );
-  expect(nested).toContain('<svg x="12" y="2"');
+  expect(nested).toContain('<svg x="10" y="0"');
   expect([...light.inline]).toEqual(["data:image/svg+xml;base64," + urls(light.svg)[0]]);
 });
 it("aligns the invite highlight with the nested screen", () => {
@@ -81,8 +81,8 @@ it("aligns the invite highlight with the nested screen", () => {
   const group = /<g stroke-linecap="round"[^>]*>/.exec(light.svg)![0];
   const position = /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(group)!;
   expect(position).not.toBeNull();
-  expect(Number(position[1])).toBeCloseTo(FLOW_MARGIN + Number(image.x) + 12 + box.x - 4);
-  expect(Number(position[2])).toBeCloseTo(FLOW_MARGIN + Number(image.y) + 2 + box.y - 4);
+  expect(Number(position[1])).toBeCloseTo(FLOW_MARGIN + Number(image.x) + 10 + box.x - 4);
+  expect(Number(position[2])).toBeCloseTo(FLOW_MARGIN + Number(image.y) + box.y - 4);
 });
 it("filters dark images while preserving light nested bytes", async () => {
   const dark = await renderFlowSvg(flow, lookup, { theme: "dark" });

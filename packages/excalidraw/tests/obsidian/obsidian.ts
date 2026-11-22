@@ -1,5 +1,6 @@
-// Runs real Obsidian with the Excalidraw plugin, headless, and drives it over
-// the Chrome DevTools protocol. Only `pnpm test:obsidian` uses this.
+// Runs real Obsidian with the Excalidraw plugin and the built wiredown plugin,
+// headless, and drives it over the Chrome DevTools protocol. Only
+// `pnpm test:obsidian` uses this.
 //
 // The window keeps the headless default size (200x150). At a normal size the
 // plugin locks up the window while drawing an embed that resolves to a
@@ -13,6 +14,8 @@ import { join } from "node:path";
 const OBSIDIAN_VERSION = "1.15.1";
 const PLUGIN_VERSION = "2.29.0";
 const PLUGIN_ID = "obsidian-excalidraw-plugin";
+const WIREDOWN = new URL("../../../obsidian/dist/", import.meta.url);
+const WIREDOWN_FILES = ["main.js", "manifest.json", "styles.css"];
 
 const cache = join(tmpdir(), "wiredown-obsidian");
 
@@ -38,7 +41,7 @@ async function obsidianBinary(): Promise<string> {
   return join(dir, "obsidian");
 }
 
-async function installPlugin(vault: string): Promise<void> {
+async function installPlugins(vault: string): Promise<void> {
   const dir = join(vault, ".obsidian", "plugins", PLUGIN_ID);
   const cached = join(cache, `${PLUGIN_ID}-${PLUGIN_VERSION}`);
   mkdirSync(dir, { recursive: true });
@@ -50,7 +53,18 @@ async function installPlugin(vault: string): Promise<void> {
     );
     copyFileSync(join(cached, name), join(dir, name));
   }
-  writeFileSync(join(vault, ".obsidian", "community-plugins.json"), JSON.stringify([PLUGIN_ID]));
+  const wiredown = join(vault, ".obsidian", "plugins", "wiredown");
+  mkdirSync(wiredown, { recursive: true });
+  for (const name of WIREDOWN_FILES) {
+    const file = new URL(name, WIREDOWN);
+    if (!existsSync(file))
+      throw new Error(`${file.pathname} is missing: build @wiredown/obsidian first`);
+    copyFileSync(file, join(wiredown, name));
+  }
+  writeFileSync(
+    join(vault, ".obsidian", "community-plugins.json"),
+    JSON.stringify([PLUGIN_ID, "wiredown"]),
+  );
 }
 
 export interface Obsidian {
@@ -59,7 +73,7 @@ export interface Obsidian {
   close(): Promise<void>;
 }
 
-/** Starts Obsidian on a new vault holding `files` (path → text), plugin enabled. */
+/** Starts Obsidian on a new vault holding `files` (path → text), plugins enabled. */
 export async function startObsidian(files: Record<string, string>): Promise<Obsidian> {
   const binary = await obsidianBinary();
   const home = mkdtempSync(join(tmpdir(), "wd-obs-"));
@@ -68,7 +82,7 @@ export async function startObsidian(files: Record<string, string>): Promise<Obsi
     mkdirSync(join(vault, path, ".."), { recursive: true });
     writeFileSync(join(vault, path), text);
   }
-  await installPlugin(vault);
+  await installPlugins(vault);
   mkdirSync(join(home, "config", "obsidian"), { recursive: true });
   writeFileSync(
     join(home, "config", "obsidian", "obsidian.json"),
@@ -110,14 +124,17 @@ export async function startObsidian(files: Record<string, string>): Promise<Obsi
           }),
         );
       });
-    // Wait for the vault, then leave restricted mode and load the plugin, with
-    // compression off as the README asks people to set it.
+    // Wait for the vault, then leave restricted mode and load the plugins, with
+    // compression off as the README asks people to set it. On first start the
+    // Excalidraw plugin turns compression on once its settings have loaded,
+    // so wait for settingsReady, which it sets after that.
     const setup = `(async () => {
       while (!window.app?.workspace?.layoutReady) await new Promise((r) => setTimeout(r, 100));
       await app.plugins.setEnable(true);
       await app.plugins.enablePlugin("${PLUGIN_ID}");
+      await app.plugins.enablePlugin("wiredown");
       let plugin;
-      while (!(plugin = app.plugins.plugins["${PLUGIN_ID}"])?.settings)
+      while (!(plugin = app.plugins.plugins["${PLUGIN_ID}"])?.settingsReady)
         await new Promise((r) => setTimeout(r, 100));
       plugin.settings.compress = false;
       await plugin.saveSettings();

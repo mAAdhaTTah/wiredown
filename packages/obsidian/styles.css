@@ -1,0 +1,20 @@
+.wiredown-block {
+  margin: 0.5em 0;
+}
+.wiredown-block svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+/* Export light: notes filter once; drawing embeds get Excalidraw's own theme. */
+.theme-dark .wiredown-block[data-renderer="excalidraw"] > svg {
+  filter: invert(93%) hue-rotate(180deg);
+}
+.wiredown-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-small);
+}
+.wiredown-warning {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}

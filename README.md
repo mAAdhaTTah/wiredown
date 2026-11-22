@@ -5,16 +5,15 @@ rendered as hand-drawn Excalidraw sketches, and composed into user-flow
 drawings. It is built to be written mostly by an AI coding agent and reviewed
 by a person in Obsidian and in a Git forge.
 
-Packages (`@wiredown/core`, `@wiredown/excalidraw` and `@wiredown/cli`
-exist so far; the rest are planned):
+Implemented packages are listed below; `@wiredown/web` is planned.
 
-| Package                    | Purpose                                                                     |
-| -------------------------- | --------------------------------------------------------------------------- |
-| `@wiredown/core`           | Parser, variants, layout, text metrics, and validation                      |
-| `@wiredown/excalidraw`     | Excalidraw elements and headless SVG and PNG export                         |
-| `@wiredown/cli`            | `wiredown check`, `render` to SVG or PNG, `flow` commands and `lint` for CI |
-| `packages/obsidian-plugin` | Obsidian code-block processor                                               |
-| `@wiredown/web`            | Rendering for Markdown hosts, starting with Gitea                           |
+| Package                | Purpose                                                                     |
+| ---------------------- | --------------------------------------------------------------------------- |
+| `@wiredown/core`       | Parser, variants, layout, text metrics, and validation                      |
+| `@wiredown/excalidraw` | Excalidraw elements and headless SVG and PNG export                         |
+| `@wiredown/cli`        | `wiredown check`, `render` to SVG or PNG, `flow` commands and `lint` for CI |
+| `@wiredown/obsidian`   | Obsidian code-block processor                                               |
+| `@wiredown/web`        | Rendering for Markdown hosts, starting with Gitea                           |
 
 ## Development
 
@@ -34,15 +33,19 @@ pnpm test
 scripts; tests run all package projects through the root Vitest config.
 After a build, `pnpm exec wiredown` runs the CLI from the repository root.
 
-`pnpm test:obsidian` opens flows in real Obsidian with the Excalidraw
-plugin, headless, and checks that the plugin reads them as `parseFlow` does
-and keeps what `serializeFlow` wrote when it saves. It downloads the
-versions pinned in `packages/excalidraw/tests/obsidian/obsidian.ts` on first
-run and needs Linux x64. CI runs it too.
+`pnpm test:obsidian` builds the wiredown Obsidian plugin, then opens flows
+in real Obsidian with it and the Excalidraw plugin, headless. It checks that
+the Excalidraw plugin reads them as `parseFlow` does and keeps what
+`serializeFlow` wrote when it saves, that flows built by commands keep
+their frames where Obsidian draws the screens and save lint-clean with
+nothing to refresh, and what the wiredown plugin draws in notes. It downloads the versions pinned in
+`packages/excalidraw/tests/obsidian/obsidian.ts` on first run and needs
+Linux x64. CI runs it too.
 TypeScript 6 is used because typescript-eslint does not yet support
 TypeScript 7.
 
 Packages extend `tsconfig.base.json` and build with Vite to `dist/`.
+The Obsidian plugin is one bundled file; its dist folder is installable.
 
 The design and syntax proposal live in `docs/prds/initial-implementation/`.
 

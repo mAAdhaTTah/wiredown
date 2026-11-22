@@ -17,6 +17,7 @@ import {
   refreshFlow,
   screenElements,
   serializeFlow,
+  styleScreens,
 } from "@wiredown/excalidraw";
 import type {
   ExcalidrawElementJson,
@@ -54,25 +55,6 @@ async function exists(path: string) {
   } catch {
     return false;
   }
-}
-/** Adds only missing top-level styling keys, preserving the original bytes. */
-export function styleScreens(source: string): string {
-  const nl = source.includes("\r\n") ? "\r\n" : "\n";
-  const front = /^---\r?\n(?:[\s\S]*?\r?\n)?(?:---|\.\.\.)(?=\r?\n|$)/.exec(source);
-  const additions = [
-    ["excalidraw-font", "Helvetica"],
-    ["excalidraw-css", '".wiredown-block svg{display:block}"'],
-  ]
-    .filter(
-      ([key]) => !new RegExp(`^(?:${key}|"${key}"|'${key}')\\s*:`, "m").test(front?.[0] ?? ""),
-    )
-    .map(([key, value]) => `${key}: ${value}`);
-  if (!additions.length) return source;
-  if (!front) return ["---", ...additions, "---", "", source].join(nl);
-  const close = front[0].lastIndexOf(nl);
-  return (
-    source.slice(0, close + nl.length) + additions.join(nl) + nl + source.slice(close + nl.length)
-  );
 }
 export async function editFlow(
   command: "new" | "add-screen",

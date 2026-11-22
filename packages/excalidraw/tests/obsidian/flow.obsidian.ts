@@ -1,10 +1,12 @@
-// Opens flows in real Obsidian with the Excalidraw plugin and checks that the
-// plugin reads them as parseFlow does and that its save keeps what
-// serializeFlow wrote. Run with `pnpm test:obsidian`.
+// Opens flows in real Obsidian with the Excalidraw and wiredown plugins and
+// checks that the Excalidraw plugin reads them as parseFlow does, that its save
+// keeps what serializeFlow wrote, and that flows built by commands keep their
+// frames where Obsidian draws the screens. Run with `pnpm test:obsidian`.
 import { readFileSync } from "node:fs";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { formatEmbed } from "../../src/flow";
+import { SCREEN_INSET } from "../../src/flow-edit";
 import {
   addDecision,
   addHighlight,
@@ -12,11 +14,14 @@ import {
   addNote,
   addScreen,
   connect,
+  embedSize,
+  lintFlow,
   newFlow,
   parseFlow,
   refreshFlow,
   screenElements,
   serializeFlow,
+  styleScreens,
   type ExcalidrawElementJson,
   type ScreenLookup,
 } from "../../src/index";
@@ -93,25 +98,28 @@ function written(): string {
 }
 
 // A screens file in a subfolder, and a decoy with the same name elsewhere, so
-// the written path from the vault root must pick the right one.
-const CHECKOUT = [
-  "# Cart",
-  "",
-  "```wiredown",
-  "window: Cart",
-  "  button: *Checkout #go",
-  "```",
-  "^cart",
-  "",
-  "# Done",
-  "",
-  "```wiredown",
-  "window: Done",
-  "  text: Thanks",
-  "```",
-  "^done",
-  "",
-].join("\n");
+// the written path from the vault root must pick the right one. It carries
+// the styling front matter that flow new and flow add-screen give it.
+const CHECKOUT = styleScreens(
+  [
+    "# Cart",
+    "",
+    "```wiredown",
+    "window: Cart",
+    "  button: *Checkout #go",
+    "```",
+    "^cart",
+    "",
+    "# Done",
+    "",
+    "```wiredown",
+    "window: Done",
+    "  text: Thanks",
+    "```",
+    "^done",
+    "",
+  ].join("\n"),
+);
 
 /** The screens refresh sees: each block of `source`, laid out now. */
 function lookup(source: string): ScreenLookup {
@@ -184,6 +192,10 @@ function bindings(elements: Bound[]) {
 interface Seen {
   id: string;
   type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   text?: string;
   groupIds: string[];
   customData?: unknown;
@@ -201,6 +213,19 @@ interface Opened {
 }
 
 const before = (text: string) => text.slice(0, text.indexOf("## Drawing\n"));
+
+/** Each image's place and size. */
+const images = (elements: Partial<Seen>[]) =>
+  elements
+    .filter((e) => e.type === "image")
+    .map(({ id, x, y, width, height }) => ({ id, x, y, width, height }));
+
+/** How Obsidian draws a screen embed: the image, its content box, the screen. */
+interface Drawn {
+  image: { width: number; height: number };
+  foreignObject: { x: number; y: number };
+  screen: { x: number; y: number; width: number; height: number } | null;
+}
 
 const FLOWS = {
   "flows/review-and-apply.excalidraw.md": FIXTURE,
@@ -222,7 +247,12 @@ afterAll(() => obsidian?.close());
 
 describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", (path, text) => {
   let opened: Opened;
+  let saved: string;
   const flow = parseFlow(text);
+  const live = flow.elements.filter((e) => !e.isDeleted) as Partial<Seen>[];
+  // Flows the commands built, from screens the wiredown plugin renders.
+  const built = path.startsWith("docs/checkout/");
+  const screens = lookup(CHECKOUT);
 
   beforeAll(async () => {
     opened = await obsidian.run<Opened>(`(async () => {
@@ -238,8 +268,8 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
       return {
         view: view.getViewType(),
         elements: view.excalidrawAPI.getSceneElements().map(
-          ({ id, type, text, groupIds, customData, startBinding, endBinding, boundElements, containerId }) =>
-            ({ id, type, text, groupIds, customData, startBinding, endBinding, boundElements, containerId }),
+          ({ id, type, x, y, width, height, text, groupIds, customData, startBinding, endBinding, boundElements, containerId }) =>
+            ({ id, type, x, y, width, height, text, groupIds, customData, startBinding, endBinding, boundElements, containerId }),
         ),
         embeds,
         loaded: Object.keys(view.excalidrawAPI.getFiles()),
@@ -249,25 +279,74 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
 
   it("opens in the Excalidraw view with the elements parseFlow reads", () => {
     expect(opened.view).toBe("excalidraw");
-    const live = flow.elements.filter((e) => !e.isDeleted);
     expect(opened.elements.map(({ id, type, text }) => ({ id, type, text }))).toEqual(
       live.map(({ id, type, text }) => ({ id, type, text: type === "text" ? text : undefined })),
     );
   });
 
-  // Not sizes or places: the plugin re-measures each Markdown embed as
-  // Obsidian renders it, about its centre, and without the wiredown plugin a
-  // screen renders as a code block.
+  // Not every size and place: the plugin reshapes a Markdown embed to the
+  // aspect Obsidian renders it at, about its centre, and Excalidraw adjusts
+  // arrow ends and the ellipse around a mark's label.
   it("keeps every element's groups and customData", () => {
     const kept = (elements: Partial<Seen>[]) =>
       elements.map(({ id, groupIds, customData }) => ({ id, groupIds, customData }));
-    expect(kept(opened.elements)).toEqual(
-      kept(flow.elements.filter((e) => !e.isDeleted) as Partial<Seen>[]),
-    );
+    expect(kept(opened.elements)).toEqual(kept(live));
   });
 
   it("keeps every arrow and text binding, both ways", () => {
-    expect(bindings(opened.elements)).toEqual(bindings(flow.elements.filter((e) => !e.isDeleted)));
+    expect(bindings(opened.elements)).toEqual(bindings(live as Bound[]));
+  });
+
+  it.runIf(built)("keeps every frame image's place and size", () => {
+    expect(images(opened.elements)).toEqual(images(live));
+  });
+
+  // Measured as laid out in Obsidian's window, so the host padding and any
+  // other CSS inside the image count. overlayBox puts a screen's top-left at
+  // SCREEN_INSET inside its image, with no border around it.
+  it.runIf(built)("draws each screen at SCREEN_INSET in an image of embedSize", async () => {
+    const drawn = await obsidian.run<Record<string, Drawn>>(`(async () => {
+      const leaf = app.workspace.getLeavesOfType("excalidraw")
+        .find((l) => l.view.file?.path === ${JSON.stringify(path)});
+      const drawn = {};
+      for (const [id, file] of Object.entries(leaf.view.excalidrawAPI.getFiles())) {
+        const host = document.body.appendChild(document.createElement("div"));
+        host.style.cssText = "position: fixed; left: 0; top: 0";
+        const root = host.attachShadow({ mode: "open" });
+        root.innerHTML = await (await fetch(file.dataURL)).text();
+        const image = root.querySelector("svg").getBoundingClientRect();
+        const box = root.querySelector("foreignObject");
+        const screen = root.querySelector("svg.wiredown-svg")?.getBoundingClientRect();
+        drawn[id] = {
+          image: { width: image.width, height: image.height },
+          foreignObject: { x: Number(box.getAttribute("x")), y: Number(box.getAttribute("y")) },
+          screen: screen && {
+            x: screen.x - image.x,
+            y: screen.y - image.y,
+            width: screen.width,
+            height: screen.height,
+          },
+        };
+        host.remove();
+      }
+      return drawn;
+    })()`);
+    const expected = Object.fromEntries(
+      [...flow.embeds].map(([id, link]) => {
+        const found = screens({ path: link.path, blockId: link.blockId! });
+        if (!found.ok) throw new Error(found.message);
+        const { width, height } = found.screen;
+        return [
+          id,
+          {
+            image: embedSize(width, height).image,
+            foreignObject: { x: 0, y: 0 },
+            screen: { ...SCREEN_INSET, width, height },
+          },
+        ];
+      }),
+    );
+    expect(drawn).toEqual(expected);
   });
 
   it("resolves and loads every embed parseFlow reads", () => {
@@ -282,7 +361,7 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
   });
 
   it("keeps everything before the drawing when the plugin saves", async () => {
-    const saved = await obsidian.run<string>(`(async () => {
+    saved = await obsidian.run<string>(`(async () => {
       const file = app.vault.getAbstractFileByPath(${JSON.stringify(path)});
       const was = await app.vault.read(file);
       const leaf = app.workspace.getLeavesOfType("excalidraw").find((l) => l.view.file === file);
@@ -302,5 +381,12 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
       flow.elements.map((e) => [e.groupIds, e.customData]),
     );
     expect(bindings(after)).toEqual(bindings(flow.elements));
+    expect(parseFlow(saved).compressed).toBe(false);
+  });
+
+  it.runIf(built)("saves frames in place, lint-clean, with nothing to refresh", () => {
+    expect(images(parseFlow(saved).elements as Partial<Seen>[])).toEqual(images(live));
+    expect(lintFlow(parseFlow(saved), screens)).toEqual([]);
+    expect(refreshFlow(parseFlow(saved), screens)).toEqual([]);
   });
 });
