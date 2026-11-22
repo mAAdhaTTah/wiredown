@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { layoutScreen, parse } from "@wiredown/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { addScreen, embedSize, newFlow, screenElements } from "../src/index";
+import { SCREEN_INSET } from "../src/flow-edit";
+import { addScreen, newFlow, screenElements } from "../src/index";
 import { BACKGROUND, FLOW_MARGIN, renderFlowSvg, renderSvg, svgToPng } from "../src/node";
 import { decodePng } from "./png";
 
@@ -65,7 +66,6 @@ describe("svgToPng", { timeout: 30000 }, () => {
     addScreen(flow, { screenId: "s", title: "s", path: "screens", size: screen });
     flow.elements = flow.elements.filter((e) => e.type === "image");
     const rendered = await renderFlowSvg(flow, () => screen.elements);
-    const pad = (embedSize(screen.width, screen.height).image.width - screen.width) / 2;
     const whole = decodePng(
       (await svgToPng(rendered.svg, { background: "#fff", inline: rendered.inline })).png,
     );
@@ -74,7 +74,10 @@ describe("svgToPng", { timeout: 30000 }, () => {
     let worst = 0;
     for (let y = 0; y < alone.height; y++)
       for (let x = 0; x < alone.width; x++) {
-        const [a, b] = [whole.pixel(x + pad + FLOW_MARGIN, y + FLOW_MARGIN), alone.pixel(x, y)];
+        const [a, b] = [
+          whole.pixel(x + SCREEN_INSET.x + FLOW_MARGIN, y + SCREEN_INSET.y + FLOW_MARGIN),
+          alone.pixel(x, y),
+        ];
         for (let c = 0; c < 4; c++) worst = Math.max(worst, Math.abs(a[c] - b[c]));
       }
     expect(worst).toBeLessThanOrEqual(2);
