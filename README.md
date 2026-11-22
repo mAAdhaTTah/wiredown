@@ -25,17 +25,13 @@ mise install
 pnpm install
 pnpm format:check
 pnpm lint
-pnpm build
 pnpm typecheck
+pnpm build
 pnpm test
 ```
 
 `pnpm format` applies formatting. Build and typecheck run each package's
 scripts; tests run all package projects through the root Vitest config.
-In type-checking and unit tests, workspace package imports resolve to their
-source; the CLI bin, the bundles and code that imports a `dist/` path use
-the build. The evals import core's built `dist/internal.js`, so run
-`pnpm build` before `pnpm typecheck` and `pnpm test`.
 After a build, `pnpm exec wiredown` runs the CLI from the repository root.
 
 `pnpm test:obsidian` builds the wiredown Obsidian plugin, then opens flows

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkScreens } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
-import { checkScreensInternal } from "../../core/dist/internal.js";
+import { checkScreensInternal } from "../../core/src/internal.ts";
 import { loadBaseline } from "./baseline.ts";
 import type { BaselineCore } from "./baseline.ts";
 import { PACKAGE, REPO } from "./paths.ts";
