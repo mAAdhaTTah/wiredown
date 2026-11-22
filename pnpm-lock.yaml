@@ -212,7 +212,7 @@ importers:
         specifier: 0.1.8
         version: 0.1.8
       '@resvg/resvg-js':
-        specifier: 2.6.2
+        specifier: ^2.6.2
         version: 2.6.2
       '@wiredown/core':
         specifier: workspace:*
@@ -221,10 +221,10 @@ importers:
         specifier: workspace:*
         version: link:../excalidraw
       happy-dom:
-        specifier: 21.0.4
+        specifier: ^21.0.4
         version: 21.0.4
       woff2-encoder:
-        specifier: 2.0.0
+        specifier: ^2.0.0
         version: 2.0.0
     devDependencies:
       '@types/node':
@@ -275,13 +275,13 @@ importers:
         specifier: 0.1.8
         version: 0.1.8
       '@resvg/resvg-js':
-        specifier: 2.6.2
+        specifier: ^2.6.2
         version: 2.6.2
       happy-dom:
-        specifier: 21.0.4
+        specifier: ^21.0.4
         version: 21.0.4
       woff2-encoder:
-        specifier: 2.0.0
+        specifier: ^2.0.0
         version: 2.0.0
 
   packages/gitea:
@@ -302,16 +302,16 @@ importers:
         specifier: workspace:*
         version: link:../excalidraw
       happy-dom:
-        specifier: 21.0.4
+        specifier: ^21.0.4
         version: 21.0.4
       playwright-core:
         specifier: 1.65.1
         version: 1.65.1
       react:
-        specifier: 18.3.1
+        specifier: ^18.3.1
         version: 18.3.1
       react-dom:
-        specifier: 18.3.1
+        specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
 
   packages/obsidian:

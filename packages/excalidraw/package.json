@@ -54,9 +54,9 @@
     }
   },
   "devDependencies": {
-    "happy-dom": "21.0.4",
-    "@resvg/resvg-js": "2.6.2",
-    "woff2-encoder": "2.0.0",
+    "happy-dom": "^21.0.4",
+    "@resvg/resvg-js": "^2.6.2",
+    "woff2-encoder": "^2.0.0",
     "@excalidraw/utils": "0.1.8"
   }
 }
