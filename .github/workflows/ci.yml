@@ -37,7 +37,8 @@ jobs:
       - run: pnpm --filter "@wiredown/excalidraw..." build
       - run: pnpm vitest run --project excalidraw
 
-  # Opens flows in real Obsidian with the Excalidraw plugin.
+  # Opens flows in real Obsidian with the Excalidraw and wiredown plugins;
+  # test:obsidian builds the wiredown plugin first.
   obsidian:
     runs-on: ubuntu-latest
     steps:
