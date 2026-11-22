@@ -279,6 +279,24 @@ it("draws blocks in a pull request comment, and in a comment's preview", async (
   await form.getByText("Preview", { exact: true }).click();
   await expect.poll(() => form.locator(".wiredown-block svg.wiredown-svg").count()).toBe(2);
   await form.getByRole("button", { name: "Comment", exact: true }).click();
+  // DIAGNOSTIC, to remove: what the page shows after posting.
+  await new Promise((r) => setTimeout(r, 5000));
+  await visit.page.screenshot({ path: join(SHOTS, "pr-posted.png"), fullPage: true });
+  console.log(
+    "after posting:",
+    visit.page.url(),
+    JSON.stringify(
+      await visit.page
+        .locator('[id^="issuecomment-"]')
+        .evaluateAll((els) =>
+          els.map(
+            (e) =>
+              `${e.id} ${e.className} blocks=${e.querySelectorAll(".wiredown-block").length} code=${e.querySelectorAll("code.language-wiredown").length} done=${e.querySelectorAll("[data-wiredown]").length}`,
+          ),
+        ),
+    ),
+    JSON.stringify(visit.errors),
+  );
   await expect.poll(() => comment.count()).toBe(4);
   await visit.page.waitForLoadState("load");
   expect(visit.errors).toEqual([]);
