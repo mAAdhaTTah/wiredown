@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "skill": "node scripts/skill.mjs",
-    "smoke:web": "pnpm build && pnpm --filter @wiredown/web smoke",
+    "smoke:gitea": "pnpm build && pnpm --filter @wiredown/gitea smoke",
     "metrics": "node packages/core/scripts/metrics.mjs"
   },
   "devDependencies": {

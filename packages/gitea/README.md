@@ -110,14 +110,7 @@ reported under "Not drawn:" as drawn in a fallback font, so no request is
 made for a font that is not there. The renderer does not check that a
 listed folder exists.
 
-### On Gitea (unverified)
-
-The integration assumes Gitea's custom templates. The usual place,
-not checked on a live Gitea, is:
-
-- `dist/` copied to `$GITEA_CUSTOM/public/assets/wiredown/<version>/`,
-  served as `/assets/wiredown/<version>/`;
-- the `<script>` tag above in `$GITEA_CUSTOM/templates/custom/footer.tmpl`.
+### Content Security Policy (unverified)
 
 Gitea 28.4.0 sends no Content Security Policy by default. A strict policy
 works if it allows, from the page's own origin, scripts (module scripts and
