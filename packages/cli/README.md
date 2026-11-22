@@ -156,7 +156,7 @@ Missing embed styling frontmatter is added; existing values are preserved.
 Invalid screens and unknown nodes leave the drawing untouched.
 A frame's image and its `F3 · Title` label share an Excalidraw group, so
 they move together: clicking either selects both; double-click to select
-one. Human output is one `F3  team-members  548x333` line per frame, then one
+one. Human output is one `F3  team-members  552x337` line per frame, then one
 `F1 -> F2` line per arrow. The size is the embed image size in the drawing.
 JSON is `{ flow, frames: [{ frame, screen, title, id, x, y, width, height }],
 screensFileUpdated }`, where `id` is the image's element id; `flow new` adds
@@ -267,7 +267,7 @@ Human output is one line per change, or `up to date` when nothing changed and
 every screen was found:
 
 ```text
-F2  embed 548x373 -> 548x413
+F2  embed 552x377 -> 552x417
 F2  note moved
 F2  highlight #invite moved
 F2  mark 3 #members unresolved: ^team-members has no #members any more
