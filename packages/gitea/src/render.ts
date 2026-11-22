@@ -103,7 +103,7 @@ function pageMarkdown(blocks: Block[]): string {
 
 /**
  * Check blocks as the CLI checks a file: against the page's own Markdown file
- * when the host has one and every block is in it (file lines), otherwise
+ * when the page shows one and every block is in it (file lines), otherwise
  * against the blocks on the page (lines within each block).
  */
 export function resolveBlocks(blocks: Block[], note: string | undefined): Resolved[] {

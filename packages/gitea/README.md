@@ -6,7 +6,7 @@ Excalidraw, and loads Excalidraw only on pages that have one. It supports
 Gitea only.
 
 **Status: built and tested in happy-dom only. It has never run on a Gitea
-instance or in a real browser.** See "Verify on a forge" below.
+instance or in a real browser.** See "Verify on Gitea" below.
 
 ## Files
 
@@ -37,16 +37,17 @@ Sizes (Vite 8.3, `@excalidraw/excalidraw` 0.18.1, React 18.3.1):
 
 | Download                                            | Minified | Gzip    |
 | --------------------------------------------------- | -------- | ------- |
-| `wiredown.js`, on every page                        | 2.3 KB   | 1.2 KB  |
-| `wiredown-renderer.js`                              | 83 KB    | 30 KB   |
-| Renderer and the chunks one drawing used (13 files) | 3.12 MB  | 1.15 MB |
-| Renderer and every chunk (182 files)                | 7.7 MB   | 2.5 MB  |
+| `wiredown.js`, on every page                        | 2.4 KB   | 1.2 KB  |
+| `wiredown-renderer.js`                              | 90 KB    | 33 KB   |
+| Renderer and the chunks one drawing used (13 files) | 3.06 MB  | 1.14 MB |
+| Renderer and every chunk (182 files)                | 7.9 MB   | 2.6 MB  |
 
 `pnpm build` prints the size of each file; the last row is their sum. The
-third was measured once in Chromium: the JavaScript a page with two screens
-loaded besides the loader. That page also fetched one 25 KB Excalifont
-file. It matches the design's estimate of about 1.15 MB gzipped. Other
-pages may load somewhat different chunks. This has not been measured.
+third was measured once, before the move to Vite, by exporting a screen
+with the built renderer in Node under happy-dom and recording which files
+were loaded; that run also fetched one 25 KB Excalifont file. It matches the
+design's estimate of about 1.15 MB gzipped. A real browser may load
+somewhat different chunks. This has not been measured.
 
 ## Installing on Gitea
 
@@ -172,16 +173,15 @@ The file-view and raw URLs are new and come from no prototype.
   the drawing. A flow whose frames were sized for older screens is drawn as
   it is, squeezed into those sizes, with a notice under it: "This flow is out
   of date with its screens; run wiredown flow refresh."
-- **Theme.** It draws for the page's theme at render time. Switching theme
-  later does not redraw.
+- **Theme.** It draws for the page's theme when the loader finds the
+  wireframes. Switching theme later does not redraw.
 - **Failures.** If the renderer cannot load, a fetch fails or Excalidraw
   throws, the page's content stays as it was, a short `.wiredown-notice`
   appears next to it, and one `console.warn` is logged.
 
 ## Limitations
 
-- github.com and other forges without custom JavaScript are not supported.
-- Only Gitea's page structure is known, and it is assumed, not verified.
+- Only Gitea is supported, and its page structure is assumed, not verified.
 - Flows and file-accurate variants need same-origin access to raw files.
 - Only Excalifont is shipped (see "Other fonts"). Text in another family
   is drawn in Excalifont with a fallback diagnostic under "Not drawn:".
@@ -189,7 +189,7 @@ The file-view and raw URLs are new and come from no prototype.
 - The `^id` of a block in a comment is found only if Gitea renders the
   `^id` line as the next paragraph; otherwise variants there do not resolve.
 
-## Verify on a forge (NOT YET RUN)
+## Verify on Gitea (NOT YET RUN)
 
 On a Gitea instance, after an install or a Gitea upgrade:
 
@@ -204,10 +204,10 @@ On a Gitea instance, after an install or a Gitea upgrade:
 5. A `flows/*.excalidraw.md` file view draws the flow above the Markdown,
    with every screen; renaming a screen id shows it under "Not drawn".
 6. Dark theme: drawings are drawn dark after a reload.
-7. No request leaves the forge's origin, and the console has no errors.
+7. No request leaves Gitea's origin, and the console has no errors.
 8. Add a note in Virgil: it is drawn in Excalifont with a "fallback font"
    notice and no font request. With Virgil added (see "Other fonts"), it is
-   drawn in Virgil, loaded from the forge without a 404.
+   drawn in Virgil, loaded from Gitea without a 404.
 9. With the renderer file removed, blocks stay as code with a notice.
 
 ## Development
@@ -226,5 +226,4 @@ Drawing-supplied image files must use inline `data:` URLs with media type
 (case-insensitive, base64 or plain). Other URLs, media types, and missing or
 non-string values are dropped and listed under "Not drawn:"; image elements
 remain as placeholders. Generated screen SVGs are unaffected. SVG data URLs
-remain images inside Excalidraw's SVG export: the browser smoke observes no
-external fetch from an SVG's nested external image reference.
+remain images inside Excalidraw's SVG export.

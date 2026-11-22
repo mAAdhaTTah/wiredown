@@ -229,7 +229,7 @@ name: Framedown.
 | Excalifont metrics match Excalidraw | Prototype measurement | Measured |
 | Variants, wrapping grids, validation work | Prototype fork, 1,024 tests passing | Prototyped |
 | Overlays line up with elements inside embeds | Screen size and place inside the embed measured in headless Obsidian, for a screens file with the CLI's styling front matter (`pnpm test:obsidian`); not checked by eye | Measured |
-| Forge renderer | Bundle built, never run on a forge | Open |
+| Gitea script | Bundle built, never run on Gitea | Open |
 
 ## Open questions and risks
 
