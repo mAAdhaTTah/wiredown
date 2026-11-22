@@ -2,13 +2,25 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { expect, it } from "vitest";
 
-const dist = new URL("../dist/", import.meta.url);
+const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+// The files Gitea serves; dist/ itself is a Gitea custom directory.
+const dist = new URL(`../dist/public/assets/wiredown/${version}/`, import.meta.url);
 const read = (file: string) => readFileSync(new URL(file, dist), "utf8");
 const scripts = [
   "wiredown.js",
   "wiredown-renderer.js",
   ...readdirSync(new URL("chunks/", dist)).map((f) => `chunks/${f}`),
 ];
+
+it("builds a Gitea custom directory: the footer template loads this version's loader", () => {
+  expect(readdirSync(new URL("../dist/", import.meta.url)).sort()).toEqual(["public", "templates"]);
+  expect(
+    readFileSync(new URL("../dist/templates/custom/footer.tmpl", import.meta.url), "utf8"),
+  ).toBe(`<script src="{{AppSubUrl}}/assets/wiredown/${version}/wiredown.js" defer></script>\n`);
+  expect(readdirSync(new URL("../dist/public/assets/wiredown/", import.meta.url))).toEqual([
+    version,
+  ]);
+});
 
 it("builds a small loader with no Excalidraw or React in it", () => {
   const loader = read("wiredown.js");

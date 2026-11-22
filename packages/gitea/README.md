@@ -10,7 +10,16 @@ instance or in a real browser.** See "Verify on a forge" below.
 
 ## Files
 
-`pnpm build` writes `dist/`:
+`pnpm build` writes `dist/` laid out as a Gitea custom directory (see
+"Installing on Gitea"):
+
+```text
+dist/
+  templates/custom/footer.tmpl        the tag that loads wiredown.js on every page
+  public/assets/wiredown/<version>/   served by Gitea as /assets/wiredown/<version>/
+```
+
+The version folder holds:
 
 | File                   | What it is                                                    |
 | ---------------------- | ------------------------------------------------------------- |
@@ -39,20 +48,37 @@ loaded besides the loader. That page also fetched one 25 KB Excalifont
 file. It matches the design's estimate of about 1.15 MB gzipped. Other
 pages may load somewhat different chunks. This has not been measured.
 
-## Loading it
+## Installing on Gitea
 
-Host the whole `dist/` folder on the forge's own origin, in a folder named
-after the version. Then add one tag to every page:
+Copy everything in `dist/` into Gitea's custom directory (`$GITEA_CUSTOM`)
+and restart Gitea:
+
+```sh
+cp -R dist/. "$GITEA_CUSTOM/"
+```
+
+**This replaces `$GITEA_CUSTOM/templates/custom/footer.tmpl`.** Gitea has
+one such file. If you already have one, add the line from
+`dist/templates/custom/footer.tmpl` to yours instead of copying it.
+
+`footer.tmpl` holds one tag:
 
 ```html
-<script src="/assets/wiredown/0.1.0/wiredown.js" defer></script>
+<script src="{{AppSubUrl}}/assets/wiredown/<version>/wiredown.js" defer></script>
 ```
+
+`{{AppSubUrl}}` is Gitea's base path, empty unless Gitea is served under a
+sub-path. None of this has been checked on a live Gitea: that Gitea serves
+`$GITEA_CUSTOM/public/assets/` at `/assets/`, that `footer.tmpl` is added to
+every page, that `AppSubUrl` is available in it, or whether a restart is
+needed.
 
 - It must be a classic script, not `type="module"`. The loader finds its
   own URL through `document.currentScript`, and loads the renderer and fonts
   from the same folder.
-- Pin a version. Each loader loads the renderer next to it, so a versioned
-  folder keeps the two in step. Upgrading means a new folder and a new tag.
+- Each version has its own folder, and the loader loads the renderer next to
+  it, so the two stay in step. Upgrading copies a new folder and a new
+  `footer.tmpl`; an old version's folder can then be deleted.
 - It makes no requests except to the page's own origin: the renderer and
   fonts, a Markdown file's raw text, and a flow's raw text and screens files.
   It reads cookies only as the page's own `fetch` does (`same-origin`). It
@@ -66,10 +92,14 @@ Only Excalifont is shipped. Excalidraw loads a font family from
 folder unless the page set it. To use another of Excalidraw's families,
 copy its folder from `@excalidraw/excalidraw/dist/prod/fonts/` (for
 example `Virgil/`) into `fonts/` next to `wiredown.js`, and list the
-folders on the tag:
+folders on the tag in `footer.tmpl`:
 
 ```html
-<script src="/assets/wiredown/0.1.0/wiredown.js" data-fonts="Virgil,Nunito" defer></script>
+<script
+  src="{{AppSubUrl}}/assets/wiredown/<version>/wiredown.js"
+  data-fonts="Virgil,Nunito"
+  defer
+></script>
 ```
 
 The names are the folder names: `Virgil`, `Cascadia`, `Nunito`, `Lilita`,
@@ -79,14 +109,7 @@ reported under "Not drawn:" as drawn in a fallback font, so no request is
 made for a font that is not there. The renderer does not check that a
 listed folder exists. Check each font's licence before serving it.
 
-### On Gitea (unverified)
-
-The prototypes and notes assume Gitea's custom templates. The usual place,
-not checked on a live Gitea, is:
-
-- `dist/` copied to `$GITEA_CUSTOM/public/assets/wiredown/<version>/`,
-  served as `/assets/wiredown/<version>/`;
-- the `<script>` tag above in `$GITEA_CUSTOM/templates/custom/footer.tmpl`.
+### Content Security Policy (unverified)
 
 A strict Content Security Policy works if it allows, from the page's own
 origin, scripts (module scripts and dynamic `import()`), `fetch` and workers,

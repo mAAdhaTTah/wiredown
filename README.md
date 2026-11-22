@@ -46,8 +46,9 @@ TypeScript 6 is used because typescript-eslint does not yet support
 TypeScript 7.
 
 Packages extend `tsconfig.base.json` and build with Vite to `dist/`.
-The Obsidian plugin and `@wiredown/gitea` are bundles; the plugin's dist
-folder is installable.
+The Obsidian plugin and `@wiredown/gitea` are bundles. The plugin's dist
+folder is installable; `@wiredown/gitea`'s dist is a Gitea custom directory,
+installed by copying it into `$GITEA_CUSTOM`.
 
 The design and syntax proposal live in `docs/prds/initial-implementation/`.
 

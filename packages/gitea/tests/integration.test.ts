@@ -1,10 +1,13 @@
 // The real renderer bundle and Excalidraw's real exporter, under happy-dom.
 // happy-dom has no canvas and no FontFace: both are stubbed with just what
-// Excalidraw's SVG export touches. The font is served from dist/fonts.
+// Excalidraw's SVG export touches. The font is served from the built fonts/.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it, vi } from "vitest";
 import type { Renderer } from "../src/loader";
+
+const { version } = JSON.parse(readFileSync(join(import.meta.dirname, "../package.json"), "utf8"));
+const assets = join(import.meta.dirname, `../dist/public/assets/wiredown/${version}`);
 
 it("renders a block through the built renderer and Excalidraw", async () => {
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function () {
@@ -36,12 +39,12 @@ it("renders a block through the built renderer and Excalidraw", async () => {
   const fetch = vi.fn(async (url: string) => {
     const font = /\/(fonts\/Excalifont\/[^/]+\.woff2)$/.exec(String(url));
     if (!font) return new Response("", { status: 404 });
-    return new Response(readFileSync(join(import.meta.dirname, "../dist", font[1]!)));
+    return new Response(readFileSync(join(assets, font[1]!)));
   });
   vi.stubGlobal("fetch", fetch);
   document.body.innerHTML = `<pre>text: Hello</pre>`;
   const element = document.querySelector("pre")!;
-  const { render } = (await import("../dist/wiredown-renderer.js" as string)) as Renderer;
+  const { render } = (await import(join(assets, "wiredown-renderer.js"))) as Renderer;
   await render({ blocks: [{ element, source: "text: Hello", id: "hello" }], theme: "light" });
   const svg = document.querySelector(".wiredown-block > svg.wiredown-svg")!;
   expect(svg.querySelector("text")!.textContent).toBe("Hello");
@@ -49,7 +52,9 @@ it("renders a block through the built renderer and Excalidraw", async () => {
     "@font-face { font-family: Excalifont; src: url(data:font/woff2;base64,",
   );
   expect(document.querySelector("details.wiredown-source > pre")).toBe(element);
-  expect(fetch.mock.calls.every(([url]) => String(url).includes("/dist/fonts/Excalifont/"))).toBe(
-    true,
-  );
+  expect(
+    fetch.mock.calls.every(([url]) =>
+      String(url).includes(`/wiredown/${version}/fonts/Excalifont/`),
+    ),
+  ).toBe(true);
 }, 30_000);
