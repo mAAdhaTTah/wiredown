@@ -21,6 +21,12 @@ async function setup() {
   return { dir, file, screens: join(dir, "screens.md") };
 }
 const lint = (file: string) => run(["flow", "lint", file]);
+const geometry = {
+  x: expect.any(Number),
+  y: expect.any(Number),
+  width: expect.any(Number),
+  height: expect.any(Number),
+};
 
 test("removes a frame with everything of ours on it, in one line", async () => {
   const { dir, file } = await setup();
@@ -50,7 +56,7 @@ test("each kind of target, as lines and as JSON", async () => {
       {
         kind: "highlight",
         element: expect.any(String),
-        elements: [expect.any(String)],
+        elements: [{ id: expect.any(String), type: "rectangle", ...geometry }],
         node: "F2",
         target: "invite",
       },
@@ -66,7 +72,13 @@ test("each kind of target, as lines and as JSON", async () => {
     ],
     unbound: [],
   });
-  expect(out.removed[1].elements).toHaveLength(4); // diamond, its text, the arrow, its label
+  // the diamond, the arrow, then their text
+  expect(out.removed[1].elements).toEqual([
+    { id: out.removed[1].element, type: "diamond", ...geometry },
+    { id: expect.any(String), type: "arrow", ...geometry },
+    { id: expect.any(String), type: "text", text: "Done?", ...geometry },
+    { id: expect.any(String), type: "text", text: "Yes", ...geometry },
+  ]);
   expect((await lint(file)).exitCode).toBe(0);
 });
 
@@ -95,7 +107,8 @@ test("a person's arrow is unbound and kept; a person's element is refused", asyn
   const flow = parseFlow(await readFile(file, "utf8"));
   const f2 = flow.elements.find((e) => e.type === "image" && e.x !== 0)!;
   flow.elements.push({
-    ...{ id: "handmade", type: "arrow", x: 0, y: 0, version: 1, points: [[0, 0]] },
+    ...{ id: "handmade", type: "arrow", x: 0, y: 0, width: 5, height: 6, version: 1 },
+    points: [[0, 0]],
     ...{ startBinding: null, endBinding: { elementId: f2.id, mode: "orbit", fixedPoint: [0, 0] } },
   });
   (f2.boundElements as unknown[]).push({ id: "handmade", type: "arrow" });
@@ -108,6 +121,11 @@ test("a person's arrow is unbound and kept; a person's element is refused", asyn
   expect(await readFile(file, "utf8")).toBe(before);
   const result = await run(["flow", "remove", file, "F2"]);
   expect(result.stdout).toContain("unbound a hand-drawn arrow handmade from F2\n");
+  await writeFile(file, before);
+  const json = JSON.parse((await run(["flow", "remove", file, "F2", "--json"])).stdout);
+  expect(json.unbound).toEqual([
+    { element: "handmade", from: "F2", x: 0, y: 0, width: 5, height: 6 },
+  ]);
   const arrow = parseFlow(await readFile(file, "utf8")).elements.find((e) => e.id === "handmade");
   expect(arrow).toMatchObject({ endBinding: null, version: 2 });
   expect(arrow!.isDeleted).toBeFalsy();

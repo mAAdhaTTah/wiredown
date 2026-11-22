@@ -480,16 +480,18 @@ removed 2 notes on F2
 removed label <id> of F2
 removed <id>, a copy of F2's frame, and 1 element pasted with it
 removed <id>, one of the elements claiming F2 (frame)
-left the labels of F2: the copy has no group of its own; remove its label by element id
+left the label of F2, and any notes or overlays pasted with it: the copy has no group of its own; remove them by element id
 unbound a hand-drawn arrow <id> from F2
 ```
 
 JSON is `{ flow, removed: [{ kind, element, elements, node?, from?, to?,
 target?, label?, notes?, overlays?, arrows?, copy?, labelLeft?, of? }], unbound:
-[{ element, from }] }`, where `kind` is `frame`, `decision`, `arrow`,
-`highlight`, `mark`, `note`, `label` or `copy` (with `of`, what it copies:
-`F2's frame`), `element` is the element the target named and `elements`
-every element removed. Errors exit 1 with `removed` and
+[{ element, from, x, y, width, height }] }`, where `kind` is `frame`,
+`decision`, `arrow`, `highlight`, `mark`, `note`, `label` or `copy` (with
+`of`, what it copies: `F2's frame`), `element` is the id of the element the
+target named and `elements` every element removed, each as `{ id, type,
+text?, x, y, width, height }` (`text` for text elements). Each `unbound`
+entry is a person's arrow with its geometry. Errors exit 1 with `removed` and
 `unbound` empty and an `errors` array.
 
 Keep flows diffable by turning off "Compress Excalidraw JSON in Markdown"

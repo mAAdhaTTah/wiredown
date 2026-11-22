@@ -595,7 +595,17 @@ export async function removeFlowItems(
       exitCode: 0,
       stderr: "",
       stdout: options.json
-        ? json({ flow: file, removed, unbound })
+        ? json({
+            flow: file,
+            removed: removed.map((r) => ({
+              ...r,
+              elements: r.elements.map((id) => {
+                const e = elementById(flow, id);
+                return { id, type: e.type, ...(e.text ? { text: e.text } : {}), ...box(e) };
+              }),
+            })),
+            unbound: unbound.map((u) => ({ ...u, ...box(elementById(flow, u.element)) })),
+          })
         : removed.map(removedLine).join("") +
           unbound.map((u) => `unbound a hand-drawn arrow ${u.element} from ${u.from}\n`).join(""),
     };
