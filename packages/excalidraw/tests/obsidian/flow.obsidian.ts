@@ -179,6 +179,40 @@ function refreshed(): string {
   return serializeFlow(flow);
 }
 
+// The commands' drawing with an arrow a person drew from F1 to F2, after
+// `flow remove … F2 'F1#go:1' D1:note`: deleted elements kept with isDeleted,
+// the person's arrow unbound from F2, F2's embed dropped.
+function removed(): string {
+  const flow = parseFlow(commands());
+  const [f1, f2] = ["F1", "F2"].map((n) => flowNodes(flow).find((f) => f.node === n)!.element);
+  const [x, y] = [Number(f1.x) + Number(f1.width) / 2, Number(f1.y) + Number(f1.height)];
+  const dy = Number(f2.y) - y;
+  flow.elements.push(
+    element("Hand0001", "arrow", {
+      index: "b9",
+      x,
+      y,
+      width: 0,
+      height: dy,
+      points: [
+        [0, 0],
+        [0, dy],
+      ],
+      lastCommittedPoint: null,
+      startBinding: { elementId: f1.id, mode: "orbit", fixedPoint: [0.5, 1] },
+      endBinding: { elementId: f2.id, mode: "orbit", fixedPoint: [0.5, 0] },
+      startArrowhead: null,
+      endArrowhead: "arrow",
+      elbowed: false,
+    }),
+  );
+  for (const n of [f1, f2]) (n.boundElements as unknown[]).push({ id: "Hand0001", type: "arrow" });
+  const after = parseFlow(serializeFlow(flow));
+  const { unbound } = removeFromFlow(after, ["F2", "F1#go:1", "D1:note"]);
+  if (unbound.length !== 1) throw new Error(`unbound ${JSON.stringify(unbound)}`);
+  return serializeFlow(after);
+}
+
 // The same drawing after `flow move … F1 --below F2`: F1 with its group,
 // label, note, highlight and mark moved, and both arrows to D1 re-routed,
 // labels included.
@@ -246,6 +280,7 @@ const FLOWS = {
   "flows/new.excalidraw.md": written(),
   "docs/checkout/flows/commands.excalidraw.md": commands(),
   "docs/checkout/flows/refreshed.excalidraw.md": refreshed(),
+  "docs/checkout/flows/removed.excalidraw.md": removed(),
   "docs/checkout/flows/moved.excalidraw.md": moved(),
 };
 
