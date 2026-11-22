@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkScreens } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
@@ -33,14 +33,24 @@ export interface Arm {
 export const referenceText = (markdown: string) =>
   markdown.replace(/^\s*<!--[\s\S]*?-->\s*/, "").trimEnd() + "\n";
 
-export const NEW_REFERENCE = join(REPO, "skills/wiredown/reference/syntax.md");
+const SKILL_REFERENCE = join(REPO, "skills/wiredown/reference");
+/** The skill's syntax reference as one document: the grammar, then each component category. */
+export const newReference = () =>
+  [
+    join(SKILL_REFERENCE, "syntax.md"),
+    ...readdirSync(join(SKILL_REFERENCE, "components"))
+      .sort()
+      .map((file) => join(SKILL_REFERENCE, "components", file)),
+  ]
+    .map((file) => referenceText(readFileSync(file, "utf8")).trim())
+    .join("\n\n");
 export const OLD_REFERENCE = join(PACKAGE, "fixtures/old/syntax.md");
 
 /** The current parser and the skill's syntax reference. */
 export function newArm(): Arm {
   return {
     name: "new",
-    reference: referenceText(readFileSync(NEW_REFERENCE, "utf8")),
+    reference: newReference(),
     check(markdown) {
       const { screens, errors, warnings } = checkScreens(markdown);
       return { ids: screens.map((s) => s.id), errors, warnings };

@@ -18,7 +18,8 @@ or CI, and it costs money (or subscription usage) each time it runs.
 Two arms, each a parser and the syntax reference given to the model:
 
 - **new**: the current `@wiredown/core` (`checkScreens`) and the skill's
-  [`reference/syntax.md`](../../skills/wiredown/reference/syntax.md).
+  syntax reference: [`reference/syntax.md`](../../skills/wiredown/reference/syntax.md)
+  followed by each file in `reference/components/`.
 - **old**: the fork's parser as first imported into this repo, at commit
   `c36f5df` (`BASELINE_SHA` in [`src/baseline.ts`](src/baseline.ts)), and
   [`fixtures/old/syntax.md`](fixtures/old/syntax.md): a trimmed copy of the

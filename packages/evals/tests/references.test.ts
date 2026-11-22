@@ -1,12 +1,11 @@
 import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
-import { checkWithBaseline, NEW_REFERENCE, OLD_REFERENCE, referenceText } from "../src/arms.ts";
+import { checkWithBaseline, newReference, OLD_REFERENCE, referenceText } from "../src/arms.ts";
 import { loadBaseline } from "../src/baseline.ts";
 import type { BaselineCore } from "../src/baseline.ts";
 import { hasBaseline } from "./helpers.ts";
 
 const oldDoc = readFileSync(OLD_REFERENCE, "utf8");
-const newDoc = readFileSync(NEW_REFERENCE, "utf8");
 
 /** The bodies of fenced blocks with an info string, dedented. */
 function blocks(markdown: string, info: string): string[] {
@@ -21,7 +20,7 @@ function blocks(markdown: string, info: string): string[] {
 describe("the two syntax references", () => {
   it("are comparable in size as given to the model", () => {
     const oldText = referenceText(oldDoc);
-    const newText = referenceText(newDoc);
+    const newText = newReference();
     expect(oldText.startsWith("# Syntax")).toBe(true);
     expect(newText.startsWith("# Syntax")).toBe(true);
     const ratio = oldText.length / newText.length;
