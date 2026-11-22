@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { ClaudeError, runClaude } from "../src/claude.ts";
+import { ClaudeError, runClaude } from "../src/claude";
 
 // A stand-in `claude` on a temp PATH. It logs what it was given and answers
 // according to STUB_MODE.

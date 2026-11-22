@@ -1,14 +1,9 @@
 import { check } from "./check";
-import type { CheckResult } from "./check";
 import { closingFence, FENCE_KEYWORD } from "./detect";
 import type { SpecNode } from "./types";
 import { BLOCK_ID } from "./variants";
-import type { ResolveOptions } from "./variants";
 
 const ID = new RegExp(`^${BLOCK_ID.source}$`);
-
-/** Checks one block's source; `check` unless a host compares another parser. */
-export type BlockCheck = (source: string, options: ResolveOptions) => CheckResult;
 
 export interface Screen {
   id?: string;
@@ -91,7 +86,7 @@ export function parseScreens(markdown: string): Screen[] {
 }
 
 /** Check all blocks, resolving variants against the first valid occurrence of each id. */
-export function checkScreens(markdown: string, checkBlock: BlockCheck = check): CheckScreensResult {
+export function checkScreens(markdown: string): CheckScreensResult {
   const { screens, errors, idLines } = scan(markdown);
   const warnings: ScreenDiagnostic[] = [];
   const byId = new Map<string, Screen>();
@@ -113,7 +108,7 @@ export function checkScreens(markdown: string, checkBlock: BlockCheck = check): 
     }
   });
   const checked = screens.map((screen) => {
-    const result = checkBlock(screen.source, {
+    const result = check(screen.source, {
       lookup: (id) => byId.get(id)?.source,
       known: () => [...byId.keys()],
       // a base's lines are file lines too

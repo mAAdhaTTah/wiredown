@@ -1,6 +1,6 @@
 import { join } from "node:path";
-import { DEFAULT_MATERIAL } from "./material.ts";
-import { PACKAGE } from "./paths.ts";
+import { DEFAULT_MATERIAL } from "./material";
+import { PACKAGE } from "./paths";
 
 export interface EvalConfig {
   model: string;
@@ -12,8 +12,6 @@ export interface EvalConfig {
   /** A material directory, or a PRD file inside one. */
   material: string;
   resultsDir: string;
-  /** Seed of the rating sheet's A/B order; the results directory's name by default. */
-  seed?: string;
 }
 
 function count(env: NodeJS.ProcessEnv, name: string, fallback: number, min: number): number {
@@ -36,6 +34,5 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): EvalConfig {
     timeoutMs: count(env, "WIREDOWN_EVAL_TIMEOUT_MS", 300_000, 1000),
     material: env.WIREDOWN_EVAL_PRD || DEFAULT_MATERIAL,
     resultsDir: env.WIREDOWN_EVAL_RESULTS || join(PACKAGE, "results"),
-    ...(env.WIREDOWN_EVAL_SEED ? { seed: env.WIREDOWN_EVAL_SEED } : {}),
   };
 }

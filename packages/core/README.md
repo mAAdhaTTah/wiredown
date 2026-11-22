@@ -87,12 +87,11 @@ The root export is the whole public API.
   fenced blocks are screens, each named by a `^id` line after its fence.
   `parseScreens(markdown)` returns every block as a `Screen` (its `id`, the
   `heading` above it, its `source` and the file `line` of its first line)
-  and throws on an unclosed fence. `checkScreens(markdown, checkBlock)`
-  checks every block with `checkBlock`, a `BlockCheck` (`check` unless a
-  host compares another parser), resolving variants against the first
-  block with each id, and returns a `CheckScreensResult`: the
-  `CheckedScreen`s (each with its tree), and `errors` and `warnings` as
-  `ScreenDiagnostic`s with file lines.
+  and throws on an unclosed fence. `checkScreens(markdown)` checks every
+  block, resolving variants against the first block with each id, and
+  returns a `CheckScreensResult`: the `CheckedScreen`s (each with its
+  tree), and `errors` and `warnings` as `ScreenDiagnostic`s with file
+  lines.
 - **Types** (`types`): every type, including `SpecNode`, `ParseResult`,
   `DrawOp` and its four op kinds, `MeasureText`, `TextStyle` and `Theme`.
 

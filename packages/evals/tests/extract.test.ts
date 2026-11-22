@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractFile } from "../src/extract.ts";
+import { extractFile } from "../src/extract";
 
 const FILE = ["## Hello", "", "```wiredown", "text: Hello", "```", "", "^hello"].join("\n");
 

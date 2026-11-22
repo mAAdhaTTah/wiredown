@@ -1,7 +1,8 @@
 import { parseScreens } from "@wiredown/core";
-import type { Arm, Report } from "./arms.ts";
-import { REPLY_FORMAT } from "./extract.ts";
-import type { Material } from "./material.ts";
+import { skillReference } from "./check";
+import type { Report } from "./check";
+import { REPLY_FORMAT } from "./extract";
+import type { Material } from "./material";
 
 export type TaskId = "screens" | "variant" | "review";
 
@@ -9,9 +10,9 @@ export interface Task {
   id: TaskId;
   number: 1 | 2 | 3;
   title: string;
-  /** The file the task starts from, in the arm's syntax; none for task 1. */
-  input(material: Material, arm: Arm): string | null;
-  prompt(material: Material, arm: Arm): string;
+  /** The file the task starts from; none for task 1. */
+  input(material: Material): string | null;
+  prompt(material: Material): string;
   /** The screens file to check: the reply's file, or the input with the reply appended. */
   assemble(input: string | null, output: string): string;
   /**
@@ -31,13 +32,13 @@ export interface Structure {
 
 const fence = (body: string) => ["````markdown", body.trimEnd(), "````"].join("\n");
 
-function preamble(arm: Arm): string {
+function preamble(): string {
   return [
     "You write low-fidelity wireframe screens for product specs in the wiredown screen syntax.",
     "The complete syntax reference follows; use only what it describes.",
     "",
     "<syntax-reference>",
-    arm.reference.trimEnd(),
+    skillReference().trimEnd(),
     "</syntax-reference>",
     "",
     "## The screens file",
@@ -51,8 +52,8 @@ function preamble(arm: Arm): string {
   ].join("\n");
 }
 
-const prompt = (arm: Arm, ...task: string[]) =>
-  [preamble(arm), "", "## Task", "", ...task, "", "## Reply format", "", REPLY_FORMAT].join("\n");
+const prompt = (...task: string[]) =>
+  [preamble(), "", "## Task", "", ...task, "", "## Reply format", "", REPLY_FORMAT].join("\n");
 
 const join = (input: string, output: string) => input.trimEnd() + "\n\n" + output;
 
@@ -71,9 +72,8 @@ export const TASKS: Task[] = [
     number: 1,
     title: "screens from prose",
     input: () => null,
-    prompt: (m, arm) =>
+    prompt: (m) =>
       prompt(
-        arm,
         "Here is the PRD:",
         "",
         "<prd>",
@@ -102,13 +102,12 @@ export const TASKS: Task[] = [
     id: "variant",
     number: 2,
     title: "variant from a one-line change",
-    input: (m, arm) => m.inputs[arm.name].variantBase,
-    prompt: (m, arm) =>
+    input: (m) => m.variantBase,
+    prompt: (m) =>
       prompt(
-        arm,
         "Here is screens.md:",
         "",
-        fence(m.inputs[arm.name].variantBase),
+        fence(m.variantBase),
         "",
         `Add a variant of ^${m.variant.base} with the block id ^${m.variant.id}. The change: ` +
           m.variant.change,
@@ -140,13 +139,12 @@ export const TASKS: Task[] = [
     id: "review",
     number: 3,
     title: "reviewer comment",
-    input: (m, arm) => m.inputs[arm.name].review,
-    prompt: (m, arm) =>
+    input: (m) => m.reviewInput,
+    prompt: (m) =>
       prompt(
-        arm,
         "Here is screens.md:",
         "",
-        fence(m.inputs[arm.name].review),
+        fence(m.reviewInput),
         "",
         `A reviewer left this comment on ^${m.review.screen}: "${m.review.comment}".`,
         "Revise screens.md to address it. Reply with the complete revised file.",

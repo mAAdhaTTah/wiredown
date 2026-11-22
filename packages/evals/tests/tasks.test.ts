@@ -2,18 +2,18 @@ import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { newArm } from "../src/arms.ts";
-import { readConfig } from "../src/config.ts";
-import { DEFAULT_MATERIAL, loadMaterial } from "../src/material.ts";
-import { TASKS } from "../src/tasks.ts";
+import { skillReference } from "../src/check";
+import { readConfig } from "../src/config";
+import { DEFAULT_MATERIAL, loadMaterial } from "../src/material";
+import { TASKS } from "../src/tasks";
 
 describe("material", () => {
-  it("loads the fixture PRD and per-arm inputs", () => {
+  it("loads the fixture PRD and the task inputs", () => {
     const m = loadMaterial();
     expect(m.screens.map((s) => s.id)).toHaveLength(5);
     expect(m.prd).toContain("Scheduled report exports");
-    expect(m.inputs.old.review).toContain("(id=exports)");
-    expect(m.inputs.new.review).toContain("grid #exports");
+    expect(m.variantBase).toContain("^exports-list");
+    expect(m.reviewInput).toContain("grid #exports");
   });
 
   it("takes a PRD file, with the material next to it", () => {
@@ -32,21 +32,22 @@ describe("material", () => {
 
 describe("prompts", () => {
   const m = loadMaterial();
-  const arm = newArm();
-  it("give the arm's reference, the file format, the task and the reply format", () => {
+  it("give the skill's reference, the file format, the task and the reply format", () => {
     for (const task of TASKS) {
-      const p = task.prompt(m, arm);
-      expect(p).toContain("<syntax-reference>\n# Syntax");
+      const p = task.prompt(m);
+      expect(p).toContain(
+        "<syntax-reference>\n" + skillReference().trimEnd() + "\n</syntax-reference>",
+      );
       expect(p).toContain("^greeting");
       expect(p).toContain("four backticks");
     }
-    expect(TASKS[0].prompt(m, arm)).toContain("- ^export-failed: ");
-    expect(TASKS[1].prompt(m, arm)).toContain(m.variant.change);
-    expect(TASKS[2].prompt(m, arm)).toContain(m.review.comment);
+    expect(TASKS[0].prompt(m)).toContain("- ^export-failed: ");
+    expect(TASKS[1].prompt(m)).toContain(m.variant.change);
+    expect(TASKS[2].prompt(m)).toContain(m.review.comment);
   });
 
   it("never mention this repository's skill", () => {
-    for (const task of TASKS) expect(task.prompt(m, arm)).not.toMatch(/SKILL\.md|wiredown render/);
+    for (const task of TASKS) expect(task.prompt(m)).not.toMatch(/SKILL\.md|wiredown render/);
   });
 });
 

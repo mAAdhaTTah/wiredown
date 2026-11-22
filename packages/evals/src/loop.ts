@@ -1,10 +1,9 @@
-import type { Arm, ArmName } from "./arms.ts";
-import { formatFindings } from "./arms.ts";
-import type { ClaudeReply } from "./claude.ts";
-import { diffSize, lineCount } from "./diff.ts";
-import { extractFile } from "./extract.ts";
-import type { Material } from "./material.ts";
-import type { Task, TaskId } from "./tasks.ts";
+import { checkFile, formatFindings } from "./check";
+import type { ClaudeReply } from "./claude";
+import { diffSize, lineCount } from "./diff";
+import { extractFile } from "./extract";
+import type { Material } from "./material";
+import type { Task, TaskId } from "./tasks";
 
 /** One model call; throws (e.g. a ClaudeError) when the call fails. */
 export type Runner = (prompt: string) => Promise<ClaudeReply>;
@@ -29,7 +28,6 @@ export interface Attempt {
 
 export interface TaskRun {
   task: TaskId;
-  arm: ArmName;
   run: number;
   attempts: Attempt[];
   /** Check errors on the first attempt; null when it gave no well-formed file. */
@@ -56,7 +54,6 @@ export interface TaskRun {
 
 export interface LoopOptions {
   task: Task;
-  arm: Arm;
   material: Material;
   runner: Runner;
   /** Fix rounds after the first attempt. */
@@ -92,10 +89,10 @@ const formatPrompt = (original: string, reason: string) =>
   ].join("\n");
 
 /** Run one task: an attempt, then fix rounds with the check's errors until clean or the cap. */
-export async function runTask({ task, arm, material, runner, cap, run }: LoopOptions) {
+export async function runTask({ task, material, runner, cap, run }: LoopOptions) {
   const started = Date.now();
-  const input = task.input(material, arm);
-  const original = task.prompt(material, arm);
+  const input = task.input(material);
+  const original = task.prompt(material);
   const attempts: Attempt[] = [];
   let prompt = original;
   let output: string | null = null;
@@ -127,7 +124,7 @@ export async function runTask({ task, arm, material, runner, cap, run }: LoopOpt
       continue;
     }
     output = extracted.content;
-    const report = arm.check(task.assemble(input, output));
+    const report = checkFile(task.assemble(input, output));
     attempt.errors = report.errors.length;
     attempt.warnings = report.warnings.length;
     if (!report.errors.length) {
@@ -141,11 +138,10 @@ export async function runTask({ task, arm, material, runner, cap, run }: LoopOpt
   const structure =
     output === null || file === null
       ? { ok: false, reason: "no well-formed reply" }
-      : task.structure(material, input, output, arm.check(file));
+      : task.structure(material, input, output, checkFile(file));
   const costs = attempts.map((a) => a.costUsd).filter((c) => c !== undefined);
   const result: TaskRun = {
     task: task.id,
-    arm: arm.name,
     run,
     attempts,
     firstAttemptErrors: attempts[0].errors ?? null,
