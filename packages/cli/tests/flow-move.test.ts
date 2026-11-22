@@ -82,18 +82,44 @@ test("each placement moves the node with everything of ours on it, in one line",
 
 test("JSON is shaped like the other flow commands'", async () => {
   const { file } = await setup();
+  const f2 = flowNodes(parseFlow(await readFile(file, "utf8"))).find((n) => n.node === "F2")!;
   const result = await run(["flow", "move", file, "F2", "--to", "0,1000", "--json"]);
   expect(result.exitCode).toBe(0);
-  expect(JSON.parse(result.stdout)).toEqual({
+  const flow = parseFlow(await readFile(file, "utf8"));
+  const out = JSON.parse(result.stdout);
+  const { width, height } = f2.element;
+  expect(out).toEqual({
     flow: file,
-    moved: { node: "F2", kind: "frame", x: 0, y: 1000, notes: 1, overlays: 2, arrows: 2 },
+    moved: {
+      node: "F2",
+      kind: "frame",
+      element: f2.element.id,
+      x: 0,
+      y: 1000,
+      width,
+      height,
+      elements: expect.any(Array),
+      notes: 1,
+      overlays: 2,
+      arrows: 2,
+    },
+    changes: [expect.any(Object), expect.any(Object)],
     unresolved: [],
   });
+  // the image, label, note, highlight, mark and the mark's text moved
+  expect(out.moved.elements).toHaveLength(6);
+  expect(out.moved.elements[0]).toBe(f2.element.id);
+  // each re-routed arrow as refresh reports it, with its geometry in the file
+  for (const c of out.changes) {
+    const a = flow.elements.find((e) => e.id === c.element)!;
+    expect(c).toMatchObject({ kind: "arrow", x: a.x, y: a.y, width: a.width, height: a.height });
+  }
   const failed = await run(["flow", "move", file, "F2", "--to", "0,0", "--json"]);
   expect(failed.exitCode).toBe(1);
   expect(JSON.parse(failed.stdout)).toEqual({
     flow: file,
     moved: null,
+    changes: [],
     unresolved: [],
     errors: [{ message: "F2 at 0,0 would overlap F1; pick another place" }],
   });
@@ -176,9 +202,22 @@ test("moving to the current coordinates or placement writes nothing", async () =
   expect(result.exitCode).toBe(0);
   expect(JSON.parse(result.stdout)).toEqual({
     flow: file,
-    moved: null,
+    moved: {
+      unchanged: true,
+      node: "F2",
+      kind: "frame",
+      element: f2.id,
+      x: f2.x,
+      y: f2.y,
+      width: f2.width,
+      height: f2.height,
+      elements: [],
+      notes: 0,
+      overlays: 0,
+      arrows: 0,
+    },
+    changes: [],
     unresolved: [],
-    message: `F2 is already at ${f2.x},${f2.y}`,
   });
   expect(await readFile(file, "utf8")).toBe(before);
   expect((await stat(file)).mtimeMs).toBe(modified);

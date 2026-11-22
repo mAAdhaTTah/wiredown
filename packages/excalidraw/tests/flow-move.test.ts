@@ -89,18 +89,35 @@ test.each([
   const before = new Map(flow.elements.map((e) => [e.id, structuredClone(e)]));
   const mine = parts(flow);
   expect(mine).toHaveLength(6);
-  const [x0, y0] = at(node(flow, "F1"));
-  const moved = moveNode(flow, "F1", to);
+  const f1 = node(flow, "F1");
+  const [x0, y0] = at(f1);
+  const { changes, elements, ...moved } = moveNode(flow, "F1", to);
   expect(moved).toEqual({
     node: "F1",
     kind: "frame",
+    element: f1.id,
     x,
     y,
+    width: f1.width,
+    height: f1.height,
     notes: 1,
     overlays: 2,
     arrows: 3,
     unresolved: [],
   });
+  expect(elements[0]).toBe(f1.id);
+  expect([...elements].sort()).toEqual(mine.map((e) => e.id).sort());
+  // each re-routed arrow as refresh reports it, with its new geometry; `frame`
+  // is the first node an end missed, which a move can make either one
+  const arrows = flow.elements.filter((e) => e.type === "arrow" && identity(e));
+  expect(changes).toEqual(
+    arrows.map((a) => {
+      const { from, to } = identity(a)!;
+      const [x, y, width, height] = [a.x, a.y, a.width, a.height].map(Number);
+      const frame = expect.stringMatching(/^(F1|F2|D1)$/);
+      return { frame, kind: "arrow", element: a.id, from, to, x, y, width, height };
+    }),
+  );
   for (const e of mine) {
     const [bx, by] = at(before.get(e.id)!);
     expect(at(e)).toEqual([bx + x - x0, by + y - y0]);

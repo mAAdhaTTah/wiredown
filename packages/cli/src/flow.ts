@@ -647,22 +647,17 @@ export async function moveFlowNode(
     const original = await fileOp(`cannot read ${file}`, readFile(file, "utf8"));
     const flow = parseEditableFlow(original);
     const moved = moveNode(flow, node, to);
-    if (moved.unchanged) {
-      const message = `${node} is already at ${moved.x},${moved.y}`;
-      return {
-        exitCode: 0,
-        stderr: "",
-        stdout: options.json
-          ? json({ flow: file, moved: null, unresolved: [], message })
-          : `${message}\n`,
-      };
-    }
-    await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
-    const { unresolved, ...value } = moved;
+    if (!moved.unchanged)
+      await fileOp(`cannot write ${file}`, safeWrite(file, original, serializeFlow(flow)));
+    const { changes, unresolved, ...value } = moved;
     return {
       exitCode: 0,
       stderr: "",
-      stdout: options.json ? json({ flow: file, moved: value, unresolved }) : movedLine(moved),
+      stdout: options.json
+        ? json({ flow: file, moved: value, changes, unresolved })
+        : moved.unchanged
+          ? `${node} is already at ${moved.x},${moved.y}\n`
+          : movedLine(moved),
     };
   } catch (error) {
     if (!(error instanceof CommandError || error instanceof FlowError)) throw error;
@@ -670,7 +665,7 @@ export async function moveFlowNode(
     return {
       exitCode: 1,
       stdout: options.json
-        ? json({ flow: file, moved: null, unresolved: [], errors: findings })
+        ? json({ flow: file, moved: null, changes: [], unresolved: [], errors: findings })
         : "",
       stderr: options.json
         ? ""

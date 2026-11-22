@@ -11,24 +11,33 @@ import {
   touch,
 } from "./flow-edit";
 import { arrowRoutes, bentArrow, intersects, rect, reroute, unmet } from "./flow-refresh";
-import type { FlowChange } from "./flow-refresh";
+import type { FlowChange, Route } from "./flow-refresh";
 
 /** Where `moveNode` puts a node: next to another node, as add-screen places, or at a top-left. */
 export type MoveTo = Place | { x: number; y: number };
+type ArrowChange = Extract<FlowChange, { kind: "arrow" }>;
 /** What `moveNode` did. */
 export interface Moved {
-  unchanged?: boolean;
+  /** Set when the node was already there and no arrow needed re-routing. */
+  unchanged?: true;
   node: string;
   kind: "frame" | "decision";
-  /** The node's new top-left. */
+  /** The node's element, its new top-left and its size. */
+  element: string;
   x: number;
   y: number;
+  width: number;
+  height: number;
+  /** Every element moved, the node's first; empty when it did not move. */
+  elements: string[];
   /** Its notes and overlays, moved with it, and our straight arrows re-routed. */
   notes: number;
   overlays: number;
   arrows: number;
+  /** Our straight arrows re-routed, as `refreshFlow` reports them. */
+  changes: ArrowChange[];
   /** Arrows of ours a person bent that no longer meet a node, left as they are. */
-  unresolved: Extract<FlowChange, { kind: "arrow" }>[];
+  unresolved: ArrowChange[];
 }
 
 /**
@@ -56,38 +65,43 @@ export function moveNode(flow: Flow, name: string, to: MoveTo): Moved {
       `${name} at ${where} would overlap ${hit.map((o) => o.node).join(" and ")}; pick another place`,
     );
   const [dx, dy] = [at.x - box.x, at.y - box.y];
-  const parts = nodeParts(flow, n);
-  if (dx || dy)
-    for (const p of [e, ...parts]) {
-      Object.assign(p, { x: Number(p.x) + dx, y: Number(p.y) + dy });
-      touch(p);
-    }
+  const moving = dx || dy ? [e, ...nodeParts(flow, n)] : [];
+  const parts = moving.slice(1);
+  for (const p of moving) {
+    Object.assign(p, { x: Number(p.x) + dx, y: Number(p.y) + dy });
+    touch(p);
+  }
   const routes = arrowRoutes(flow).filter(
     (r) => r.missed.length && (r.start.element === e || r.end.element === e),
   );
   const straight = routes.filter((r) => !r.shaped);
   for (const r of straight) reroute(flow, r);
+  const arrowChange = ({ arrow, start, end }: Route, frame: string) => ({
+    frame,
+    kind: "arrow" as const,
+    element: arrow.id,
+    from: start.node,
+    to: end.node,
+  });
   const count = (...roles: string[]) =>
     parts.filter((p) => !p.containerId && roles.includes(identity(p)!.role)).length;
   return {
-    ...(!dx && !dy && !straight.length ? { unchanged: true } : {}),
+    ...(!dx && !dy && !straight.length ? { unchanged: true as const } : {}),
     node: n.node,
     kind: n.kind,
-    x: at.x,
-    y: at.y,
+    element: e.id,
+    ...rect(e),
+    elements: moving.map((p) => p.id),
     notes: count("note"),
     overlays: count("highlight", "mark"),
     arrows: straight.length,
+    changes: straight.map((r) => ({ ...arrowChange(r, r.missed[0]), ...rect(r.arrow) })),
     unresolved: routes
       .filter((r) => r.shaped)
       .flatMap((r) => {
         const [off] = unmet(r);
         if (!off) return [];
-        const { arrow, start, end } = r;
-        const change = { frame: off, kind: "arrow" as const, element: arrow.id };
-        return [
-          { ...change, from: start.node, to: end.node, unresolved: bentArrow(off), ...rect(arrow) },
-        ];
+        return [{ ...arrowChange(r, off), unresolved: bentArrow(off), ...rect(r.arrow) }];
       }),
   };
 }

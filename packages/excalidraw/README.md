@@ -248,9 +248,11 @@ The root export renders nothing; SVG export is in the Node entry,
   meet a node returned in `unresolved`. A person's arrows, copies and drawing do
   not move. It throws, changing nothing, for an unknown node, a name two nodes
   claim, its own name as `place`, or a place where it would overlap another node
-  (touching edges do not). It returns `Moved`,
-  `{ node, kind, x, y, notes, overlays, arrows, unresolved }`, with
-  `unchanged: true` when nothing moved or was re-routed.
+  (touching edges do not). It returns `Moved`: `{ node, kind, element, x, y,
+width, height, elements, notes, overlays, arrows, changes, unresolved }`,
+  `element` and the box being the node's after the move, `elements` every
+  element moved, `changes` the re-routed arrows as `refreshFlow` reports
+  them, with `unchanged: true` when nothing moved or was re-routed.
 
 - **Flow rendering** (`flow-render`): the part of the Node entry's
   `renderFlowSvg` that needs no Node. `flowScene(flow, screenSvg, { raster? })`

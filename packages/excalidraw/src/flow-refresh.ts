@@ -226,7 +226,7 @@ const removeIt = (what: string) => `remove it with "wiredown flow remove <flow> 
 const overlayName = (o: Overlay) =>
   o.role === "mark" ? `mark ${o.label} #${o.target}` : `highlight #${o.target}`;
 
-export interface Rect {
+interface Rect {
   x: number;
   y: number;
   width: number;
