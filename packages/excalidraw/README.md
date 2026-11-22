@@ -41,8 +41,8 @@ The root export renders nothing; SVG export is in the Node entry,
   around the drawing (default 8) and Excalidraw `roughness` (0 architect,
   1 artist, 2 cartoonist; default 1). Ids and seeds come from each
   element's position in the list, so the same screen always gives the
-  same elements. `EXCALIFONT_FAMILY` is Excalidraw's font family number for
-  Excalifont (5).
+  same elements. Text uses core's `EXCALIFONT_FAMILY`, Excalidraw's font
+  family number for Excalifont (5).
 
 - **Scene** (`scene`): `sceneOf(elements)` wraps elements in the
   `ExcalidrawScene` object Excalidraw's exporters take, with a white
@@ -114,8 +114,7 @@ The root export renders nothing; SVG export is in the Node entry,
   every command that takes that name throw a `FlowError`, naming both
   element ids.
 
-  Flow overlays use exported screen boxes and the image's current geometry:
-  `overlayBox(image, screenSize, box)` returns `{ x, y, width, height }`.
+  Flow overlays use exported screen boxes and the image's current geometry.
   `addHighlight(flow, frame, { target, box, screen })` returns an outline id;
   `addMark(flow, frame, { target, box, screen, label })` returns the circle id,
   with its text bound to it. Their `OverlayOptions` are the `target` id, its
@@ -286,16 +285,14 @@ throws, naming the package to install. The optional Node peers accept
 compatible caret ranges, except `@excalidraw/utils`, which stays at 0.1.8
 for the font metrics and export path.
 
-- **SVG** (`node`): `renderSvg(elements, options?)` exports the adapter's
-  light-theme elements and resolves to the SVG markup.
-  `renderScreenSvg(tree, options?)` lays a parsed screen out with core's
+- **SVG** (`node`): `renderScreenSvg(tree, options?)` lays a parsed screen out with core's
   `layoutScreen`, builds its elements with the default `ElementOptions` and
   exports them, resolving to `{ svg, width, height, boxes }`: the SVG and
   `screenElements`' size and boxes.
 
   `renderFlowSvg(flow, screens, options?)` exports a flow with `FLOW_MARGIN`
   (16px) around it, so labels at its edge are not cut; its options are
-  `FlowSvgOptions`, those of `renderSvg` plus `raster` (below). It returns
+  `FlowSvgOptions`, those of `renderScreenSvg` plus `raster` (below). It returns
   `{ svg, width, height, missing, rejected, inline }`. The lookup is asked per
   embed, `screens({ path, blockId })`, and returns adapter elements or
   `undefined`; missing entries contain `element`, `path` and `blockId`. Screen
@@ -359,9 +356,8 @@ for the font metrics and export path.
   the SVG is portable; default true).
 
 ```ts
-import { renderScreenSvg, renderSvg } from "@wiredown/excalidraw/node";
+import { renderScreenSvg } from "@wiredown/excalidraw/node";
 
-const svg = await renderSvg(elements);
 const rendered = await renderScreenSvg(parse("button: Save #save").tree);
 // rendered: { svg, width, height, boxes }
 ```

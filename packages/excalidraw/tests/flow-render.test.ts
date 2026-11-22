@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { checkScreens, layoutScreen } from "@wiredown/core";
 import { beforeAll, expect, it, vi } from "vitest";
+import { FLOW_MARGIN } from "../src/flow-render";
 import {
   addHighlight,
   addScreen,
@@ -11,7 +12,7 @@ import {
   screenElements,
 } from "../src/index";
 import type { ScreenRef } from "../src/index";
-import { FLOW_MARGIN, renderFlowSvg } from "../src/node";
+import { renderFlowSvg } from "../src/node";
 
 const source = readFileSync(
   new URL("../../core/tests/fixtures/screens.md", import.meta.url),

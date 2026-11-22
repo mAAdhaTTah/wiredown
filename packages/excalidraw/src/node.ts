@@ -11,8 +11,6 @@ import { FLOW_MARGIN, flowScene, svgSize } from "./flow-render";
 import { nodeDependency } from "./node-dependency";
 import { sceneOf } from "./scene";
 
-export { FLOW_MARGIN };
-
 export interface SvgOptions {
   theme?: "light" | "dark";
   /** Inline Excalifont so the SVG is portable. Defaults to true. */
@@ -76,7 +74,7 @@ async function quietly<T>(run: () => Promise<T>): Promise<T> {
 }
 
 /** Export the adapter's light-theme elements through Excalidraw in Node. */
-export async function renderSvg(
+async function renderSvg(
   elements: ExcalidrawElementJson[],
   options: SvgOptions = {},
 ): Promise<string> {

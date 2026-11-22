@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { layoutScreen, parse } from "@wiredown/core";
 import { beforeAll, describe, expect, it } from "vitest";
 import { screenElements } from "../src/index";
-import { renderScreenSvg, renderSvg } from "../src/node";
+import { renderScreenSvg } from "../src/node";
 
 // Use the actual proposal so this fixture cannot silently diverge from it.
 const proposal = readFileSync(
@@ -14,18 +14,20 @@ const proposal = readFileSync(
 const source = proposal.split("```wiredown\n")[1].split("\n```")[0];
 const tree = parse(source).tree;
 const screen = screenElements(layoutScreen(tree));
+const svgOf = async (options?: Parameters<typeof renderScreenSvg>[1]) =>
+  (await renderScreenSvg(tree, options)).svg;
 let svg: string;
 
 // Runs the built entry in a fresh Node process, as a consumer would.
 const runNode = (...args: string[]) =>
-  execFileSync(process.execPath, [...args, JSON.stringify(screen.elements)], {
+  execFileSync(process.execPath, [...args, JSON.stringify(tree)], {
     cwd: new URL("..", import.meta.url),
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
 
 beforeAll(async () => {
-  svg = await renderSvg(screen.elements);
+  svg = await svgOf();
 }, 15000);
 
 describe("Node SVG export", () => {
@@ -40,25 +42,25 @@ describe("Node SVG export", () => {
   });
 
   it("can omit embedded fonts", async () => {
-    expect(await renderSvg(screen.elements, { fonts: false })).not.toContain("@font-face");
+    expect(await svgOf({ fonts: false })).not.toContain("@font-face");
   });
 
   it("lets Excalidraw render dark mode", async () => {
-    const dark = await renderSvg(screen.elements, { theme: "dark" });
+    const dark = await svgOf({ theme: "dark" });
     expect(dark).not.toBe(svg);
     expect(dark).toContain("Team settings");
   });
 
   it("is byte-identical on repeat and concurrent exports", async () => {
-    const copies = await Promise.all([renderSvg(screen.elements), renderSvg(screen.elements)]);
+    const copies = await Promise.all([svgOf(), svgOf()]);
     expect(copies).toEqual([svg, svg]);
   });
 
   it("is byte-identical in two fresh Node processes", () => {
     const script = `
-      import { renderSvg } from "@wiredown/excalidraw/node";
-      const elements = JSON.parse(process.argv[1]);
-      process.stdout.write(await renderSvg(elements));
+      import { renderScreenSvg } from "@wiredown/excalidraw/node";
+      const tree = JSON.parse(process.argv[1]);
+      process.stdout.write((await renderScreenSvg(tree)).svg);
     `;
     expect(runNode("--input-type=module", "-e", script)).toBe(svg);
     expect(runNode("--input-type=module", "-e", script)).toBe(svg);
@@ -80,7 +82,6 @@ describe("Node SVG export", () => {
   });
 
   it("exports an empty screen without throwing", async () => {
-    const empty = screenElements({ ops: [], size: { w: 0, h: 0 }, boxes: {} });
-    expect(await renderSvg(empty.elements)).toContain("<svg");
+    expect((await renderScreenSvg(parse("").tree)).svg).toContain("<svg");
   });
 });

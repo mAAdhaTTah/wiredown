@@ -1,7 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { checkScreens, layoutScreen } from "@wiredown/core";
-import { overlayBox, parseFlow, screenElements, serializeFlow } from "@wiredown/excalidraw";
+import { addHighlight, parseFlow, screenElements, serializeFlow } from "@wiredown/excalidraw";
 import { expect, test } from "vitest";
 import { run } from "../src/index";
 import { BASE, fixture, screensIn, VARIANT } from "./helpers";
@@ -17,7 +17,16 @@ test("overlays resolve variant ids and use a hand-moved image", async () => {
   const rendered = screenElements(
     layoutScreen(checkScreens(BASE + "\n" + VARIANT).screens[1].tree),
   );
-  const b = overlayBox(flow.elements[1], rendered, rendered.boxes.invite);
+  // the adapter's highlight on the moved image; without its 4px outset it is
+  // the component's box
+  const copy = parseFlow(serializeFlow(flow));
+  const id = addHighlight(copy, "F1", {
+    target: "invite",
+    box: rendered.boxes.invite,
+    screen: rendered,
+  });
+  const hi = copy.elements.find((e) => e.id === id)!;
+  const b = { x: Number(hi.x) + 4, y: Number(hi.y) + 4 };
   const result = await run(["flow", "highlight", file, "F1", "#invite", "--json"]);
   expect(result.exitCode).toBe(0);
   expect(JSON.parse(result.stdout)).toEqual({
@@ -27,10 +36,10 @@ test("overlays resolve variant ids and use a hand-moved image", async () => {
       frame: "F1",
       screen: "team-after",
       target: "invite",
-      x: b.x - 4,
-      y: b.y - 4,
-      width: b.width + 8,
-      height: b.height + 8,
+      x: hi.x,
+      y: hi.y,
+      width: hi.width,
+      height: hi.height,
     },
   });
   const human = await run(["flow", "mark", file, "F1", "invite", "3"]);
