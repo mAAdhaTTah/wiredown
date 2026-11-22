@@ -5,9 +5,10 @@ import { FlowError } from "./flow";
 import type { Flow } from "./flow";
 
 // How the Excalidraw plugin draws a Markdown embed by default: 10px of
-// horizontal padding on its host and a 5px footer. styleScreens writes both
-// into the screens file, and turns the plugin's border off, so a person's
-// plugin settings cannot change them. Measured in Obsidian (test:obsidian).
+// horizontal padding on its host and a 5px footer. It draws no border around
+// an embed whose CSS mentions svg, as the CSS styleScreens writes does.
+// Measured in Obsidian (test:obsidian). A person's own embed CSS can change
+// the padding and footer; that is their choice.
 // The link height is a maximum, with 40px headroom.
 const MD_HOST_PAD = 10,
   MD_FOOTER = 5,
