@@ -167,11 +167,15 @@ to overwrite files changed while they run, so retry after a concurrent save.
 
 ## Diagnostics and JSON
 
-Findings read `path:line: ^id: error: message` (or `warning:`). Lines are
-1-based file lines; follow did-you-mean suggestions and recheck. Check and
-lint warnings do not fail the command, so inspect the warnings array too.
-Exit codes are 0 for success, 1 for content or operational failures, and 2
-for usage or unreadable-file errors; exit 2 may print stderr even with JSON.
+Screen findings read `path:line: ^id: error: message` (or `warning:`); flow
+findings read `path: F2: error: message`. Lines are 1-based file lines;
+follow did-you-mean suggestions and recheck. Check and lint warnings do not
+fail the command, so inspect the warnings array too. Exit codes are 0 for
+success and 1 for errors and findings. Flow commands also exit 1 for a
+missing or unreadable drawing or screens file, or an unknown node or screen,
+and so does rendering a flow whose screens file cannot be read. Exit 2 is
+bad usage, or a path given to `check`, `render` or `lint` that cannot be
+read; it prints only a message on stderr, even with `--json`.
 
 `check --json` returns `files`, each with `screens`, `errors` and `warnings`.
 `wiredown lint --json` returns `{ screens: [...check per-file objects], flows: [{ file, findings }] }`.
