@@ -4,7 +4,7 @@ import { checkScreens, layoutScreen } from "@wiredown/core";
 import type { Box, CheckedScreen } from "@wiredown/core";
 import { FlowError, flowFrames, screenElements } from "@wiredown/excalidraw";
 import { BACKGROUND, renderFlowSvg, renderScreenSvg, svgToPng } from "@wiredown/excalidraw/node";
-import { embeddedScreens } from "./flow";
+import { embeddedScreen, embeddedScreens } from "./flow";
 import {
   CommandError,
   formatFindings,

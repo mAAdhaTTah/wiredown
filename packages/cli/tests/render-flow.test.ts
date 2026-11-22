@@ -285,7 +285,7 @@ it("reports a file that is not a drawing as an error, writing nothing", async ()
 });
 
 it.skipIf(process.getuid?.() === 0)(
-  "exits 2 when a frame's screens file cannot be read",
+  "reports a frame's screens file that cannot be read, as lint does, writing nothing",
   async () => {
     const dir = await fixture({ "screens.md": BASE });
     const file = join(dir, "flows", "f.excalidraw.md");
@@ -293,9 +293,22 @@ it.skipIf(process.getuid?.() === 0)(
     const screens = join(dir, "screens.md");
     await chmod(screens, 0o000);
     try {
-      const result = await run(["render", file, "--out", dir]);
-      expect(result).toMatchObject({ exitCode: 2, stdout: "" });
-      expect(result.stderr).toContain(`cannot read the screens file ${screens}: permission denied`);
+      const message = `cannot read the screens file ${screens}: permission denied`;
+      expect(await run(["render", file, "--out", dir])).toEqual({
+        exitCode: 1,
+        stdout: "",
+        stderr: `${file}: error: ${message}\n`,
+      });
+      expect((await run(["flow", "lint", file])).stdout).toContain(`${file}: error: ${message}\n`);
+      const json = JSON.parse((await run(["render", file, "--out", dir, "--json"])).stdout);
+      expect(json).toEqual({
+        file,
+        format: "svg",
+        flow: null,
+        errors: [{ message }],
+        warnings: [],
+      });
+      await expect(readFile(join(dir, "f.svg"))).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await chmod(screens, 0o644);
     }

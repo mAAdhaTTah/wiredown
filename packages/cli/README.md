@@ -421,9 +421,11 @@ take a place in the note stack.
 whole drawing to `out/example.svg` (`out/example.png` with `--format png`).
 Each frame's screen comes from the screens file its embed names, resolved
 from the flow as the flow commands do. `--screen` is only for screens files.
-Missing or invalid screens, and embeds that name no screens file (one
-finding per frame), leave placeholders; the image is still written, findings
-are reported, and the command exits 1. Flow JSON is
+Missing or invalid screens, and embeds that name no screens file, are
+reported as `flow lint` words them, one finding per frame or image; nothing
+is drawn in their place. An image that embeds a whole file or a heading
+rather than a screen block is not drawn either, and is reported. In each
+case the image is still written and the command exits 1. Flow JSON is
 `{ file, format, flow: { svg, width, height }, errors, warnings }`. The size is
 rounded to whole pixels, as a screen's is; the SVG keeps Excalidraw's exact
 size.
