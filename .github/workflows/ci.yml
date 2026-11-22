@@ -9,7 +9,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: jdx/mise-action@v3
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
@@ -27,7 +27,7 @@ jobs:
     env:
       MISE_NODE_VERSION: ${{ matrix.node }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: jdx/mise-action@v3
       - run: node --version
       - run: pnpm install --frozen-lockfile
@@ -39,7 +39,7 @@ jobs:
   obsidian:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: jdx/mise-action@v3
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:obsidian
@@ -49,7 +49,7 @@ jobs:
   gitea:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: jdx/mise-action@v3
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @wiredown/gitea exec playwright-core install --with-deps chromium-headless-shell
