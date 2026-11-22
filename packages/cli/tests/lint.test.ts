@@ -109,6 +109,33 @@ test("lint passes when clean, warnings don't fail, and defaults to .", async () 
   expect(missing.stderr).toContain("cannot read");
 });
 
+test("lint skips files and folders --exclude matches, from the working directory", async () => {
+  const dir = await tree();
+  const cwd = process.cwd();
+  process.chdir(dir);
+  try {
+    const result = await run([
+      "lint",
+      "--exclude",
+      "notes.md",
+      "--exclude",
+      "c",
+      "--exclude",
+      "**/b/**",
+    ]);
+    expect(result).toEqual({
+      exitCode: 0,
+      stdout: "a/screens.md: 1 screen, 0 errors, 0 warnings\na/flows/f.excalidraw.md: 0 errors\n",
+      stderr: "",
+    });
+    expect((await run(["lint", "c/screens.md", "--exclude", "c/*.md"])).stdout).toBe(
+      "no screens or flows found\n",
+    );
+  } finally {
+    process.chdir(cwd);
+  }
+});
+
 test.skipIf(process.getuid?.() === 0)("exits 2 on a directory it cannot read", async () => {
   const dir = await fixture({ "screens.md": BASE });
   const locked = join(dir, "locked");

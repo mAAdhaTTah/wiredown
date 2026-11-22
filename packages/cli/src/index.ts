@@ -182,7 +182,7 @@ options:
   },
   lint: {
     summary: "check screens and lint flows, for CI",
-    help: `usage: wiredown lint [<path>...] [--json]
+    help: `usage: wiredown lint [<path>...] [--exclude <glob>]... [--json]
 
 Walks each path (default: .), skipping node_modules and dot-directories.
 Runs check on every other Markdown file (one with no wiredown block gets
@@ -190,12 +190,17 @@ check's warning) and flow lint on every *.excalidraw.md, in one report. Exits 1 
 finding; warnings don't fail.
 
 options:
-  --json      print one JSON document instead
-  -h, --help  show this help
+  --exclude <glob>  skip files and folders whose path from the working
+                    directory matches, such as 'docs/**/prd.md'; repeatable
+  --json            print one JSON document instead
+  -h, --help        show this help
 `,
-    options: { json: { type: "boolean" } },
+    options: { exclude: { type: "string", multiple: true }, json: { type: "boolean" } },
     run(values, paths) {
-      return lint(paths, { json: values.json === true });
+      return lint(paths, {
+        json: values.json === true,
+        exclude: values.exclude as string[] | undefined,
+      });
     },
   },
   render: {

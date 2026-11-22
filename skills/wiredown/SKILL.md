@@ -75,10 +75,12 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    ```
 
 7. Before committing, lint the spec directory (the default is the current
-   directory):
+   directory). Markdown files without `wiredown` blocks, such as the PRD
+   itself, each get a "no wiredown blocks" warning; skip them with
+   `--exclude`, a glob matched against paths from the working directory.
 
    ```sh
-   wiredown lint --json
+   wiredown lint --exclude prd.md --json
    ```
 
 ## Authoring rules

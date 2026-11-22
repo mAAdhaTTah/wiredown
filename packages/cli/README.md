@@ -5,7 +5,7 @@ headlessly in Node, with JSON output for agents.
 
 ```sh
 wiredown check <file.md>... [--json]
-wiredown lint [<path>...] [--json]
+wiredown lint [<path>...] [--exclude <glob>]... [--json]
 wiredown render <file.md> [--screen <id>]... [--out <dir>] [--format svg|png] [--scale <n>]
                 [--transparent] [--theme light|dark] [--no-fonts] [--json]
 wiredown --help | <command> --help | flow <command> --help | --version
@@ -150,9 +150,12 @@ the PNG matters.
 
 ## lint
 
-`wiredown lint [<path>...] [--json]` is the check for CI. Each path is a file
-or a directory, walked recursively, skipping `node_modules` and
-dot-directories; with no paths it lints `.`. It runs `flow lint` on every
+`wiredown lint [<path>...] [--exclude <glob>]... [--json]` is the check for
+CI. Each path is a file or a directory, walked recursively, skipping
+`node_modules` and dot-directories; with no paths it lints `.`. Each
+`--exclude` glob is matched against paths relative to the working
+directory; a matching file is skipped and a matching folder is not walked,
+for example `--exclude 'docs/**/prd.md'` for specs that have no screens. It runs `flow lint` on every
 `*.excalidraw.md` (each frame's screens file is the one its embed names,
 resolved as the `flow` commands do) and `check` on every other Markdown
 file, so one without wiredown blocks gets `check`'s warning. The report is
@@ -477,7 +480,7 @@ or exits; `bin/wiredown.js` prints the result. Build the package
   `boxes`, one entry of its `screens`.
 - **Lint** (`lint`, `flow`): `lint(paths, options?)` runs the `lint`
   command on files and directories (`.` when empty). `LintOptions` is
-  `{ json? }`; `LintedFlow`, `{ file, findings }`, is one entry of the JSON
+  `{ json?, exclude? }` (`exclude`: globs, as `--exclude`); `LintedFlow`, `{ file, findings }`, is one entry of the JSON
   document's `flows`.
 - **Output** (`output`): `UsageError`, which `check`, `lint` and `render`
   throw for an unreadable file and `run` turns into exit code 2. `Finding`
