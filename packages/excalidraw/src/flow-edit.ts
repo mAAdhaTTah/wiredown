@@ -4,10 +4,10 @@ import type { ExcalidrawElementJson } from "./elements";
 import { FlowError } from "./flow";
 import type { Flow } from "./flow";
 
-// Excalidraw plugin DEFAULT_MD_EMBED_CSS:
-// host has 10px horizontal padding; footer has 5px height.
-// The plugin's default Markdown border (mdBorderColor "Black") insets the
-// content 2px on every side, as seen in its rendered SVG in Obsidian.
+// How the Excalidraw plugin draws a Markdown embed by default: 10px of
+// horizontal padding on its host and a 5px footer. styleScreens writes both
+// into the screens file, and turns the plugin's border off, so a person's
+// plugin settings cannot change them. Measured in Obsidian (test:obsidian).
 // The link height is a maximum, with 40px headroom.
 const MD_HOST_PAD = 10,
   MD_FOOTER = 5,
