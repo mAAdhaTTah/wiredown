@@ -8,13 +8,13 @@ by a person in Obsidian and in a Git forge.
 Packages are listed below. `@wiredown/web` is built and tested in happy-dom
 but has not yet run on a forge or in a real browser.
 
-| Package                     | Purpose                                                                     |
-| --------------------------- | --------------------------------------------------------------------------- |
-| `@wiredown/core`            | Parser, variants, layout, text metrics, and validation                      |
-| `@wiredown/excalidraw`      | Excalidraw elements and headless SVG and PNG export                         |
-| `@wiredown/cli`             | `wiredown check`, `render` to SVG or PNG, `flow` commands and `lint` for CI |
-| `@wiredown/obsidian-plugin` | Obsidian code-block processor                                               |
-| `@wiredown/web`             | Script that renders blocks and flows on Gitea's pages (unverified)          |
+| Package                | Purpose                                                                     |
+| ---------------------- | --------------------------------------------------------------------------- |
+| `@wiredown/core`       | Parser, variants, layout, text metrics, and validation                      |
+| `@wiredown/excalidraw` | Excalidraw elements and headless SVG and PNG export                         |
+| `@wiredown/cli`        | `wiredown check`, `render` to SVG or PNG, `flow` commands and `lint` for CI |
+| `@wiredown/obsidian`   | Obsidian code-block processor                                               |
+| `@wiredown/web`        | Script that renders blocks and flows on Gitea's pages (unverified)          |
 
 ## Development
 
