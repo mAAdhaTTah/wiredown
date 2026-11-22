@@ -253,9 +253,21 @@ dependencies load on first render.
   `layoutScreen`, builds its elements with the default `ElementOptions` and
   exports them, resolving to `{ svg, width, height, boxes }`: the SVG and
   `screenElements`' size and boxes.
-- **Types** (`node`): `SvgOptions`, which both take: `theme` (`"light"` or
-  `"dark"`; default light) and `fonts` (inline Excalifont so the SVG is
-  portable; default true).
+
+  `renderFlowSvg(flow, screens, options?)` exports a flow, returning
+  `{ svg, width, height, missing, rejected }`. The lookup is asked per embed,
+  `screens({ path, blockId })`, and returns adapter elements or `undefined`;
+  missing entries contain `element`, `path` and `blockId`. Screen SVGs are
+  cached by embed path and block id, padded using `embedSize`, and supplied as
+  SVG data URLs alongside existing drawing files. Nested screens inline their
+  own fonts unless `fonts: false`. Excalidraw filters light SVG images for dark
+  flows, so nested screens are always exported light. A drawing file that is not
+  an inline PNG, JPEG, GIF, WebP or SVG data URL is left out and listed in
+  `rejected` as `{ id, reason }`.
+
+- **Types** (`node`): `SvgOptions`, which the SVG functions take: `theme`
+  (`"light"` or `"dark"`; default light) and `fonts` (inline Excalifont so
+  the SVG is portable; default true).
 
 ```ts
 import { renderScreenSvg, renderSvg } from "@wiredown/excalidraw/node";

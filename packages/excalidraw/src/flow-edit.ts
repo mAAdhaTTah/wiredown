@@ -32,6 +32,8 @@ const HAND_NUDGE = 60,
   NOTE_STACK_GAP = 200;
 const measurer = fontMeasurer(EXCALIFONT);
 
+/** Where a screen's top-left corner sits inside its frame's image, unscaled. */
+export const SCREEN_INSET = { x: MD_BORDER + MD_HOST_PAD, y: MD_BORDER };
 export function embedSize(screenWidth: number, screenHeight: number) {
   const width = screenWidth + 2 * (MD_HOST_PAD + MD_BORDER),
     height = screenHeight + MD_FOOTER + 2 * MD_BORDER;
@@ -696,8 +698,8 @@ export function overlayBox(
   // y = image.y + (border + box.y) * sy.
   // Width and height use their own axis ratio, including distorted images.
   return {
-    x: Number(frameImage.x) + (MD_BORDER + MD_HOST_PAD + box.x) * sx,
-    y: Number(frameImage.y) + (MD_BORDER + box.y) * sy,
+    x: Number(frameImage.x) + (SCREEN_INSET.x + box.x) * sx,
+    y: Number(frameImage.y) + (SCREEN_INSET.y + box.y) * sy,
     width: box.w * sx,
     height: box.h * sy,
   };

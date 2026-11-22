@@ -156,7 +156,7 @@ Missing embed styling frontmatter is added; existing values are preserved.
 Invalid screens and unknown nodes leave the drawing untouched.
 A frame's image and its `F3 · Title` label share an Excalidraw group, so
 they move together: clicking either selects both; double-click to select
-one. Human output is one `F3  team-members  548x333` line per frame, then one
+one. Human output is one `F3  team-members  552x337` line per frame, then one
 `F1 -> F2` line per arrow. The size is the embed image size in the drawing.
 JSON is `{ flow, frames: [{ frame, screen, title, id, x, y, width, height }],
 screensFileUpdated }`, where `id` is the image's element id; `flow new` adds
@@ -267,7 +267,7 @@ Human output is one line per change, or `up to date` when nothing changed and
 every screen was found:
 
 ```text
-F2  embed 548x373 -> 548x413
+F2  embed 552x377 -> 552x417
 F2  note moved
 F2  highlight #invite moved
 F2  mark 3 #members unresolved: ^team-members has no #members any more
@@ -359,6 +359,34 @@ nudges stay untouched. Far notes beside a decision are handled the same way. A
 label or note with a group absent from its node is left untouched and does not
 take a place in the note stack.
 
+`wiredown render flows/example.excalidraw.md --out out --json` exports the
+whole drawing to `out/example.svg`. Each frame's screen comes from the
+screens file its embed names, resolved from the flow as the flow commands
+do. `--screen` is only for screens files.
+Missing or invalid screens, and embeds that name no screens file, are
+reported as `flow lint` words them, one finding per frame or image; nothing
+is drawn in their place. An image that embeds a whole file or a heading
+rather than a screen block is not drawn either, and is reported. In each
+case the SVG is still written and the command exits 1. Flow JSON is
+`{ file, flow: { svg, width, height }, errors, warnings }`. The size is
+rounded to whole pixels, as a screen's is; the SVG keeps Excalidraw's exact
+size.
+A file that is not an Excalidraw drawing, a drawing written by a newer
+wiredown, or a screens file an embed names that cannot be read, is an error
+(exit 1): nothing is written, and the JSON has `flow: null`.
+
+Flow embeds include their own Excalifont copy, since nested SVG images cannot
+use the outer SVG's fonts. Each distinct screen is rendered once. This adds
+about 33 KB per screen before data URL encoding, plus the outer font copy.
+A measured three-screen flow was 244,120 bytes with fonts and 77,374
+without. Use `--no-fonts` for smaller files when font portability is
+unnecessary.
+Dark flows use light screen images with Excalidraw's own dark image filter.
+
+Flow renders reject drawing image files unless they contain inline PNG, JPEG,
+GIF, WebP or SVG data URLs; each rejection is a finding (exit 1), and the
+render is still written, as with missing screens.
+
 ## API
 
 The root export runs the commands without a terminal. Each resolves to a
@@ -374,10 +402,11 @@ or exits; `bin/wiredown.js` prints the result. Build the package
   on a list of paths. `CheckOptions` is `{ json? }`; `CheckedFile` is one
   entry of the JSON document's `files`.
 - **Render** (`render`): `render(file, options?)` runs the `render`
-  command. `RenderOptions` are all optional: `screens` (ids; all screens
-  with an id when empty), `out` (default `.`), `theme` (`"light"` or
-  `"dark"`), `fonts` (default true) and `json`. `RenderedScreen` is one
-  entry of the JSON document's `screens`.
+  command on a screens file or a `*.excalidraw.md` flow. `RenderOptions`
+  are all optional: `screens` (ids, for a screens file; all screens with an
+  id when empty), `out` (default `.`), `theme` (`"light"` or `"dark"`),
+  `fonts` (default true) and `json`. `RenderedScreen` is one entry of the
+  JSON document's `screens`.
 - **Lint** (`lint`, `flow`): `lint(paths, options?)` runs the `lint`
   command on files and directories (`.` when empty). `LintOptions` is
   `{ json? }`; `LintedFlow`, `{ file, findings }`, is one entry of the JSON
