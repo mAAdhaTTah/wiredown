@@ -268,7 +268,10 @@ it("draws dark for a user with the dark theme", async () => {
 
 it("draws blocks in a pull request comment, and in a comment's preview", async () => {
   const visit = await open(user, `${REPO}/pulls/1`);
-  const comment = visit.page.locator(".timeline-item.comment .wiredown-block svg.wiredown-svg");
+  const comment = visit.page.locator(
+    // Posted comments only: the comment form is also a .timeline-item.comment.
+    '[id^="issuecomment-"] .wiredown-block svg.wiredown-svg',
+  );
   await expect.poll(() => comment.count()).toBe(2);
   // Write a comment and preview it: Gitea adds the preview without a reload.
   const form = visit.page.locator("#comment-form");
