@@ -6,7 +6,8 @@ headlessly in Node, with JSON output for agents.
 ```sh
 wiredown check <file.md>... [--json]
 wiredown lint [<path>...] [--json]
-wiredown render <file.md> [--screen <id>]... [--out <dir>] [--theme light|dark] [--no-fonts] [--json]
+wiredown render <file.md> [--screen <id>]... [--out <dir>] [--format svg|png] [--scale <n>]
+                [--transparent] [--theme light|dark] [--no-fonts] [--json]
 wiredown --help | <command> --help | flow <command> --help | --version
 ```
 
@@ -83,8 +84,69 @@ findings are those of the rendered screens plus any outside a screen; the
 errors for an unknown `--screen` id and for nothing to render have no
 `line`.
 
+The document also has `"format": "svg"` (or `"png"`) at the top level.
+
 `--theme dark` lets Excalidraw draw the dark theme; file names don't change,
 so pick another `--out`. `--no-fonts` leaves Excalifont out of the SVG.
+
+### PNG
+
+`--format png` writes `<out>/<id>.png` (or `<out>/<name>.png` for a flow)
+instead of SVG; one format per run. PNGs are rasterised in Node by resvg,
+with no browser, from the same SVG, so they look like it: Excalifont text,
+hand-drawn strokes, the theme's colours and, in flows, the embedded
+screens. The same input gives byte-identical PNGs on the same machine.
+In a PNG, SVG images supplied by the drawing (not its screens) are not
+drawn, since they could make the rasteriser read local files, and neither
+are raster images whose data URL is not plain base64; each is reported
+like any rejected image file (exit 1, the PNG still written). Other raster
+images are drawn. In SVG output all of them stay embedded as inert image
+data.
+
+- `--scale <n>`, a whole number from 1 to 4 (default 2), multiplies the
+  pixel size, so text stays legible.
+- The background is the theme's canvas colour: white (`#ffffff`) for light,
+  and `#121212`, Excalidraw's dark canvas (its white through the dark-mode
+  filter), for dark. `--transparent` keeps the SVG's transparency instead.
+- `--scale` and `--transparent` need `--format png`; `--no-fonts` is SVG
+  only, since a PNG always draws its text in Excalifont.
+
+In the JSON the path key is the format, and the pixel size is added next to
+the SVG size; `width` and `height` keep their meaning, the image size flow
+embeds use:
+
+```json
+{
+  "file": "screens.md",
+  "format": "png",
+  "screens": [
+    {
+      "id": "team-members",
+      "png": "out/team-members.png",
+      "width": 528,
+      "height": 328,
+      "pixelWidth": 1056,
+      "pixelHeight": 656,
+      "boxes": { "invite": { "x": 278.8, "y": 60, "w": 147.2, "h": 40 } }
+    }
+  ],
+  "errors": [],
+  "warnings": []
+}
+```
+
+A flow's is `{ file, format, flow: { png, width, height, pixelWidth,
+pixelHeight }, errors, warnings }`. Without `--json` each line is
+`out/team-members.png  528x328  (1056x656 px)`. A PNG that can't be
+written is an error finding, as for SVG, and the exit code is 1.
+
+Characters missing from Excalifont (`check` warns about them, for example
+`⋯`, `✓` or `▾`) change how a whole text element looks in a PNG: resvg
+draws every character of that element in a system font that has the
+missing one, so the text is wider than laid out and can be cut at the
+screen's edge. Which font it picks depends on the machine; with no such
+font, the characters come out as empty boxes. Use text Excalifont has when
+the PNG matters.
 
 ## lint
 
@@ -360,15 +422,15 @@ label or note with a group absent from its node is left untouched and does not
 take a place in the note stack.
 
 `wiredown render flows/example.excalidraw.md --out out --json` exports the
-whole drawing to `out/example.svg`. Each frame's screen comes from the
-screens file its embed names, resolved from the flow as the flow commands
-do. `--screen` is only for screens files.
+whole drawing to `out/example.svg` (`out/example.png` with `--format png`).
+Each frame's screen comes from the screens file its embed names, resolved
+from the flow as the flow commands do. `--screen` is only for screens files.
 Missing or invalid screens, and embeds that name no screens file, are
 reported as `flow lint` words them, one finding per frame or image; nothing
 is drawn in their place. An image that embeds a whole file or a heading
 rather than a screen block is not drawn either, and is reported. In each
-case the SVG is still written and the command exits 1. Flow JSON is
-`{ file, flow: { svg, width, height }, errors, warnings }`. The size is
+case the image is still written and the command exits 1. Flow JSON is
+`{ file, format, flow: { svg, width, height }, errors, warnings }`. The size is
 rounded to whole pixels, as a screen's is; the SVG keeps Excalidraw's exact
 size.
 A file that is not an Excalidraw drawing, a drawing written by a newer
@@ -378,7 +440,7 @@ wiredown, or a screens file an embed names that cannot be read, is an error
 Flow embeds include their own Excalifont copy, since nested SVG images cannot
 use the outer SVG's fonts. Each distinct screen is rendered once. This adds
 about 33 KB per screen before data URL encoding, plus the outer font copy.
-A measured three-screen flow was 244,120 bytes with fonts and 77,374
+A measured three-screen flow was 227,147 bytes with fonts and 60,397
 without. Use `--no-fonts` for smaller files when font portability is
 unnecessary.
 Dark flows use light screen images with Excalidraw's own dark image filter.
@@ -404,9 +466,13 @@ or exits; `bin/wiredown.js` prints the result. Build the package
 - **Render** (`render`): `render(file, options?)` runs the `render`
   command on a screens file or a `*.excalidraw.md` flow. `RenderOptions`
   are all optional: `screens` (ids, for a screens file; all screens with an
-  id when empty), `out` (default `.`), `theme` (`"light"` or `"dark"`),
-  `fonts` (default true) and `json`. `RenderedScreen` is one entry of the
-  JSON document's `screens`.
+  id when empty), `out` (default `.`), `format` (`"svg"` or `"png"`,
+  default `"svg"`), `scale` (PNG pixels per SVG pixel, default 2),
+  `transparent`, `theme` (`"light"` or `"dark"`), `fonts` (default true;
+  SVG only) and `json`. `Output` is a written image,
+  `{ svg?, png?, width, height, pixelWidth?, pixelHeight? }`, as in the
+  JSON document's `flow`; `RenderedScreen` is an `Output` with `id` and
+  `boxes`, one entry of its `screens`.
 - **Lint** (`lint`, `flow`): `lint(paths, options?)` runs the `lint`
   command on files and directories (`.` when empty). `LintOptions` is
   `{ json? }`; `LintedFlow`, `{ file, findings }`, is one entry of the JSON

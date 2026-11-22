@@ -1,3 +1,6 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { layoutScreen } from "@wiredown/core";
 import type { SpecNode } from "@wiredown/core";
 import { screenElements } from "./elements";
@@ -74,6 +77,9 @@ export async function renderSvg(
   return exportSvg(sceneOf(elements), options);
 }
 
+/** Space around a whole flow, so labels at its edge aren't cut. A screen pads itself. */
+export const FLOW_MARGIN = 16;
+
 async function exportSvg(
   data: {
     elements: ExcalidrawElementJson[];
@@ -81,6 +87,7 @@ async function exportSvg(
     files: Record<string, unknown>;
   },
   options: SvgOptions,
+  padding = 0,
 ): Promise<string> {
   const { document, exportScene } = await (runtime ??= initialize());
   const svg = await quietly<{ outerHTML: string }>(() =>
@@ -89,7 +96,7 @@ async function exportSvg(
       data,
       config: {
         theme: options.theme ?? "light",
-        padding: 0,
+        padding,
         canvasBackgroundColor: false,
         ...(options.fonts === false ? { skipInliningFonts: true } : {}),
         // Excalidraw embeds the font itself; there is nothing to load in Node
@@ -109,6 +116,15 @@ export async function renderScreenSvg(
   return { ...screen, svg: await renderSvg(elements, options) };
 }
 
+export interface FlowSvgOptions extends SvgOptions {
+  /**
+   * For PNG output: reject the drawing's own SVG images, and raster images
+   * that are not plain base64. resvg would draw local files an SVG links to;
+   * raster images are only pixels.
+   */
+  raster?: boolean;
+}
+
 /**
  * Export a drawing with its block embeds supplied as portable SVG images.
  * `screens` gives an embed's screen elements, or undefined when it has none;
@@ -117,13 +133,15 @@ export async function renderScreenSvg(
 export async function renderFlowSvg(
   flow: Flow,
   screens: (embed: ScreenRef) => ExcalidrawElementJson[] | undefined,
-  options: SvgOptions = {},
+  options: FlowSvgOptions = {},
 ): Promise<{
   svg: string;
   width: number;
   height: number;
   missing: ({ element: string } & ScreenRef)[];
   rejected: { id: string; reason: string }[];
+  /** The screen images this export generated, for `svgToPng`'s `inline`. */
+  inline: ReadonlySet<string>;
 }> {
   const files: Record<string, unknown> = {};
   const rejected: { id: string; reason: string }[] = [];
@@ -132,11 +150,20 @@ export async function renderFlowSvg(
       file && typeof file === "object" && "dataURL" in file ? file.dataURL : undefined;
     if (typeof dataURL !== "string") {
       rejected.push({ id, reason: "missing or non-string dataURL" });
+    } else if (options.raster && /^data:image\/svg\+xml[;,]/i.test(dataURL)) {
+      rejected.push({ id, reason: "SVG images are not drawn in PNG output" });
     } else if (!/^data:image\/(png|jpeg|gif|webp|svg\+xml)(?:;[^,]*)?,/i.test(dataURL)) {
       rejected.push({ id, reason: "expected an inline PNG, JPEG, GIF, WebP or SVG data URL" });
+    } else if (
+      options.raster &&
+      !/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/]*={0,2}$/i.test(dataURL)
+    ) {
+      // svgToPng refuses an SVG with any other data URL in it
+      rejected.push({ id, reason: "expected a base64 PNG, JPEG, GIF or WebP data URL" });
     } else files[id] = file;
   }
   const cache = new Map<string, string | undefined>();
+  const inline = new Set<string>();
   const missing: ({ element: string } & ScreenRef)[] = [];
   const elements: ExcalidrawElementJson[] = [];
   for (const element of flow.elements) {
@@ -164,6 +191,7 @@ export async function renderFlowSvg(
     }
     const dataURL = cache.get(key);
     if (dataURL) {
+      inline.add(dataURL);
       files[fileId] = { id: fileId, mimeType: "image/svg+xml", dataURL, created: 1 };
       elements.push({ ...element, status: "saved" });
     } else {
@@ -172,8 +200,134 @@ export async function renderFlowSvg(
       elements.push(element);
     }
   }
-  const svg = await exportSvg({ elements, appState: flow.appState, files }, options);
-  return { svg, ...svgSize(svg), missing, rejected };
+  const svg = await exportSvg({ elements, appState: flow.appState, files }, options, FLOW_MARGIN);
+  return { svg, ...svgSize(svg), missing, rejected, inline };
+}
+
+export interface PngOptions {
+  /** Pixels per SVG unit. Defaults to 1. */
+  scale?: number;
+  /** A CSS colour painted under the drawing; transparent when omitted. */
+  background?: string;
+  /**
+   * The trusted screen image data URLs, as `renderFlowSvg` returns them;
+   * they are drawn inline. Any other SVG image is refused (see below).
+   */
+  inline?: ReadonlySet<string>;
+}
+
+/** The canvas colour behind an Excalidraw export: white, and white as dark mode draws it. */
+export const BACKGROUND = { light: "#ffffff", dark: "#121212" } as const;
+
+/**
+ * Rasterise an SVG from this module to PNG with resvg, drawing text in the
+ * Excalifont it embeds. Characters Excalifont lacks use a system font that
+ * has them, if there is one.
+ */
+export async function svgToPng(
+  svg: string,
+  options: PngOptions = {},
+): Promise<{ png: Uint8Array; width: number; height: number }> {
+  const scale = options.scale ?? 1;
+  if (!(scale > 0 && Number.isFinite(scale))) throw new RangeError(`bad PNG scale ${scale}`);
+  const { Resvg } = await import("@resvg/resvg-js");
+  const trusted = options.inline ?? new Set();
+  refuseUntrustedImages(svg, trusted);
+  const flat = inlineSvgImages(svg, trusted);
+  const fonts = await Promise.all(
+    [...new Set(flat.match(/(?<=url\(data:font\/woff2;base64,)[^)]+/g))].map(woff2ToSfnt),
+  );
+  // resvg 2.6 loads fonts only from files, and ignores @font-face.
+  const dir = await mkdtemp(join(tmpdir(), "wiredown-fonts-"));
+  try {
+    const fontFiles = await Promise.all(
+      fonts.map(async (font, i) => {
+        const path = join(dir, `font-${i}.ttf`);
+        await writeFile(path, font);
+        return path;
+      }),
+    );
+    const image = new Resvg(flat, {
+      fitTo: { mode: "zoom", value: scale },
+      ...(options.background ? { background: options.background } : {}),
+      // Given fonts come first, so they are also the first fallback.
+      font: { fontFiles, loadSystemFonts: true, defaultFontFamily: "Excalifont" },
+      logLevel: "off",
+    }).render();
+    return { png: new Uint8Array(image.asPng()), width: image.width, height: image.height };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+const sfnts = new Map<string, Promise<Uint8Array>>();
+function woff2ToSfnt(base64: string): Promise<Uint8Array> {
+  let font = sfnts.get(base64);
+  if (!font) {
+    font = import("woff2-encoder/decompress").then((m) => m.default(Buffer.from(base64, "base64")));
+    sfnts.set(base64, font);
+  }
+  return font;
+}
+
+/**
+ * resvg loads an image's data URL as an SVG document by its media type, or by
+ * sniffing a `text/plain` one, and an SVG document can draw local files (an
+ * `feImage`, a pattern's image). So outside the trusted screens, only raster
+ * image and font data URLs may appear. Character references are decoded and
+ * tabs and newlines dropped first, so neither hides a media type; a DTD could
+ * declare entities that do, so one is refused. The SVG's own markup is the
+ * caller's: as exported here it links to nothing but data URLs.
+ */
+function refuseUntrustedImages(svg: string, trusted: ReadonlySet<string>) {
+  const refused = () =>
+    new Error("svgToPng: refusing an SVG image that is not one of the trusted screens");
+  if (/<!ENTITY/i.test(svg)) throw refused();
+  // Links are attributes, so scan the tags (and CSS), not a drawing's visible
+  // text. Comments, CDATA and processing instructions are tokens of their own:
+  // read as tags, a quote inside one would hide part of the tag after it.
+  let rest = (
+    svg.match(
+      /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<style\b[^>]*>[\s\S]*?<\/style\s*>|<(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi,
+    ) ?? []
+  ).join("");
+  for (const url of trusted) rest = rest.replaceAll(url, "");
+  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+  rest = rest
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (ref, name: string) => {
+      if (name[0] !== "#") return named[name] ?? ref;
+      const code = Number(name[1].toLowerCase() === "x" ? "0" + name.slice(1) : name.slice(1));
+      if (code > 0x10ffff) throw refused();
+      return String.fromCodePoint(code);
+    })
+    .replace(/[\t\n\r]/g, "");
+  if (/data:(?!image\/(?:png|jpeg|gif|webp)[;,]|font\/woff2[;,])/i.test(rest)) throw refused();
+}
+
+/**
+ * Excalidraw draws images as `<use>` of a viewBox-less `<symbol>` holding a
+ * 100%-sized `<image>`. resvg sizes such an image against the wrong viewport
+ * and draws no text inside SVG images, so trusted SVG images are inlined into
+ * their symbol, with a viewBox the `<use>` scales.
+ *
+ * Once inlined, an SVG's links would be followed by resvg, which reads local
+ * files, so only the exact data URLs in `trusted` are inlined: screens this
+ * module generated, which hold no links. A drawing can only match one by
+ * carrying that same screen, which is harmless.
+ */
+function inlineSvgImages(svg: string, trusted: ReadonlySet<string>): string {
+  return svg.replace(
+    /<symbol id="([^"]+)"><image href="(data:image\/svg\+xml;base64,([^"]+))"[^>]*><\/image><\/symbol>/g,
+    (symbol, id: string, dataURL: string, base64: string) => {
+      if (!trusted.has(dataURL)) return symbol;
+      const inner = Buffer.from(base64, "base64").toString("utf8");
+      const root = /<svg[^>]*>/.exec(inner)?.[0] ?? "";
+      const width = / width="([\d.]+)"/.exec(root)?.[1];
+      const height = / height="([\d.]+)"/.exec(root)?.[1];
+      if (!width || !height) return symbol;
+      return `<symbol id="${id}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">${inner}</symbol>`;
+    },
+  );
 }
 
 function svgSize(svg: string): { width: number; height: number } {

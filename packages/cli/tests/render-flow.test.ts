@@ -219,31 +219,56 @@ it("reports rejected drawing images and still writes the flow", async () => {
   expect(JSON.parse(json.stdout).errors[0].message).toContain("image file remote:");
 });
 
-it("refuses unsupported flows before creating output, with render JSON errors", async () => {
+it.each(["svg", "png"])(
+  "refuses unsupported flows before creating %s output, with render JSON errors",
+  async (format) => {
+    const dir = await fixture({ "screens.md": BASE });
+    const file = join(dir, "f.excalidraw.md");
+    await run(["flow", "new", file, "team", ...screensIn(dir)]);
+    const flow = parseFlow(await readFile(file, "utf8"));
+    flow.elements[0].customData = { wiredown: { v: "2" } };
+    await writeFile(file, serializeFlow(flow));
+    const out = join(dir, `refused.${format}`);
+    const result = await run(["render", file, "--out", out, "--format", format, "--json"]);
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.stdout)).toEqual({
+      file,
+      format,
+      flow: null,
+      warnings: [],
+      errors: [
+        {
+          message:
+            'this drawing was written by a newer wiredown (data version "2"); upgrade wiredown to use it',
+        },
+      ],
+    });
+    expect((await run(["render", file, "--out", out])).stderr).toMatch(
+      /upgrade wiredown to use it\n$/,
+    );
+    await expect(readFile(out)).rejects.toMatchObject({ code: "ENOENT" });
+  },
+);
+
+it("rejects a drawing's SVG and non-base64 images in PNG output only, and still writes the flow", async () => {
   const dir = await fixture({ "screens.md": BASE });
-  const file = join(dir, "f.excalidraw.md");
+  const file = join(dir, "flows", "f.excalidraw.md");
   await run(["flow", "new", file, "team", ...screensIn(dir)]);
   const flow = parseFlow(await readFile(file, "utf8"));
-  flow.elements[0].customData = { wiredown: { v: "2" } };
+  const inner = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
+  flow.files.drawn = {
+    dataURL: "data:image/svg+xml;base64," + Buffer.from(inner).toString("base64"),
+  };
+  flow.files.odd = { dataURL: "data:image/png;base64,AAAAdata:text/plain;base64,AAAA" };
   await writeFile(file, serializeFlow(flow));
-  const out = join(dir, "refused.svg");
-  const result = await run(["render", file, "--out", out, "--json"]);
-  expect(result.exitCode).toBe(1);
-  expect(JSON.parse(result.stdout)).toEqual({
-    file,
-    flow: null,
-    warnings: [],
-    errors: [
-      {
-        message:
-          'this drawing was written by a newer wiredown (data version "2"); upgrade wiredown to use it',
-      },
-    ],
-  });
-  expect((await run(["render", file, "--out", out])).stderr).toMatch(
-    /upgrade wiredown to use it\n$/,
+  const png = await run(["render", file, "--out", dir, "--format", "png"]);
+  expect(png.exitCode).toBe(1);
+  expect(png.stderr).toContain(
+    `${file}: error: image file drawn: SVG images are not drawn in PNG output\n` +
+      `${file}: error: image file odd: expected a base64 PNG, JPEG, GIF or WebP data URL\n`,
   );
-  await expect(readFile(out)).rejects.toMatchObject({ code: "ENOENT" });
+  expect((await readFile(join(dir, "f.png"))).subarray(1, 4).toString()).toBe("PNG");
+  expect(await run(["render", file, "--out", dir])).toMatchObject({ exitCode: 0, stderr: "" });
 });
 
 it("reports a file that is not a drawing as an error, writing nothing", async () => {
@@ -278,7 +303,13 @@ it.skipIf(process.getuid?.() === 0)(
       });
       expect((await run(["flow", "lint", file])).stdout).toContain(`${file}: error: ${message}\n`);
       const json = JSON.parse((await run(["render", file, "--out", dir, "--json"])).stdout);
-      expect(json).toEqual({ file, flow: null, errors: [{ message }], warnings: [] });
+      expect(json).toEqual({
+        file,
+        format: "svg",
+        flow: null,
+        errors: [{ message }],
+        warnings: [],
+      });
       await expect(readFile(join(dir, "f.svg"))).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await chmod(screens, 0o644);
