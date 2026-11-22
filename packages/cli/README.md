@@ -214,11 +214,13 @@ added; there is no default. It takes any `.md` file inside the root; one
 outside it is an error (`the screens file <file> points outside <root>`).
 A screens file whose path from the root contains `#`, `|` or `]` is
 refused, since those end the path in an embed link.
-Missing embed styling frontmatter is added; existing values are preserved.
+Missing embed styling frontmatter is added (`excalidraw-font`,
+`excalidraw-css` and `excalidraw-border-color`); existing values are
+preserved.
 Invalid screens and unknown nodes leave the drawing untouched.
 A frame's image and its `F3 · Title` label share an Excalidraw group, so
 they move together: clicking either selects both; double-click to select
-one. Human output is one `F3  team-members  552x337` line per frame, then one
+one. Human output is one `F3  team-members  548x333` line per frame, then one
 `F1 -> F2` line per arrow. The size is the embed image size in the drawing.
 JSON is `{ flow, frames: [{ frame, screen, title, id, x, y, width, height }],
 screensFileUpdated }`, where `id` is the image's element id; `flow new` adds
@@ -295,12 +297,13 @@ flow commands' findings convention. A second mark with another label is
 allowed. Overlays use current image position and size, including independent
 axis scales after a distorted resize. Highlights extend 4px beyond the box.
 
-Frames are sized for the Excalidraw plugin's default Markdown embed, as
-measured in Obsidian: 10px host padding on each side, a 2px border on every
-side, and a 5px footer. The constants live in
-`packages/excalidraw/src/flow-edit.ts`; one change there corrects both embed
-sizing and overlay placement. With the plugin's border turned off, frames
-are reshaped when the drawing opens and lint reports them (issue #42).
+Frames are sized for a screen with 10px of host padding on each side, a 5px
+footer and no border. The styling front matter that `flow new` and
+`flow add-screen` add to the screens file makes the Excalidraw plugin draw
+its embeds that way whatever the plugin's settings, so frames keep their
+size when a drawing opens. The constants live in
+`packages/excalidraw/src/flow-edit.ts`; one change there corrects embed
+sizing, overlay placement and the front matter.
 
 ### refresh and lint
 
@@ -329,7 +332,7 @@ Human output is one line per change, or `up to date` when nothing changed and
 every screen was found:
 
 ```text
-F2  embed 552x377 -> 552x417
+F2  embed 548x373 -> 548x413
 F2  note moved
 F2  highlight #invite moved
 F2  mark 3 #members unresolved: ^team-members has no #members any more

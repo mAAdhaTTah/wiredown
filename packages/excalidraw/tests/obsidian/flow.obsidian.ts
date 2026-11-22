@@ -21,6 +21,7 @@ import {
   refreshFlow,
   screenElements,
   serializeFlow,
+  styleScreens,
   type ExcalidrawElementJson,
   type ScreenLookup,
 } from "../../src/index";
@@ -97,25 +98,28 @@ function written(): string {
 }
 
 // A screens file in a subfolder, and a decoy with the same name elsewhere, so
-// the written path from the vault root must pick the right one.
-const CHECKOUT = [
-  "# Cart",
-  "",
-  "```wiredown",
-  "window: Cart",
-  "  button: *Checkout #go",
-  "```",
-  "^cart",
-  "",
-  "# Done",
-  "",
-  "```wiredown",
-  "window: Done",
-  "  text: Thanks",
-  "```",
-  "^done",
-  "",
-].join("\n");
+// the written path from the vault root must pick the right one. It carries
+// the styling front matter that flow new and flow add-screen give it.
+const CHECKOUT = styleScreens(
+  [
+    "# Cart",
+    "",
+    "```wiredown",
+    "window: Cart",
+    "  button: *Checkout #go",
+    "```",
+    "^cart",
+    "",
+    "# Done",
+    "",
+    "```wiredown",
+    "window: Done",
+    "  text: Thanks",
+    "```",
+    "^done",
+    "",
+  ].join("\n"),
+);
 
 /** The screens refresh sees: each block of `source`, laid out now. */
 function lookup(source: string): ScreenLookup {
@@ -299,7 +303,7 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
 
   // Measured as laid out in Obsidian's window, so the host padding and any
   // other CSS inside the image count. overlayBox puts a screen's top-left at
-  // SCREEN_INSET inside its image, past a border of SCREEN_INSET.y.
+  // SCREEN_INSET inside its image, with no border around it.
   it.runIf(built)("draws each screen at SCREEN_INSET in an image of embedSize", async () => {
     const drawn = await obsidian.run<Record<string, Drawn>>(`(async () => {
       const leaf = app.workspace.getLeavesOfType("excalidraw")
@@ -336,7 +340,7 @@ describe.each(Object.entries(FLOWS))("Obsidian with the Excalidraw plugin: %s", 
           id,
           {
             image: embedSize(width, height).image,
-            foreignObject: { x: SCREEN_INSET.y, y: SCREEN_INSET.y },
+            foreignObject: { x: 0, y: 0 },
             screen: { ...SCREEN_INSET, width, height },
           },
         ];

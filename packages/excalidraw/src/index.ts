@@ -43,4 +43,4 @@ export {
   isRelativeEmbed,
   resolveEmbedPath,
 } from "./screens-path";
-export { newerDataVersion } from "./flow-edit";
+export { newerDataVersion, styleScreens } from "./flow-edit";

@@ -23,7 +23,7 @@ test("geometry, metadata, deletion and numbering", () => {
   const flow = newFlow();
   expect(addScreen(flow, options)).toBe("F1");
   const image = flowFrames(flow)[0].element;
-  expect([image.x, image.y, image.width, image.height]).toEqual([0, 0, 124, 209]);
+  expect([image.x, image.y, image.width, image.height]).toEqual([0, 0, 120, 205]);
   expect(flow.elements[0]).toMatchObject({
     text: "F1 · Home",
     customData: { wiredown: { v: 1, frame: "F1", role: "label", screen: "home" } },
@@ -31,13 +31,13 @@ test("geometry, metadata, deletion and numbering", () => {
   image.x = 500;
   image.y = 100;
   addScreen(flow, { ...options, place: { rightOf: "F1" } });
-  expect(flowFrames(flow)[1].element).toMatchObject({ x: 964, y: 100 });
+  expect(flowFrames(flow)[1].element).toMatchObject({ x: 960, y: 100 });
   addScreen(flow, { ...options, place: { below: "F1" } });
-  expect(flowFrames(flow)[2].element).toMatchObject({ x: 500, y: 649 });
+  expect(flowFrames(flow)[2].element).toMatchObject({ x: 500, y: 645 });
   image.isDeleted = true;
   flow.elements[0].isDeleted = true;
   expect(addScreen(flow, options)).toBe("F4");
-  expect(formatEmbed([...flow.embeds.values()][0])).toBe("screens#^home|124x249");
+  expect(formatEmbed([...flow.embeds.values()][0])).toBe("screens#^home|120x245");
   expect(pluginFailures(serializeFlow(flow))).toEqual([]);
 });
 test("legacy fixture is preserved and reserves label numbers", () => {
@@ -77,8 +77,8 @@ test("legacy placement clears all live elements", () => {
 
 test("embed dimensions include padding, footer and headroom", () => {
   expect(embedSize(100, 200)).toEqual({
-    image: { width: 100 + 2 * (10 + 2), height: 200 + 5 + 2 * 2 },
-    link: { width: 100 + 2 * (10 + 2), height: 200 + 5 + 2 * 2 + 40 },
+    image: { width: 100 + 2 * 10, height: 200 + 5 },
+    link: { width: 100 + 2 * 10, height: 200 + 5 + 40 },
   });
 });
 test("rightmost placement follows moved frames rather than insertion order", () => {
@@ -88,7 +88,7 @@ test("rightmost placement follows moved frames rather than insertion order", () 
   flowFrames(flow)[0].element.x = 1000;
   flowFrames(flow)[0].element.y = 90;
   addScreen(flow, options);
-  expect(flowFrames(flow)[2].element).toMatchObject({ x: 1464, y: 90 });
+  expect(flowFrames(flow)[2].element).toMatchObject({ x: 1460, y: 90 });
   expect(() => addScreen(flow, { ...options, place: { rightOf: "F99" } })).toThrow(
     'unknown node "F99" (nodes: F1, F2, F3)',
   );
@@ -157,7 +157,7 @@ test("pasted frames are ignored as anchors and do not imply a newer version", ()
   expect(flowFrames(flow).map((f) => f.element.id)).toEqual([flow.elements[1].id]);
   expect(newerDataVersion(flow)).toBeUndefined();
   expect(addScreen(flow, { ...options, place: { rightOf: "F1" } })).toBe("F2");
-  expect(flowFrames(flow)[1].element.x).toBe(464);
+  expect(flowFrames(flow)[1].element.x).toBe(460);
   // a copy keeps its name taken, even once its original is gone for good
   flow.elements = [copy];
   expect(addScreen(flow, options)).toBe("F2");

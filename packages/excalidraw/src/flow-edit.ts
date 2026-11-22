@@ -4,14 +4,13 @@ import type { ExcalidrawElementJson } from "./elements";
 import { FlowError } from "./flow";
 import type { Flow } from "./flow";
 
-// Confirmed gen-flow.mjs / Excalidraw plugin DEFAULT_MD_EMBED_CSS:
-// host has 10px horizontal padding; footer has 5px height.
-// The plugin's default Markdown border (mdBorderColor "Black") insets the
-// content 2px on every side, as seen in its rendered SVG in Obsidian.
+// How the Excalidraw plugin draws a Markdown embed by default: 10px of
+// horizontal padding on its host and a 5px footer. styleScreens writes both
+// into the screens file, and turns the plugin's border off, so a person's
+// plugin settings cannot change them. Measured in Obsidian (test:obsidian).
 // The link height is a maximum, with 40px headroom as in the prototype.
 const MD_HOST_PAD = 10,
   MD_FOOTER = 5,
-  MD_BORDER = 2,
   MAX_HEIGHT_HEADROOM = 40;
 // gen-flow.mjs: gap between nodes, where an arrow leaves a frame, the
 // decision diamond's size, the spacing of parallel arrows, and how far an
@@ -32,11 +31,37 @@ const HAND_NUDGE = 60,
   NOTE_STACK_GAP = 200;
 const measurer = fontMeasurer(EXCALIFONT);
 
+/**
+ * The front matter a screens file needs for its screens to embed at the size
+ * and place flow commands assume, whatever the Excalidraw plugin's settings.
+ */
+const SCREENS_STYLE = [
+  ["excalidraw-font", "Helvetica"],
+  [
+    "excalidraw-css",
+    `".excalidraw-md-host{padding:0 ${MD_HOST_PAD}px!important}.excalidraw-md-footer{height:${MD_FOOTER}px!important}.wiredown-block svg{display:block}"`,
+  ],
+  ["excalidraw-border-color", '""'],
+];
+/** Adds the styling keys a screens file lacks, preserving the original bytes. */
+export function styleScreens(source: string): string {
+  const nl = source.includes("\r\n") ? "\r\n" : "\n";
+  const front = /^---\r?\n(?:[\s\S]*?\r?\n)?(?:---|\.\.\.)(?=\r?\n|$)/.exec(source);
+  const additions = SCREENS_STYLE.filter(
+    ([key]) => !new RegExp(`^(?:${key}|"${key}"|'${key}')\\s*:`, "m").test(front?.[0] ?? ""),
+  ).map(([key, value]) => `${key}: ${value}`);
+  if (!additions.length) return source;
+  if (!front) return ["---", ...additions, "---", "", source].join(nl);
+  const close = front[0].lastIndexOf(nl);
+  return (
+    source.slice(0, close + nl.length) + additions.join(nl) + nl + source.slice(close + nl.length)
+  );
+}
 /** Where a screen's top-left corner sits inside its frame's image, unscaled. */
-export const SCREEN_INSET = { x: MD_BORDER + MD_HOST_PAD, y: MD_BORDER };
+export const SCREEN_INSET = { x: MD_HOST_PAD, y: 0 };
 export function embedSize(screenWidth: number, screenHeight: number) {
-  const width = screenWidth + 2 * (MD_HOST_PAD + MD_BORDER),
-    height = screenHeight + MD_FOOTER + 2 * MD_BORDER;
+  const width = screenWidth + 2 * MD_HOST_PAD,
+    height = screenHeight + MD_FOOTER;
   return { link: { width, height: height + MAX_HEIGHT_HEADROOM }, image: { width, height } };
 }
 /** Where a new node goes, relative to an existing node (F2, D1). */
@@ -694,8 +719,7 @@ export function overlayBox(
   const size = embedSize(screen.width, screen.height).image;
   const sx = Number(frameImage.width) / size.width;
   const sy = Number(frameImage.height) / size.height;
-  // x = image.x + (border + host padding + box.x) * sx;
-  // y = image.y + (border + box.y) * sy.
+  // x = image.x + (host padding + box.x) * sx; y = image.y + box.y * sy.
   // Width and height use their own axis ratio, including distorted images.
   return {
     x: Number(frameImage.x) + (SCREEN_INSET.x + box.x) * sx,

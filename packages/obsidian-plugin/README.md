@@ -22,11 +22,14 @@ The CLI writes this frontmatter to `screens.md`:
 
 ```yaml
 excalidraw-font: Helvetica
-excalidraw-css: ".wiredown-block svg{display:block}"
+excalidraw-css: ".excalidraw-md-host{padding:0 10px!important}.excalidraw-md-footer{height:5px!important}.wiredown-block svg{display:block}"
+excalidraw-border-color: ""
 ```
 
-Helvetica prevents an extra Cascadia font being added to image embeds;
-the CSS mentions svg to suppress Excalidraw's default black border. The
+Helvetica prevents an extra Cascadia font being added to image embeds. The
+CSS fixes the padding and footer Excalidraw gives an embed, and the empty
+border colour turns its black border off, so a screen embeds at the same
+size and place whatever the Excalidraw plugin's settings are. The
 screen SVG itself embeds Excalifont. Exports stay light; CSS filters dark
 notes immediately, while the drawing handles its embedded images' theme.
 

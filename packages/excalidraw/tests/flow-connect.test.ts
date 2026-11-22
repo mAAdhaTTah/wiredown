@@ -21,7 +21,7 @@ const small = {
   path: "screens",
   size: { width: 100, height: 200 },
 };
-const tall = { ...small, size: { width: 400, height: 500 } }; // image 424x509
+const tall = { ...small, size: { width: 400, height: 500 } }; // image 420x505
 const measure = (text: string) =>
   fontMeasurer(EXCALIFONT).measure(text, { fontSize: 16, fontFamily: 5 });
 
@@ -48,11 +48,11 @@ test("decisions: numbering, diamond, centred text and placement", () => {
   addScreen(flow, small);
   expect(addDecision(flow, { text: "Confirmed?" })).toBe("D1");
   const d1 = node(flow, "D1");
-  // right of F1, centred on F1's arrow port (half its 209px height)
+  // right of F1, centred on F1's arrow port (half its 205px height)
   expect(d1).toMatchObject({
     type: "diamond",
-    x: 124 + 340,
-    y: 104.5 - 85,
+    x: 120 + 340,
+    y: 102.5 - 85,
     width: 260,
     height: 170,
     backgroundColor: "#fff3bf",
@@ -68,18 +68,18 @@ test("decisions: numbering, diamond, centred text and placement", () => {
     containerId: d1.id,
     textAlign: "center",
     verticalAlign: "middle",
-    x: 464 + (260 - size.w) / 2,
-    y: 19.5 + (170 - size.h) / 2,
+    x: 460 + (260 - size.w) / 2,
+    y: 17.5 + (170 - size.h) / 2,
     customData: { wiredown: { node: "D1", role: "label", id: text.id } },
   });
   expect(addDecision(flow, { text: "Below?", place: { below: "D1" } })).toBe("D2");
-  expect(node(flow, "D2")).toMatchObject({ x: 464, y: 19.5 + 170 + 340 });
+  expect(node(flow, "D2")).toMatchObject({ x: 460, y: 17.5 + 170 + 340 });
   // a frame right of a decision lines its port up with the diamond's centre
   addScreen(flow, { ...small, place: { rightOf: "D1" } });
-  expect(flowFrames(flow)[1].element).toMatchObject({ x: 464 + 260 + 340, y: 0 });
+  expect(flowFrames(flow)[1].element).toMatchObject({ x: 460 + 260 + 340, y: 0 });
   // default: right of the rightmost node
   addDecision(flow, { text: "Again?" });
-  expect(node(flow, "D3")).toMatchObject({ x: 1064 + 124 + 340, y: 19.5 });
+  expect(node(flow, "D3")).toMatchObject({ x: 1060 + 120 + 340, y: 17.5 });
   valid(flow);
   // deleting D2 and D3 with their text keeps their numbers taken
   for (const e of flow.elements.slice(4, 6).concat(flow.elements.slice(-2))) e.isDeleted = true;
@@ -103,10 +103,10 @@ test("decision text wraps inside the diamond, which grows for long text", () => 
 });
 
 test.each([
-  ["right", 1000, 50, [430, 180, 994, 230], [1, 180 / 509], [0, 180 / 509]],
-  ["left", -1000, 50, [-6, 180, -570, 230], [0, 180 / 509], [1, 180 / 509]],
-  ["below", 100, 900, [212, 515, 312, 894], [0.5, 1], [0.5, 0]],
-  ["above", 0, -1000, [212, -6, 212, -485], [0.5, 0], [0.5, 1]],
+  ["right", 1000, 50, [426, 180, 994, 230], [1, 180 / 505], [0, 180 / 505]],
+  ["left", -1000, 50, [-6, 180, -574, 230], [0, 180 / 505], [1, 180 / 505]],
+  ["below", 100, 900, [210, 511, 310, 894], [0.5, 1], [0.5, 0]],
+  ["above", 0, -1000, [210, -6, 210, -489], [0.5, 0], [0.5, 1]],
 ])("arrow to a frame moved %s", (_name, x, y, ends, start, end) => {
   const flow = newFlow();
   addScreen(flow, tall);
@@ -185,15 +185,15 @@ test("connecting frames and decisions meets the diamond's sides", () => {
   const d = node(flow, "D1");
   const first = byId(flow, connect(flow, "F1", "D1", { label: "Submit" }));
   // straight: F1's port and D1's centre line up; ends 6px off the left tip
-  expect(points(first)).toEqual([130, 104.5, 458, 104.5]);
+  expect(points(first)).toEqual([126, 102.5, 454, 102.5]);
   expect((first.endBinding as { fixedPoint: number[] }).fixedPoint).toEqual([0, 0.5]);
   const second = byId(flow, connect(flow, "D1", "F1"));
   // 70px down, the diamond's left side is this far left of its centre
   const half = 130 * (1 - 70 / 85);
-  expect(points(second)).toEqual([594 - half - 6, 174.5, 130, 174.5]);
+  expect(points(second)).toEqual([590 - half - 6, 172.5, 126, 172.5]);
   addScreen(flow, { ...small, place: { below: "D1" } });
   const down = byId(flow, connect(flow, "D1", "F2", { label: "no" }));
-  expect(points(down)).toEqual([594, 19.5 + 170 + 6, 594, 19.5 + 170 + 340 - 6]);
+  expect(points(down)).toEqual([590, 17.5 + 170 + 6, 590, 17.5 + 170 + 340 - 6]);
   expect(d.boundElements).toEqual([
     { type: "text", id: flow.elements[3].id },
     { id: first.id, type: "arrow" },
@@ -222,7 +222,7 @@ test("notes stack under a frame or decision, wrapped to its width", () => {
   expect(first).toMatchObject({
     type: "text",
     x: 0,
-    y: 209 + 20,
+    y: 205 + 20,
     fontSize: 16,
     strokeColor: "#495057",
     containerId: null,
@@ -240,7 +240,7 @@ test("notes stack under a frame or decision, wrapped to its width", () => {
   addDecision(flow, { text: "Ok?" });
   const third = byId(flow, addNote(flow, "D1", "Why"));
   // beside the diamond, below the height its rightward arrow leaves at
-  expect(third).toMatchObject({ x: 464 + 260 + 20, y: 19.5 + 85 + 20 });
+  expect(third).toMatchObject({ x: 460 + 260 + 20, y: 17.5 + 85 + 20 });
   valid(flow);
 });
 
@@ -433,5 +433,5 @@ test("notes stack by position after their drawing order is swapped", () => {
   const b = byId(flow, addNote(flow, "F1", "B"));
   [a.y, b.y] = [b.y, a.y];
   const c = byId(flow, addNote(flow, "F1", "C"));
-  expect(c.y).toBe(309);
+  expect(c.y).toBe(305);
 });
