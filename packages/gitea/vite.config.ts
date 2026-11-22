@@ -51,22 +51,13 @@ function emit(files: Record<string, string | Buffer>): Rolldown.Plugin {
 }
 
 const EXCALIFONT = "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Excalifont";
-// Files copied next to the bundle: { "path under ASSETS": "source path" }.
-const copied = {
-  // Only Excalifont, with its licence; a site adds other families itself
-  // (README, "Other fonts").
-  ...Object.fromEntries(
-    readdirSync(EXCALIFONT).map((f) => [`fonts/Excalifont/${f}`, `${EXCALIFONT}/${f}`]),
-  ),
-  "fonts/Excalifont/OFL.txt": "OFL.txt",
-  // Notices for what the renderer bundles; see THIRD-PARTY-NOTICES.md.
-  "THIRD-PARTY-NOTICES.md": "THIRD-PARTY-NOTICES.md",
-  "licenses/react.txt": "node_modules/react/LICENSE",
-  "licenses/react-dom.txt": "node_modules/react-dom/LICENSE",
-};
 const files = {
+  // Only Excalifont; a site adds other families itself (README, "Other fonts").
   ...Object.fromEntries(
-    Object.entries(copied).map(([to, from]) => [`${ASSETS}/${to}`, readFileSync(from)]),
+    readdirSync(EXCALIFONT).map((f) => [
+      `${ASSETS}/fonts/Excalifont/${f}`,
+      readFileSync(`${EXCALIFONT}/${f}`),
+    ]),
   ),
   "templates/custom/footer.tmpl": FOOTER,
 };
@@ -95,7 +86,6 @@ export default defineConfig({
           output: {
             chunkFileNames: `${ASSETS}/chunks/[name]-[hash].js`,
             minify: true,
-            comments: { legal: true },
           },
         },
       },

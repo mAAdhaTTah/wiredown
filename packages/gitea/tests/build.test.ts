@@ -49,9 +49,8 @@ it("ships no Node code and no font fallback to another origin", () => {
     );
 });
 
-it("ships only Excalifont, with its licence", () => {
+it("ships only Excalifont", () => {
   expect(readdirSync(new URL("fonts/", dist))).toEqual(["Excalifont"]);
   const files = readdirSync(new URL("fonts/Excalifont/", dist));
-  expect(files.filter((f) => !f.endsWith(".woff2"))).toEqual(["OFL.txt"]);
-  expect(read("fonts/Excalifont/OFL.txt")).toContain("SIL OPEN FONT LICENSE Version 1.1");
+  expect(files.every((f) => f.endsWith(".woff2"))).toBe(true);
 });

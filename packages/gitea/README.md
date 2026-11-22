@@ -26,7 +26,7 @@ The version folder holds:
 | `wiredown.js`          | The loader. A classic script, about 2 KB, no dependencies.    |
 | `wiredown-renderer.js` | The renderer, an ES module the loader imports on demand.      |
 | `chunks/`              | Excalidraw and React, split into chunks the renderer imports. |
-| `fonts/Excalifont/`    | The font Excalidraw inlines into each drawing, and `OFL.txt`. |
+| `fonts/Excalifont/`    | The font Excalidraw inlines into each drawing.                |
 
 The loader runs on every page. On DOM ready, and whenever the page adds
 content later (comments, previews), it looks for `wiredown` blocks and a
@@ -107,7 +107,7 @@ The names are the folder names: `Virgil`, `Cascadia`, `Nunito`, `Lilita`,
 Helvetica, which is the browser's local font) is drawn in Excalifont and
 reported under "Not drawn:" as drawn in a fallback font, so no request is
 made for a font that is not there. The renderer does not check that a
-listed folder exists. Check each font's licence before serving it.
+listed folder exists.
 
 ### Content Security Policy (unverified)
 
