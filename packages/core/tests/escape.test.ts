@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parse } from "../src/parse";
-import { resolve } from "../src/variants";
+import { parse, resolve, serialize } from "../src/index";
 
 const first = (source: string) => parse(source).tree.children[0];
 
@@ -23,12 +22,31 @@ describe("\\( keeps trailing brackets as text", () => {
     expect(node).toMatchObject({ text: "Width (fill)", id: "width", opts: { focus: 1 } });
   });
 
+  it("round-trips through serialize", () => {
+    for (const source of [
+      "text: Column width \\(fill)",
+      "button: Retry \\(disbled) #retry",
+      "text: Size \\(w=200)",
+      "text: Tag \\#urgent \\(focus) (fill)",
+    ]) {
+      const { tree, errors } = parse(source);
+      expect(errors).toEqual([]);
+      expect(serialize(tree)).toBe(source);
+      expect(parse(serialize(tree)).tree).toEqual(tree);
+    }
+  });
+
+  it("leaves brackets that are text anyway unescaped", () => {
+    expect(serialize(parse("button: Save (draft)").tree)).toBe("button: Save (draft)");
+    expect(serialize(parse("text: a \\(b) c").tree)).toBe("text: a (b) c");
+  });
+
   it("survives a variant", () => {
     const { tree, errors } = resolve("extends: base\nreplace: w\n  text: Width \\(fill)", {
       lookup: () => "text: Width #w",
     });
     expect(errors).toEqual([]);
-    expect(tree.children[0]).toMatchObject({ text: "Width (fill)", id: "w" });
+    expect(serialize(tree)).toBe("text: Width \\(fill) #w");
   });
 });
 
@@ -58,4 +76,15 @@ describe("the escape hint", () => {
       'row doesn\'t take "plain" (it takes: w, fill, top, disabled, invalid, focus)',
     );
   });
+
+  it.each(["f\\(x) = y", "end \\(fill)", "end (fill)", "a (b) (fill)", "x \\(w=1)", "f(x) = y"])(
+    "round-trips the text %j through serialize",
+    (text) => {
+      const tree = parse("text: placeholder").tree;
+      tree.children[0].text = text;
+      const again = parse(serialize(tree)).tree.children[0];
+      expect(again.text).toBe(text);
+      expect(again.opts).toEqual({});
+    },
+  );
 });

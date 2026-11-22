@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { SpecNode } from "../src/types";
-import { resolve } from "../src/variants";
+import { resolve, serialize } from "../src/index";
+import type { SpecNode } from "../src/index";
 
 // the running example of the syntax proposal
 const TEAM_MEMBERS = `window: Team settings
@@ -36,9 +36,14 @@ rows: members
 after: members
   text: -Removed members keep access until the end of the day-`);
     expect(r.errors).toEqual([]);
-    expect(byId(win(r), "seats")?.text).toBe("2 of 5 seats used");
-    expect(byId(win(r), "notice")?.text).toBe(
-      "{check} Erik Lund was removed from the team. [Undo]",
+    expect(serialize({ ...win(r), children: win(r).children.slice(0, 2) })).toBe(
+      [
+        "row",
+        "  h2: Members",
+        "  text: 2 of 5 seats used #seats",
+        "  button: *Invite member #invite",
+        "alert: {check} Erik Lund was removed from the team. [Undo] #notice",
+      ].join("\n"),
     );
     const grid = byId(win(r), "members")!;
     expect(grid.body.map((row) => row.split(" | ")[1])).toEqual(["Anna Svensson", "Maja Berg"]);

@@ -4,13 +4,22 @@ export { CATALOG, COMMON_FLAGS } from "./catalog";
 export type { CatalogEntry } from "./catalog";
 export { check } from "./check";
 export type { CheckResult } from "./check";
-export { extendsId, resolve } from "./variants";
+export { extendsId, resolve, serialize } from "./variants";
 export type { Lookup, ResolveOptions } from "./variants";
-export { fontMeasurer } from "./metrics";
+export {
+  ASCENT,
+  DESCENT,
+  FONT_CSS,
+  FONT_STACK,
+  LINE_HEIGHT,
+  tableMeasure,
+  unmeasured,
+  fontMeasurer,
+} from "./metrics";
 export type { FontMetrics } from "./metrics";
 export { EXCALIFONT } from "./metrics-excalifont";
 export type { Box, LayoutResult } from "./layout";
-export { DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme";
+export { DARK_COLORS, DARK_INK, DEFAULT_THEME, FONT_SIZE, INK, LIGHT_INK } from "./theme";
 export { ICON_NAMES } from "./icons";
 export { EXCALIFONT_FAMILY, layoutScreen } from "./screen";
 export type { LayoutScreenOptions } from "./screen";

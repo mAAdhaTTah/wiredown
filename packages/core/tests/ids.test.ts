@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parse } from "../src/parse";
-import { resolve } from "../src/variants";
+import { parse, resolve, serialize } from "../src/index";
 
 describe("#id shorthand", () => {
   it("is equivalent to the long form, including options", () => {
@@ -138,5 +137,21 @@ describe("#id shorthand", () => {
     );
     expect(errors).toEqual([]);
     expect(tree.children[0].children.map((node) => node.id)).toEqual(["tabs", "docs", "note"]);
+  });
+
+  it("round-trips shorthand, long-only ids, and literal hashes", () => {
+    const source = String.raw`box #panel
+  text: Tag \#urgent
+  button: Invite #invite (disabled)
+  text: Legacy (id=Legacy_ID)
+  grid #members
+  # | Name
+  1 | #word`;
+    const parsed = parse(source);
+    expect(parsed.errors).toEqual([]);
+    const serialized = serialize(parsed.tree);
+    expect(serialized).toContain("#invite (disabled)");
+    expect(serialized).toContain("(id=Legacy_ID)");
+    expect(parse(serialized)).toEqual(parsed);
   });
 });
