@@ -154,7 +154,17 @@ wiredown flow move flows/members.excalidraw.md F2 --below D1 --json
 ```
 
 ```json
-{ "moved": { "node": "F2", "kind": "frame", "notes": 0, "overlays": 0, "arrows": 1 } }
+{
+  "moved": {
+    "node": "F2",
+    "kind": "frame",
+    "x": 745,
+    "y": 591.5,
+    "notes": 0,
+    "overlays": 0,
+    "arrows": 1
+  }
+}
 ```
 
 ## Settings form

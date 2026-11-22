@@ -89,6 +89,11 @@ they illustrate. You need a shell and the `wiredown` CLI on PATH.
    node's label, notes and overlays with it and re-routes its arrows; a
    person's drawing stays. If the new place would overlap another node, it
    refuses and names it: move that node first, or pick another place.
+   `flow move` also takes `--to <x>,<y>`, the node's top-left in drawing
+   coordinates (`--to=-200,0` for a negative x). Use it only with
+   coordinates a person gives you or a command's `--json` reported, such as
+   a node's earlier `x, y` to put it back; otherwise place it relative to a
+   node.
 
    ```sh
    wiredown flow move flows/members.excalidraw.md F2 --below D1 --json
@@ -208,8 +213,9 @@ read; it prints only a message on stderr, even with `--json`.
 `flow refresh --json` returns `changes` and `unresolved` arrays.
 `flow remove --json` returns `removed` and `unbound`: tell the person about
 hand-drawn arrows it unbound.
-`flow move --json` returns `moved` and `unresolved`: tell the person about
-arrows they bent, which it left.
+`flow move --json` returns `moved` (the node's new box and the ids of every
+element moved), `changes` (arrows it re-routed) and `unresolved`: tell the
+person about arrows they bent, which it left.
 `render --json` returns `screens` with `id`, output path (`png` or `svg`),
 `width`, `height` and `boxes` keyed by component id. Each box is
 `{ x, y, w, h }` in image coordinates; use ids for overlays, not these numbers.
