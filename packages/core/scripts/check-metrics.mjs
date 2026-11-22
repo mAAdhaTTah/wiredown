@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { EXCALIFONT } from "../dist/metrics-excalifont.js";
 import { fontMeasurer } from "../dist/metrics.js";
 
-const require = createRequire(new URL("../../web/package.json", import.meta.url));
+const require = createRequire(new URL("../../gitea/package.json", import.meta.url));
 const { chromium } = require("playwright-core");
 const dir = join(dirname(require.resolve("@excalidraw/excalidraw")), "fonts/Excalifont");
 const faces = readdirSync(dir)
