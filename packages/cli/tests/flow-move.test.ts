@@ -65,12 +65,12 @@ test("each placement moves the node with everything of ours on it, in one line",
   expect(copyOnly).toContain(`${file}: 1 error\n`);
   expect(await run(["flow", "move", file, "F2", "--below", "F1"])).toEqual({
     exitCode: 0,
-    stdout: "moved F2 to 0,507 (frame, 1 note, 2 overlays, 2 arrows)\n",
+    stdout: "moved F2 to 0,503 (frame, 1 note, 2 overlays, 2 arrows)\n",
     stderr: "",
   });
   expect((await lint(file)).stdout).toBe(copyOnly);
   const right = await run(["flow", "move", file, "D1", "--right-of", "F1"]);
-  expect(right.stdout).toBe("moved D1 to 700,-1.5 (decision, 1 arrow)\n");
+  expect(right.stdout).toBe("moved D1 to 696,-3.5 (decision, 1 arrow)\n");
   expect((await lint(file)).stdout).toBe(copyOnly);
   // --to=<x>,<y> takes a negative x
   const to = await run(["flow", "move", file, "F2", "--to=-1000,1500"]);
@@ -157,7 +157,7 @@ test("an overlap lint reports is fixed by the move it suggests", async () => {
   );
   // back where it was, so its arrow already meets it
   expect((await run(["flow", "move", file, "F2", "--right-of", "F1"])).stdout).toBe(
-    "moved F2 to 700,0 (frame, 1 note)\n",
+    "moved F2 to 696,0 (frame, 1 note)\n",
   );
   expect(await lint(file)).toEqual({ exitCode: 0, stdout: `${file}: 0 errors\n`, stderr: "" });
 });

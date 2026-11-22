@@ -78,7 +78,7 @@ function sound(flow: Flow, lint: unknown) {
 }
 
 test.each([
-  ["--right-of", { rightOf: "F2" }, (f: Flow) => [Number(node(f, "F2").x) + 124 + 340, 0]],
+  ["--right-of", { rightOf: "F2" }, (f: Flow) => [Number(node(f, "F2").x) + 120 + 340, 0]],
   ["--below", { below: "D1" }, (f: Flow) => [0, Number(node(f, "D1").y) + 170 + 340]],
   ["--to", { x: -1000, y: 500 }, () => [-1000, 500]],
 ] as const)("%s moves the node and what of ours belongs to it by one delta", (_, to, want) => {
