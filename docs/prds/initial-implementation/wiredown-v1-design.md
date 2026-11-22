@@ -55,8 +55,8 @@ screens.md ── ```wiredown blocks (^block-id) ──┐
                                                │  Excalidraw's own SVG export
               ┌────────────────────────────────┼───────────────────────────┐
               ▼                                ▼                           ▼
-   Obsidian code block              Node (CLI: check, render,      Browser (web bundle:
-   (via the Excalidraw plugin)      lint, flow commands)           forge pages)
+   Obsidian code block              Node (CLI: check, render,      Browser (@wiredown/gitea:
+   (via the Excalidraw plugin)      lint, flow commands)           Gitea pages)
 
 flows/*.excalidraw.md ── Excalidraw drawing; screens are image embeds
    [[screens#^id|WxH]] + arrows, decisions, notes, and overlays anchored
@@ -71,7 +71,7 @@ flows/*.excalidraw.md ── Excalidraw drawing; screens are image embeds
 | `@wiredown/excalidraw` | Laid-out screen → Excalidraw elements (rectangles, lines, ellipses, text). Elements → SVG through Excalidraw's export, in the browser and headless in Node. |
 | `@wiredown/cli` | `wiredown check`, `render` (screen or flow → SVG/PNG), the flow-editing commands, `lint` for CI. JSON output for agents. |
 | Obsidian plugin (`wiredown`) | Code-block processor for the `wiredown` fence. Draws through the Excalidraw plugin, which is a hard dependency: without it the block shows a clear error, no fallback. |
-| `@wiredown/web` | Script for Gitea, added through its custom templates. Renders `wiredown` blocks and `.excalidraw.md` flows on Gitea's pages; loads Excalidraw only on pages that need it. Gitea only. |
+| `@wiredown/gitea` | Script for Gitea, added through its custom templates. Renders `wiredown` blocks and `.excalidraw.md` flows on Gitea's pages; loads Excalidraw only on pages that need it. Gitea only. |
 | Agent skill | Syntax reference generated from core's component catalog (so it can't drift), authoring conventions, self-check workflow. |
 
 ## Screens
@@ -186,7 +186,7 @@ property of the flow step, not the screen.
   builds flows with the `flow` commands.
 - **In Obsidian:** open the repo as a vault, with the Excalidraw plugin and
   the Wiredown plugin installed.
-- **On Gitea:** load `@wiredown/web` through Gitea's custom templates,
+- **On Gitea:** load `@wiredown/gitea` through Gitea's custom templates,
   pinned to a version. Worth a smoke check whenever Gitea is upgraded, since
   the script depends on the page's structure.
 - **In CI:** run `wiredown lint` to catch syntax errors, broken screen

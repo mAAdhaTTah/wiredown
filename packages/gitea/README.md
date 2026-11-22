@@ -1,4 +1,4 @@
-# @wiredown/web
+# @wiredown/gitea
 
 A script for Gitea, added to every page through Gitea's custom templates. It
 draws `wiredown` code blocks and `.excalidraw.md` flows on Gitea's pages with

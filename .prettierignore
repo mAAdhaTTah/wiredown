@@ -16,4 +16,4 @@ packages/core/src/metrics-*.ts
 packages/excalidraw/tests/fixtures/
 
 # Gitea page structures assumed from the prototypes, kept as written.
-packages/web/tests/fixtures/
+packages/gitea/tests/fixtures/

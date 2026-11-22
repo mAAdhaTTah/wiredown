@@ -271,7 +271,7 @@ importers:
         specifier: ^1.12.3
         version: 1.14.4(@codemirror/state@6.7.6)(@codemirror/view@6.43.13)
 
-  packages/web:
+  packages/gitea:
     devDependencies:
       '@excalidraw/excalidraw':
         specifier: 0.18.1

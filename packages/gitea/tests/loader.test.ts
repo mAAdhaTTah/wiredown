@@ -72,8 +72,8 @@ it("loads the renderer next to the loader, so a pinned version gets its own", ()
   expect(rendererUrl("https://git.example/assets/wiredown/0.1.0/wiredown.js?v=2")).toBe(
     "https://git.example/assets/wiredown/0.1.0/wiredown-renderer.js",
   );
-  expect(rendererUrl("https://cdn.example/npm/@wiredown/web@0.1.0/dist/wiredown.js")).toBe(
-    "https://cdn.example/npm/@wiredown/web@0.1.0/dist/wiredown-renderer.js",
+  expect(rendererUrl("https://cdn.example/npm/@wiredown/gitea@0.1.0/dist/wiredown.js")).toBe(
+    "https://cdn.example/npm/@wiredown/gitea@0.1.0/dist/wiredown-renderer.js",
   );
 });
 

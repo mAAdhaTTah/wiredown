@@ -1,5 +1,5 @@
 // The runtime-neutral half of exporting a flow: each screen embed becomes a
-// padded SVG image file. Node (node.ts) and the browser (@wiredown/web)
+// padded SVG image file. Node (node.ts) and the browser (@wiredown/gitea)
 // supply the screen SVGs and run Excalidraw's exporter themselves.
 import type { ExcalidrawElementJson } from "./elements";
 import type { Flow } from "./flow";
