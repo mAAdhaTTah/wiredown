@@ -102,7 +102,7 @@ type Change =
  */
 export type FlowChange = Change & Rect;
 
-/** Overlays, frames, arrow ends and notes within this many drawing px of their place are current. */
+/** Overlays, frames and notes within this many drawing px of their place are current. */
 const TOLERANCE = 1;
 /** Image width:height ratios within this fraction of the screen's are the same aspect. */
 const ASPECT_TOLERANCE = 0.01;
@@ -338,11 +338,14 @@ function arrowRoutes(flow: Flow): Route[] {
       [start, points[0], [0, 0]],
       [end, points.at(-1)!, [gx, gy]],
     ];
+    // Excalidraw moves an end bound to a diamond by up to END_GAP when it
+    // opens the drawing (onto the tip, or further off a side): an end within
+    // 2 × END_GAP of its place still meets its node, unless a frame grew under it
     const missed = ends
-      .filter(([, [px, py], [wx, wy]]) => {
-        const dx = num(arrow.x) + px - (geometry.x + wx),
-          dy = num(arrow.y) + py - (geometry.y + wy);
-        return Math.abs(dx) > TOLERANCE || Math.abs(dy) > TOLERANCE;
+      .filter(([n, [px, py], [wx, wy]]) => {
+        const [x, y] = [num(arrow.x) + px, num(arrow.y) + py];
+        const off = Math.hypot(x - (geometry.x + wx), y - (geometry.y + wy));
+        return off > 2 * END_GAP || insideFrame(n, x, y);
       })
       .map(([n]) => n.node);
     return [{ arrow, start, end, geometry, shaped: points.length !== 2, missed }];
@@ -368,10 +371,15 @@ function unmet({ arrow, start, end }: Route): string[] {
         Math.max(left - x, 0, x - left - width),
         Math.max(top - y, 0, y - top - height),
       );
-      const inside = Math.min(x - left, left + width - x, y - top, top + height - y);
-      return off > 2 * END_GAP || (n.kind === "frame" && inside > TOLERANCE);
+      return off > 2 * END_GAP || insideFrame(n, x, y);
     })
     .map(([n]) => n.node);
+}
+/** Whether (x, y) lies more than TOLERANCE inside a frame's image: a frame grew under it. */
+function insideFrame(n: FlowNode, x: number, y: number) {
+  const { x: left, y: top, width, height } = rect(n.element);
+  const inside = Math.min(x - left, left + width - x, y - top, top + height - y);
+  return n.kind === "frame" && inside > TOLERANCE;
 }
 /** Why refresh and move leave an arrow a person bent that no longer meets `node`, and lint reports it. */
 export const bentArrow = (node: string) =>

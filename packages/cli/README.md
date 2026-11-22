@@ -324,8 +324,9 @@ overlaps F1; run "wiredown flow refresh" or move it`;
 - a dangling arrow, ours or hand-drawn: bound to an element that is missing,
   deleted, or does not list the arrow in `boundElements` (the same for bound
   text and its container), or one of ours whose node is gone;
-- a straight arrow of ours whose end is more than 1px from where
-  `flow connect` would put it now: `arrow F1 -> F2 no longer meets F1; run
+- a straight arrow of ours whose end is more than 12px from where
+  `flow connect` would put it now, or inside a frame (Excalidraw moves an end
+  bound to a decision by up to 6px when it opens the drawing): `arrow F1 -> F2 no longer meets F1; run
 "wiredown flow refresh"`;
 - an arrow of ours a person bent whose end no longer meets its node (more
   than 12px off it, or inside a frame): `arrow F1 -> F2: it was bent by hand

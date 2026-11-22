@@ -622,6 +622,40 @@ test("arrows between a frame and a decision follow; the decision's notes stay", 
   expect(notes.map((id) => byId(flow, id))).toEqual(kept);
 });
 
+test("arrows Excalidraw moved onto a decision still meet it; further off they do not", () => {
+  const flow = newFlow();
+  add(flow, "home", home);
+  addDecision(flow, { text: "Ok?" });
+  const tip = byId(flow, connect(flow, "F1", "D1"));
+  const side = byId(flow, connect(flow, "F1", "D1"));
+  const screens = lookup({ home });
+  // as Excalidraw leaves them on open: onto the tip, and 2.5px off the side
+  const stretch = (a: ExcalidrawElementJson, by: number) => {
+    const [dx, dy] = (a.points as number[][])[1];
+    Object.assign(a, {
+      width: dx + by,
+      points: [
+        [0, 0],
+        [dx + by, dy],
+      ],
+    });
+  };
+  stretch(tip, 6);
+  stretch(side, -2.5);
+  expect(lintFlow(flow, screens)).toEqual([]);
+  expect(refreshFlow(flow, screens)).toEqual([]);
+  stretch(tip, 7); // 13px past connect's end
+  expect(lintFlow(flow, screens)).toEqual([
+    {
+      frame: "D1",
+      element: tip.id,
+      message: `arrow F1 -> D1 no longer meets D1; run "wiredown flow refresh"`,
+    },
+  ]);
+  settles(flow, screens);
+  expect(points(tip)[2]).toBe(Number(flowNodes(flow)[1].element.x) - 6);
+});
+
 test("a bent arrow is left alone and reported; a hand-drawn one is untouched", () => {
   const { flow, arrow } = build();
   const bent = byId(flow, arrow);

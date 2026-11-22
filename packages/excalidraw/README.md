@@ -173,8 +173,9 @@ The root export renders nothing; SVG export is in the Node entry,
   not), a person's copies of our elements (one finding per set pasted together),
   stale overlays, ones whose target or frame is gone or that were drawn for
   another screen, notes whose node is gone, notes whose top edge lies inside
-  their frame, straight arrows of ours whose ends are more than 1px from where
-  `connect` would put them now, dangling arrow or text bindings
+  their frame, straight arrows of ours whose ends are more than 12px from where
+  `connect` would put them now or inside a frame (Excalidraw moves ends bound
+  to a diamond by up to 6px when it opens the drawing), dangling arrow or text bindings
   (`bindingFailures(elements)` on its own), images without an
   `## Embedded Files` entry, and data from a newer wiredown. Overlays belong to
   the frame whose image id their `anchor` records.
