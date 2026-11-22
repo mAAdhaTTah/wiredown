@@ -53,6 +53,7 @@ export interface FlowScene {
  * filters SVG images, so screens must be exported light. With `raster`, for
  * PNG output, the drawing's own SVG images are rejected: resvg would draw
  * local files they link to. The screens added here are then the only ones.
+ * Its raster images must then be plain base64, which is all svgToPng accepts.
  */
 export async function flowScene(
   flow: Flow,
@@ -70,6 +71,12 @@ export async function flowScene(
       rejected.push({ id, reason: "SVG images are not drawn in PNG output" });
     } else if (!/^data:image\/(png|jpeg|gif|webp|svg\+xml)(?:;[^,]*)?,/i.test(dataURL)) {
       rejected.push({ id, reason: "expected an inline PNG, JPEG, GIF, WebP or SVG data URL" });
+    } else if (
+      options.raster &&
+      !/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/]*={0,2}$/i.test(dataURL)
+    ) {
+      // svgToPng refuses an SVG with any other data URL in it
+      rejected.push({ id, reason: "expected a base64 PNG, JPEG, GIF or WebP data URL" });
     } else files[id] = file;
   }
   const cache = new Map<string, string | undefined>();
