@@ -247,17 +247,17 @@ external fetch from an SVG's nested external image reference.
 ### Browser smoke check
 
 ```sh
-pnpm smoke:web
+pnpm smoke:gitea
 # Optional screenshot directory and explicit browser:
-pnpm smoke:web --out /tmp/wiredown-shots --browser /path/to/chromium
+pnpm smoke:gitea --out /tmp/wiredown-shots --browser /path/to/chromium
 ```
 
 The root command builds first. After building, the package command is
-`pnpm --filter @wiredown/web smoke --out /tmp/wiredown-shots`.
+`pnpm --filter @wiredown/gitea smoke --out /tmp/wiredown-shots`.
 `--browser` takes precedence over `WIREDOWN_SMOKE_BROWSER`; otherwise
 Playwright uses its installed headless Chromium, honoring
 `PLAYWRIGHT_BROWSERS_PATH` or its standard cache. If none is installed, run
-`pnpm --filter @wiredown/web exec playwright-core install chromium-headless-shell`.
+`pnpm --filter @wiredown/gitea exec playwright-core install chromium-headless-shell`.
 Installing dependencies downloads no browser. Screenshots default to a temp
 directory printed at the end; the generated site is always cleaned up.
 

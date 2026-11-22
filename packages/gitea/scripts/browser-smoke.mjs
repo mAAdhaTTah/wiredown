@@ -1,6 +1,7 @@
 // MANUAL check, outside Vitest and CI. These are Gitea-shaped STAND-IN pages,
 // using src/gitea.ts's HTML/URL assumptions, not a test of a live Gitea.
 import assert from "node:assert/strict";
+import { readdirSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -14,7 +15,9 @@ const { values } = parseArgs({
     browser: { type: "string" },
   },
 });
-const dist = new URL("../dist/", import.meta.url);
+// dist is a Gitea custom directory: the bundle is in its one versioned folder.
+const bundles = new URL("../dist/public/assets/wiredown/", import.meta.url);
+const dist = new URL(`${readdirSync(bundles)[0]}/`, bundles);
 const { run } = await import("../../cli/dist/index.js");
 const site = await mkdtemp(join(tmpdir(), "wiredown-smoke-site-"));
 const out = values.out
@@ -210,7 +213,7 @@ try {
     browser = await chromium.launch(executablePath ? { executablePath } : {});
   } catch (error) {
     throw new Error(
-      `${error.message.split("\n")[0]}\nRun: pnpm --filter @wiredown/web exec playwright-core install chromium-headless-shell (or pass --browser /path/to/chromium)`,
+      `${error.message.split("\n")[0]}\nRun: pnpm --filter @wiredown/gitea exec playwright-core install chromium-headless-shell (or pass --browser /path/to/chromium)`,
     );
   }
   console.log(`Chromium ${browser.version()}`);
