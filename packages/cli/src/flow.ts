@@ -25,8 +25,8 @@ import type {
   Flow,
   FlowChange,
   Removed,
+  ScreenLookup,
   ScreenRef,
-  ScreenState,
 } from "@wiredown/excalidraw";
 import { embedRoot, frameEmbed, resolveEmbed, screensToEmbed } from "./embeds";
 import {

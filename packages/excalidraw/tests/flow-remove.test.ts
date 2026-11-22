@@ -19,7 +19,7 @@ import { bindingFailures, pluginFailures } from "./plugin-checks";
 
 const box = { x: 20, y: 30, w: 40, h: 50 };
 const home: ScreenState = { width: 100, height: 200, boxes: { invite: box, seats: box } };
-const screens = () => home;
+const screens = () => ({ ok: true as const, screen: home });
 
 /**
  * F1 -> D1 -> F2, F2 -> F1 twice, notes on D1 and F2, a highlight and a mark

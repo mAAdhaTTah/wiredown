@@ -875,8 +875,6 @@ export interface Unbound {
   from: string;
 }
 
-const groupsOf = (e: ExcalidrawElementJson) =>
-  Array.isArray(e.groupIds) ? (e.groupIds as string[]) : [];
 const bindingOf = (e: ExcalidrawElementJson, end: "startBinding" | "endBinding") =>
   (e[end] as { elementId?: string } | null | undefined)?.elementId;
 const TARGETS =

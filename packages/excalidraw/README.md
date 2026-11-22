@@ -155,10 +155,11 @@ The root export renders nothing; SVG export is in the Node entry,
   findings about orphaned notes, overlays and arrows, lost overlay targets and
   pasted copies name the target to remove.
 
-  Embed alignment in Obsidian remains unverified. Padding assumptions live
-  in `flow-edit.ts`'s existing embed constants: 10px on each side, zero
-  above, 5px footer below. Changing those constants corrects sizing and
-  overlays.
+  Embeds are sized for the Excalidraw plugin's default Markdown embed, as
+  measured in Obsidian: 10px host padding on each side, a 2px border on
+  every side, a 5px footer. Those constants in `flow-edit.ts` set both
+  sizing and overlays. With the plugin's border turned off, the plugin
+  reshapes frames on open (issue #42).
 
   Every `customData.wiredown` carries `v` (`DATA_VERSION`, now 1); data
   without `v` is version 1, and data with a higher `v` is ignored.
