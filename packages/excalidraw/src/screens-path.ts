@@ -1,5 +1,5 @@
 // Which screens file an embed `[[path#^id]]` means. The CLI (Node) and
-// @wiredown/web (the browser) share these pieces of the rule. Locations are
+// @wiredown/gitea (the browser) share these pieces of the rule. Locations are
 // URLs (`file:` in Node), so both runtimes resolve them the same way.
 //
 // Every search is bounded by a root, a directory URL ending in `/` that

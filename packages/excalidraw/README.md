@@ -219,6 +219,20 @@ The root export renders nothing; SVG export is in the Node entry,
   absent from its node is left untouched and does not take a place in the
   note stack.
 
+- **Flow rendering** (`flow-render`): the part of the Node entry's
+  `renderFlowSvg` that needs no Node. `flowScene(flow, screenSvg, { raster? })`
+  resolves to the `FlowScene` to export: the flow's `elements`, `appState` and
+  `files`, with each `[[path#^id]]` embed supplied as a padded SVG image, and
+  `rejected`, `missing` and `inline` as `renderFlowSvg` returns them.
+  `screenSvg(embed)` resolves to an embed's light SVG export, or undefined when
+  the screen is missing; it is called once per embed path and block id.
+  `FLOW_MARGIN` (16px) is the space to export around a whole flow, so labels at
+  its edge are not cut; a screen pads itself. `paddedScreenSvg(svg)` wraps a
+  screen's SVG in the space a flow embed gives it (see `embedSize`),
+  `svgDataUrl(svg)` is a base64 `data:` URL of an SVG document in any runtime
+  with `btoa`, and `svgSize(svg)` reads the `width` and `height` of an SVG's
+  root element.
+
 - **Screens paths** (`screens-path`): an embed's path names its screens file
   within a root, a directory URL ending in `/`: the git repository's root, else
   the Obsidian vault's, else the parent of the flow's directory (on a forge,

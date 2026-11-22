@@ -1,0 +1,38 @@
+// dist/wiredown-renderer.js: imported by the loader on pages with wireframes.
+import type { Targets } from "./loader";
+import { render as renderTargets } from "./render";
+import type { ExportSvg } from "./render";
+
+declare global {
+  var EXCALIDRAW_ASSET_PATH: string | string[] | undefined;
+}
+
+let excalidraw: Promise<typeof import("@excalidraw/excalidraw")> | undefined;
+
+/** Excalidraw's browser exporter, the call the Gitea prototype made (lib-excalidraw.ts). */
+export const exportSvg: ExportSvg = async (scene, { theme, padding }) => {
+  if (!excalidraw) {
+    // Excalidraw loads the fonts it inlines from here: the fonts/ folder
+    // shipped next to this file. Set before Excalidraw's module runs.
+    globalThis.EXCALIDRAW_ASSET_PATH ??= new URL("./", import.meta.url).href;
+    excalidraw = import("@excalidraw/excalidraw");
+  }
+  const { exportToSvg } = await excalidraw;
+  return exportToSvg({
+    elements: scene.elements as never,
+    appState: {
+      ...scene.appState,
+      exportBackground: false,
+      exportWithDarkMode: theme === "dark",
+      exportScale: 1,
+    },
+    files: scene.files as never,
+    exportPadding: padding,
+  });
+};
+
+export function render(targets: Targets, fonts?: string): Promise<void> {
+  return renderTargets(targets, exportSvg, document, fonts).catch((error) =>
+    console.warn("wiredown:", error),
+  );
+}

@@ -6,7 +6,7 @@ private GitHub repo.
 Wiredown is a toolkit for low-fidelity UX wireframes written as text,
 rendered as hand-drawn Excalidraw sketches, and composed into user-flow
 drawings. It's built to be written mostly by an AI coding agent and reviewed
-by a person in Obsidian and in a Git forge (Gitea first).
+by a person in Obsidian and in a Git forge (Gitea).
 
 Supporting material in this folder:
 
@@ -55,8 +55,8 @@ screens.md ── ```wiredown blocks (^block-id) ──┐
                                                │  Excalidraw's own SVG export
               ┌────────────────────────────────┼───────────────────────────┐
               ▼                                ▼                           ▼
-   Obsidian code block              Node (CLI: check, render,      Browser (web bundle:
-   (via the Excalidraw plugin)      lint, flow commands)           forge pages)
+   Obsidian code block              Node (CLI: check, render,      Browser (@wiredown/gitea:
+   (via the Excalidraw plugin)      lint, flow commands)           Gitea pages)
 
 flows/*.excalidraw.md ── Excalidraw drawing; screens are image embeds
    [[screens#^id|WxH]] + arrows, decisions, notes, and overlays anchored
@@ -71,7 +71,7 @@ flows/*.excalidraw.md ── Excalidraw drawing; screens are image embeds
 | `@wiredown/excalidraw` | Laid-out screen → Excalidraw elements (rectangles, lines, ellipses, text). Elements → SVG through Excalidraw's export, in the browser and headless in Node. |
 | `@wiredown/cli` | `wiredown check`, `render` (screen or flow → SVG/PNG), the flow-editing commands, `lint` for CI. JSON output for agents. |
 | Obsidian plugin (`wiredown`) | Code-block processor for the `wiredown` fence. Draws through the Excalidraw plugin, which is a hard dependency: without it the block shows a clear error, no fallback. |
-| `@wiredown/web` | Browser script for Markdown hosts that allow custom JS. Renders `wiredown` blocks and `.excalidraw.md` flows on a page; loads Excalidraw only on pages that need it. Gitea first. |
+| `@wiredown/gitea` | Script for Gitea, added through its custom templates. Renders `wiredown` blocks and `.excalidraw.md` flows on Gitea's pages; loads Excalidraw only on pages that need it. Gitea only. |
 | Agent skill | Syntax reference generated from core's component catalog (so it can't drift), authoring conventions, self-check workflow. |
 
 ## Screens
@@ -186,10 +186,9 @@ property of the flow step, not the screen.
   builds flows with the `flow` commands.
 - **In Obsidian:** open the repo as a vault, with the Excalidraw plugin and
   the Wiredown plugin installed.
-- **On a forge:** load `@wiredown/web` through the forge's custom JavaScript
-  hook (on Gitea, custom templates), pinned to a version. Worth a smoke check
-  whenever the forge is upgraded, since the script depends on the page's
-  structure.
+- **On Gitea:** load `@wiredown/gitea` through Gitea's custom templates,
+  pinned to a version. Worth a smoke check whenever Gitea is upgraded, since
+  the script depends on the page's structure.
 - **In CI:** run `wiredown lint` to catch syntax errors, broken screen
   references and stale embed sizes.
 - **Layout in a repo:** `screens.md` and `flows/` together, for example next
@@ -230,7 +229,7 @@ name: Framedown.
 | Excalifont metrics match Excalidraw | Prototype measurement | Measured |
 | Variants, wrapping grids, validation work | Prototype fork, 1,024 tests passing | Prototyped |
 | Overlays line up with elements inside embeds | Screen size and place inside the embed measured in headless Obsidian, for a screens file with the CLI's styling front matter (`pnpm test:obsidian`); not checked by eye | Measured |
-| Forge renderer | Bundle built, never run on a forge | Open |
+| Gitea script | Bundle built, never run on Gitea | Open |
 
 ## Open questions and risks
 
