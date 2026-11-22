@@ -137,9 +137,9 @@ The root export renders nothing; SVG export is in the Node entry,
   5px footer and no border; those constants in `flow-edit.ts` set both
   sizing and overlays. `styleScreens(source)` adds the front matter that
   makes the Excalidraw plugin draw a screens file's embeds that way,
-  whatever the plugin's settings (`excalidraw-font`, `excalidraw-css` with
-  the padding and footer, and an empty `excalidraw-border-color`), keeping
-  any of those keys the file already has. `pnpm test:obsidian` checks the
+  whatever the plugin's settings (`excalidraw-font`, and `excalidraw-css`
+  with the padding and footer; the plugin draws no border around an embed
+  whose CSS mentions `svg`), keeping either key the file already has. `pnpm test:obsidian` checks the
   size and place in Obsidian.
 
   Every `customData.wiredown` carries `v` (`DATA_VERSION`, now 1); data

@@ -95,12 +95,7 @@ test.each([
   ["unrelated", "---\ntags: [example]\n---\n", true],
   ["font", "---\nexcalidraw-font: Custom\n---\n", true],
   ["css", "---\nexcalidraw-css: custom\n---\n", true],
-  ["both", "---\nexcalidraw-font: Custom\nexcalidraw-css: custom\n---\n", true],
-  [
-    "all",
-    "---\nexcalidraw-font: Custom\nexcalidraw-css: custom\nexcalidraw-border-color: Red\n---\n",
-    false,
-  ],
+  ["both", "---\nexcalidraw-font: Custom\nexcalidraw-css: custom\n---\n", false],
   ["crlf", "---\r\ntags: [example]\r\n---\r\n", true],
 ])("frontmatter: %s", async (_name, prefix, changed) => {
   const { styleScreens } = await import("@wiredown/excalidraw");
@@ -111,7 +106,6 @@ test.each([
   expect(styled.match(/^---\r?$/gm)).toHaveLength(2);
   expect(styled).toContain("excalidraw-font:");
   expect(styled).toContain("excalidraw-css:");
-  expect(styled).toContain("excalidraw-border-color:");
   expect(styled.endsWith(BASE.replace(/\n/g, nl))).toBe(true);
   if (String(prefix).includes("tags:")) expect(styled).toContain("tags: [example]");
   if (String(prefix).includes("Custom")) expect(styled).toContain("excalidraw-font: Custom");

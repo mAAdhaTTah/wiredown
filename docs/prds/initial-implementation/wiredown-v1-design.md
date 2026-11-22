@@ -98,8 +98,7 @@ Conventions for `screens.md`:
   invitation shows") are plain Markdown prose under the block. They travel
   with the screen to every flow that embeds it.
 - Frontmatter carries the embed styling the Excalidraw plugin reads from the
-  embedded file (`excalidraw-css`, `excalidraw-font`,
-  `excalidraw-border-color`); the CLI writes it.
+  embedded file (`excalidraw-css`, `excalidraw-font`); the CLI writes it.
 - Avoid characters missing from Excalifont (e.g. `⋯`); `check` flags them.
 
 ## Rendering: Excalidraw everywhere

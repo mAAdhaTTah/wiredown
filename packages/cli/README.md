@@ -214,9 +214,7 @@ added; there is no default. It takes any `.md` file inside the root; one
 outside it is an error (`the screens file <file> points outside <root>`).
 A screens file whose path from the root contains `#`, `|` or `]` is
 refused, since those end the path in an embed link.
-Missing embed styling frontmatter is added (`excalidraw-font`,
-`excalidraw-css` and `excalidraw-border-color`); existing values are
-preserved.
+Missing embed styling frontmatter is added; existing values are preserved.
 Invalid screens and unknown nodes leave the drawing untouched.
 A frame's image and its `F3 · Title` label share an Excalidraw group, so
 they move together: clicking either selects both; double-click to select

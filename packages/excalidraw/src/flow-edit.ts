@@ -6,8 +6,9 @@ import type { Flow } from "./flow";
 
 // How the Excalidraw plugin draws a Markdown embed by default: 10px of
 // horizontal padding on its host and a 5px footer. styleScreens writes both
-// into the screens file, and turns the plugin's border off, so a person's
-// plugin settings cannot change them. Measured in Obsidian (test:obsidian).
+// into the screens file, so a person's plugin settings cannot change them. The
+// plugin draws no border around an embed whose CSS mentions svg, as this CSS
+// does. Measured in Obsidian (test:obsidian).
 // The link height is a maximum, with 40px headroom as in the prototype.
 const MD_HOST_PAD = 10,
   MD_FOOTER = 5,
@@ -41,7 +42,6 @@ const SCREENS_STYLE = [
     "excalidraw-css",
     `".excalidraw-md-host{padding:0 ${MD_HOST_PAD}px!important}.excalidraw-md-footer{height:${MD_FOOTER}px!important}.wiredown-block svg{display:block}"`,
   ],
-  ["excalidraw-border-color", '""'],
 ];
 /** Adds the styling keys a screens file lacks, preserving the original bytes. */
 export function styleScreens(source: string): string {
