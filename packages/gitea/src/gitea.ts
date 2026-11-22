@@ -1,9 +1,11 @@
 // What wiredown reads from a Gitea page. Every assumption about Gitea's HTML
-// and URLs is here, and none has been checked on a live Gitea:
+// and URLs is here; `pnpm test:gitea` checks them on Gitea 28.4.0:
 // - A fenced block renders as `pre > code.language-<lang>`, possibly inside
 //   a `.code-block-container` (from the round-2 page script prototype).
 // - A `^id` line after a block renders as the next element, a paragraph
 //   whose whole text is `^id` (same prototype).
+// - Each rendered Markdown document (a file view, a comment, a comment's
+//   preview) is a `.markup` element.
 // - The theme is named on `<html data-theme>`; names containing "dark" are
 //   dark, names containing "auto" follow the OS (same prototype).
 // - A file view is `.../src/{branch|tag|commit}/<ref>/<path>` and its raw
@@ -26,6 +28,11 @@ export interface Block {
   source: string;
   /** The block's `^id`, when the page shows one after the block. */
   id?: string;
+  /**
+   * The rendered Markdown document the block is in. Ids and variants resolve
+   * among the blocks of one document, so two comments may use the same ids.
+   */
+  markup?: Element;
 }
 
 /** A page that shows a rendered `.excalidraw.md` file. */
@@ -45,6 +52,7 @@ export interface FlowTarget {
 export const DONE = "data-wiredown";
 
 const CODE = `pre > code.language-${FENCE_KEYWORD}`;
+const MARKUP = ".markup";
 const FILE_VIEW = ".file-view.markup";
 const ID = /^\^([A-Za-z0-9-]+)$/;
 
@@ -79,10 +87,12 @@ export function findBlocks(document: Document): Block[] {
     const element = pre.closest<HTMLElement>(".code-block-container") ?? pre;
     if (element.hasAttribute(DONE)) continue;
     const id = ID.exec(element.nextElementSibling?.textContent?.trim() ?? "")?.[1];
+    const markup = element.closest(MARKUP);
     blocks.push({
       element,
       source: (code.textContent ?? "").replace(/\n$/, ""),
       ...(id ? { id } : {}),
+      ...(markup ? { markup } : {}),
     });
   }
   return blocks;

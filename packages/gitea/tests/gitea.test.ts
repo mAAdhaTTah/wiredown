@@ -32,7 +32,11 @@ it("finds wiredown blocks, their ^id paragraphs and the element to replace", () 
 it("finds blocks outside file views, without an id", () => {
   const document = page("comment.html", "https://git.example/me/app/pulls/3");
   expect(findBlocks(document)).toEqual([
-    { element: document.querySelector("pre"), source: "text: In a comment" },
+    {
+      element: document.querySelector("pre"),
+      source: "text: In a comment",
+      markup: document.querySelector(".markup"),
+    },
   ]);
   expect(noteUrl(document)).toBeUndefined();
   expect(findFlow(document)).toBeUndefined();

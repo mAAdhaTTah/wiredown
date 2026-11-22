@@ -135,6 +135,23 @@ it("shows warnings under the drawing", async () => {
   expect(document.querySelector(".wiredown-block > svg")).not.toBeNull();
 });
 
+it("checks each Markdown document's blocks on their own, so comments may repeat ids", async () => {
+  const comments = [document.createElement("div"), document.createElement("div")];
+  const all = [
+    ...blocks([base, "base"], [variant, "variant"]),
+    ...blocks([base, "base"], [variant, "variant"]),
+  ];
+  all.forEach((block, i) => (block.markup = comments[i < 2 ? 0 : 1]));
+  const exportSvg = fakeExport();
+  await render({ blocks: all, theme: "light" }, exportSvg, document);
+  expect(document.querySelectorAll(".wiredown-error")).toHaveLength(0);
+  expect(document.querySelectorAll(".wiredown-block > svg")).toHaveLength(4);
+  // each comment's variant resolves against its own base
+  expect(
+    exportSvg.mock.calls.map(([scene]) => JSON.stringify(scene.elements).includes("Changed")),
+  ).toEqual([false, true, false, true]);
+});
+
 it("contains an exporter failure: the block stays, with a notice and one warning", async () => {
   const [a, b] = blocks([base, "a"], ["text: two", "b"]);
   const html = a!.element.outerHTML;

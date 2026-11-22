@@ -60,8 +60,12 @@ export async function render(
     document.head.append(style);
   }
   const { theme } = targets;
-  if (targets.blocks.length)
-    await renderBlocks(targets.blocks, targets.noteUrl, exportSvg, document, theme);
+  // Each Markdown document's blocks are checked on their own.
+  const documents = new Map<Element | undefined, Block[]>();
+  for (const block of targets.blocks)
+    documents.set(block.markup, [...(documents.get(block.markup) ?? []), block]);
+  for (const blocks of documents.values())
+    await renderBlocks(blocks, targets.noteUrl, exportSvg, document, theme);
   if (targets.flow) await renderFlow(targets.flow, exportSvg, document, theme, fonts);
 }
 

@@ -187,8 +187,8 @@ property of the flow step, not the screen.
 - **In Obsidian:** open the repo as a vault, with the Excalidraw plugin and
   the Wiredown plugin installed.
 - **On Gitea:** load `@wiredown/gitea` through Gitea's custom templates,
-  pinned to a version. Worth a smoke check whenever Gitea is upgraded, since
-  the script depends on the page's structure.
+  pinned to a version. `pnpm test:gitea` checks it on a pinned Gitea, and
+  a Gitea bump re-runs it, since the script depends on the page's structure.
 - **In CI:** run `wiredown lint` to catch syntax errors, broken screen
   references and stale embed sizes.
 - **Layout in a repo:** `screens.md` and `flows/` together, for example next
@@ -229,7 +229,7 @@ name: Framedown.
 | Excalifont metrics match Excalidraw | Prototype measurement | Measured |
 | Variants, wrapping grids, validation work | Prototype fork, 1,024 tests passing | Prototyped |
 | Overlays line up with elements inside embeds | Screen size and place inside the embed measured in headless Obsidian, for a screens file with the CLI's styling front matter (`pnpm test:obsidian`); not checked by eye | Measured |
-| Gitea script | Bundle built, never run on Gitea | Open |
+| Gitea script | Bundle installed on Gitea 28.4.0 in Docker and checked in headless Chromium (`pnpm test:gitea`, in CI) | Measured |
 
 ## Open questions and risks
 
