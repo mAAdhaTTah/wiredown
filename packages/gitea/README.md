@@ -39,7 +39,7 @@ Sizes (Vite 8.3, `@excalidraw/excalidraw` 0.18.1, React 18.3.1):
 | Download                                            | Minified | Gzip    |
 | --------------------------------------------------- | -------- | ------- |
 | `wiredown.js`, on every page                        | 2.4 KB   | 1.2 KB  |
-| `wiredown-renderer.js`                              | 90 KB    | 33 KB   |
+| `wiredown-renderer.js`                              | 96 KB    | 35 KB   |
 | Renderer and the chunks one drawing used (13 files) | 3.06 MB  | 1.14 MB |
 | Renderer and every chunk (182 files)                | 7.9 MB   | 2.6 MB  |
 
@@ -175,6 +175,14 @@ by local fixtures; they still need checking against a live Gitea instance.
   the drawing. A flow whose frames were sized for older screens is drawn as
   it is, squeezed into those sizes, with a notice under it: "This flow is out
   of date with its screens; run wiredown flow refresh."
+- **Navigating a flow.** A flow is drawn fitted to the page width, in a box
+  that clips it. Buttons over its bottom right corner, shown on hover, zoom
+  in, reset and zoom out, as Gitea's Mermaid viewer does, and switch to
+  fullscreen where the browser allows it. Ctrl or ⌘ with the wheel, or a
+  trackpad pinch, zooms toward the pointer; a plain wheel scrolls the page.
+  A mouse drags the drawing at any zoom, touch only once it is zoomed.
+  Reset, and entering or leaving fullscreen, fit the drawing to the box
+  again. The buttons use Gitea's `ui tiny compact icon button` classes.
 - **Theme.** It draws for the page's theme when the loader finds the
   wireframes. Switching theme later does not redraw.
 - **Failures.** If the renderer cannot load, a fetch fails or Excalidraw
@@ -208,6 +216,8 @@ of item 8. By hand, on a Gitea instance after an install or a Gitea upgrade:
    Gitea shows after reloading the page.
 5. A `flows/*.excalidraw.md` file view draws the flow above the Markdown,
    with every screen; renaming a screen id shows it under "Not drawn".
+   Hovering it shows zoom, reset and fullscreen buttons styled as Gitea's;
+   zooming in and dragging moves the drawing within its box.
 6. Dark theme: drawings are drawn dark after a reload.
 7. No request leaves Gitea's origin, and the console has no errors.
 8. Add a note in Virgil: it is drawn in Excalifont with a "fallback font"

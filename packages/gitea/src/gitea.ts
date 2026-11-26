@@ -15,6 +15,8 @@
 //   screens files, is `.../raw/{branch|tag|commit}/<ref>/`. A ref containing
 //   `/` cannot be told from the path after it, so the root is taken at the
 //   ref's first segment: the shortest plausible root.
+// - Fomantic UI's `ui tiny compact icon button` classes style a button as
+//   Gitea's own (zoom.ts uses them for a flow's controls).
 import { FENCE_KEYWORD } from "@wiredown/core";
 
 export type Theme = "light" | "dark";

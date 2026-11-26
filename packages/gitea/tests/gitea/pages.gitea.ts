@@ -227,6 +227,39 @@ it("draws a flow above its Markdown, with every screen", async () => {
   await visit.page.close();
 });
 
+it("zooms and pans a flow with Gitea-styled buttons", async () => {
+  const visit = await open(anonymous, `${FILE}/flows/f.excalidraw.md`);
+  const view = visit.page.locator(".wiredown-flow .wiredown-view");
+  const svg = view.locator("svg.wiredown-svg");
+  await svg.waitFor();
+  await settle(visit);
+  const box = (await view.boundingBox())!;
+  const fitted = (await svg.boundingBox())!;
+  await view.hover();
+  const zoomIn = view.locator('button[data-action="zoom-in"]');
+  expect(await zoomIn.isVisible()).toBe(true);
+  // Styled by Gitea's CSS, not the browser's default button.
+  expect(await zoomIn.evaluate((b) => getComputedStyle(b).borderStyle)).not.toBe("outset");
+  await zoomIn.click();
+  await zoomIn.click();
+  const zoomed = (await svg.boundingBox())!;
+  expect(zoomed.width).toBeCloseTo(fitted.width * 1.44, 0);
+  // The box keeps its size; the drawing is clipped to it.
+  expect(await view.boundingBox()).toEqual(box);
+  await visit.page.mouse.move(box.x + 100, box.y + 100);
+  await visit.page.mouse.down();
+  await visit.page.mouse.move(box.x + 150, box.y + 130, { steps: 5 });
+  await visit.page.mouse.up();
+  const dragged = (await svg.boundingBox())!;
+  expect(dragged.x - zoomed.x).toBeCloseTo(50, 0);
+  expect(dragged.y - zoomed.y).toBeCloseTo(30, 0);
+  await visit.page.screenshot({ path: join(SHOTS, "flow-zoomed.png") });
+  await view.locator('button[data-action="reset"]').click();
+  expect(await svg.boundingBox()).toEqual(fitted);
+  expect(visit.errors).toEqual([]);
+  await visit.page.close();
+});
+
 it("lists a renamed screen under Not drawn", async () => {
   const visit = await open(anonymous, `${FILE}/flows/renamed.excalidraw.md`);
   const notice = visit.page.locator(".wiredown-flow .wiredown-notice");

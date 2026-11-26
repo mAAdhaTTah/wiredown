@@ -17,6 +17,7 @@ import type { ExcalidrawElementJson } from "@wiredown/excalidraw";
 import type { Block, FlowTarget, Theme } from "./gitea";
 import { notice } from "./loader";
 import type { Targets } from "./loader";
+import { ZOOM_STYLE, zoomable } from "./zoom";
 
 /** Excalidraw 0.18.1's font family ids, by their folder under fonts/. */
 const FAMILIES: Record<string, number> = {
@@ -44,7 +45,8 @@ const STYLE = `.wiredown-block{margin:0.5em 0}
 .wiredown-svg{display:block;max-width:100%;height:auto}
 .wiredown-error{color:#d1242f;margin:0.25em 0}
 .wiredown-warning,.wiredown-notice{opacity:0.75;font-size:0.875em;margin:0.25em 0}
-.wiredown-source>summary{cursor:pointer;opacity:0.75;font-size:0.875em}`;
+.wiredown-source>summary{cursor:pointer;opacity:0.75;font-size:0.875em}
+${ZOOM_STYLE}`;
 
 export async function render(
   targets: Targets,
@@ -307,7 +309,7 @@ async function renderFlow(
     const container = document.createElement("div");
     container.className = "wiredown-block wiredown-flow";
     container.dataset.renderer = "excalidraw";
-    container.append(fitted(svg));
+    container.append(zoomable(fitted(svg)));
     if (problems.length)
       container.append(messages(document, "wiredown-notice", ["Not drawn:", ...problems]));
     if (stale)
