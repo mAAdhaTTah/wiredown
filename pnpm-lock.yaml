@@ -201,10 +201,10 @@ importers:
         version: 8.73.0(eslint@10.15.0)(typescript@6.0.3)
       vite:
         specifier: ^8.3.8
-        version: 8.3.8(@types/node@26.6.6)
+        version: 8.3.8(@types/node@26.6.11)
       vitest:
         specifier: ^5.1.0
-        version: 5.1.1(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6))
+        version: 5.1.1(@types/node@26.6.11)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.11))
 
   packages/cli:
     dependencies:
@@ -229,7 +229,7 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
-        version: 26.6.6
+        version: 26.6.11
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
@@ -241,7 +241,7 @@ importers:
         version: 0.18.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/node':
         specifier: ^26.6.6
-        version: 26.6.6
+        version: 26.6.11
       playwright-core:
         specifier: ^1.65.1
         version: 1.65.1
@@ -254,16 +254,16 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
-        version: 26.6.6
+        version: 26.6.11
       tinyrainbow:
         specifier: ^3.2.0
         version: 3.2.0
       vitest:
         specifier: ^5.1.0
-        version: 5.1.1(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6))
+        version: 5.1.1(@types/node@26.6.11)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.11))
       vitest-evals:
         specifier: ^0.18.1
-        version: 0.18.1(tinyrainbow@3.2.0)(vitest@5.1.1(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)))(zod@4.6.7)
+        version: 0.18.1(tinyrainbow@3.2.0)(vitest@5.1.1(@types/node@26.6.11)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.11)))(zod@4.6.7)
 
   packages/excalidraw:
     dependencies:
@@ -297,7 +297,7 @@ importers:
         version: 0.18.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/node':
         specifier: ^26.6.6
-        version: 26.6.6
+        version: 26.6.11
       '@wiredown/cli':
         specifier: workspace:*
         version: link:../cli
@@ -331,7 +331,7 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
-        version: 26.6.6
+        version: 26.6.11
       happy-dom:
         specifier: ^21.0.4
         version: 21.0.4
@@ -1168,8 +1168,11 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
-  '@types/node@26.6.6':
-    resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
+  '@types/node@26.6.11':
+    resolution: {integrity: sha512-uUyQ2XLEz+EXh34lmS3GhKrkqn/8FU7KUiKRpk347At2bmnMVWss45yz8b4FG/tUtmV1tV/+TVkITItPROyeeQ==}
+
+  '@types/node@26.6.7':
+    resolution: {integrity: sha512-tovuRfrUILu6v46bMG+BgXxMvsqPBx2WO2as8Rpln+JTff1dbexMtAM4KFTejmL0axsnSWViCW7MecUQpLuBRA==}
 
   '@types/tern@0.23.9':
     resolution: {integrity: sha512-ypzHFE/wBzh+BlH6rrBgS5I/Z7RD21pGhZ2rltb/+ZrVM1awdZwjx7hE5XfuYgHWk9uvV5HLZN3SloevCAp3Bw==}
@@ -3320,7 +3323,11 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@types/node@26.6.6':
+  '@types/node@26.6.11':
+    dependencies:
+      undici-types: 8.9.0
+
+  '@types/node@26.6.7':
     dependencies:
       undici-types: 8.9.0
 
@@ -3335,7 +3342,7 @@ snapshots:
 
   '@types/ws@8.18.2':
     dependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
 
   '@typescript-eslint/eslint-plugin@8.73.0(@typescript-eslint/parser@8.73.0(eslint@10.15.0)(typescript@6.0.3))(eslint@10.15.0)(typescript@6.0.3)':
     dependencies:
@@ -3445,14 +3452,14 @@ snapshots:
     dependencies:
       '@vitest-evals/core': 0.18.1
 
-  '@vitest/mocker@5.1.1(vite@8.3.8(@types/node@26.6.6))':
+  '@vitest/mocker@5.1.1(vite@8.3.8(@types/node@26.6.11))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.1.1
       estree-walker: 3.0.3
       magic-string: 1.4.5
     optionalDependencies:
-      vite: 8.3.8(@types/node@26.6.6)
+      vite: 8.3.8(@types/node@26.6.11)
 
   '@vitest/spy@5.1.1': {}
 
@@ -3516,7 +3523,7 @@ snapshots:
 
   buffer-image-size@0.6.4:
     dependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
 
   cacheable@2.5.0:
     dependencies:
@@ -3939,7 +3946,7 @@ snapshots:
 
   happy-dom@21.0.4:
     dependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.7
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.2
       buffer-image-size: 0.6.4
@@ -4452,7 +4459,7 @@ snapshots:
 
   uuid@14.0.3: {}
 
-  vite@8.3.8(@types/node@26.6.6):
+  vite@8.3.8(@types/node@26.6.11):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -4460,22 +4467,22 @@ snapshots:
       rolldown: 1.2.19
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.11
       fsevents: 2.3.3
 
-  vitest-evals@0.18.1(tinyrainbow@3.2.0)(vitest@5.1.1(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)))(zod@4.6.7):
+  vitest-evals@0.18.1(tinyrainbow@3.2.0)(vitest@5.1.1(@types/node@26.6.11)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.11)))(zod@4.6.7):
     dependencies:
       '@vitest-evals/core': 0.18.1
       '@vitest-evals/report-ui': 0.18.1
       tinyrainbow: 3.2.0
-      vitest: 5.1.1(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6))
+      vitest: 5.1.1(@types/node@26.6.11)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.11))
     optionalDependencies:
       zod: 4.6.7
 
-  vitest@5.1.1(@types/node@26.6.6)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.6)):
+  vitest@5.1.1(@types/node@26.6.11)(happy-dom@21.0.4)(vite@8.3.8(@types/node@26.6.11)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.1.1(vite@8.3.8(@types/node@26.6.6))
+      '@vitest/mocker': 5.1.1(vite@8.3.8(@types/node@26.6.11))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -4486,10 +4493,10 @@ snapshots:
       tinybench: 6.2.3
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
-      vite: 8.3.8(@types/node@26.6.6)
+      vite: 8.3.8(@types/node@26.6.11)
       why-is-node-running: 3.2.1
     optionalDependencies:
-      '@types/node': 26.6.6
+      '@types/node': 26.6.11
       happy-dom: 21.0.4
     transitivePeerDependencies:
       - msw
